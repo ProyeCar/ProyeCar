@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Inspector SST">
+    <meta name="theme-color" content="#1e3a2f">
+    <title>CARDIQUE - Inspección Ambiental y SST</title>
+    <link rel="manifest" href="manifest.json">
+    <!-- iOS splash / icons (se generan con los SVG inline como fallback) -->
+    <link rel="apple-touch-icon" href="data:image/png;base64,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">
+    <style>
+        /* ========== ESTILOS GENERALES ========== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #eef2f5;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+            padding-top: max(20px, env(safe-area-inset-top));
+            padding-bottom: max(20px, env(safe-area-inset-bottom));
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .card {
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 8px 20px rgba(0,0,0,.05);
+            padding: 1.5rem;
+            margin-bottom: 1.8rem;
+        }
+        .card-header {
+            display: flex; align-items: center; justify-content: space-between;
+            flex-wrap: wrap; border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 12px; margin-bottom: 20px;
+        }
+        .card-header h2 { font-size: 1.5rem; font-weight: 700; color: #1e6f3f; }
+        .security-banner {
+            background: #1e3a2f; color: #d1fae5;
+            padding: 10px 18px; border-radius: 60px;
+            display: inline-flex; align-items: center; gap: 10px; margin-bottom: 20px;
+        }
+        .header-cardique {
+            display: flex; align-items: center; justify-content: space-between;
+            flex-wrap: wrap; background: white; border-radius: 28px;
+            padding: 12px 24px; margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,.05);
+        }
+        .logo-area { display: flex; align-items: center; gap: 12px; }
+        .logo-img { height: 60px; max-width: 180px; object-fit: contain; }
+        .btn-cargar-logo {
+            background: #2c5e3f; font-size: .75rem; padding: 6px 12px;
+            border-radius: 30px; cursor: pointer; border: none; color: white;
+        }
+        .form-row { display: flex; flex-wrap: wrap; gap: 18px; margin-bottom: 20px; }
+        .form-group { flex: 1; min-width: 200px; }
+        label { font-weight: 600; display: block; margin-bottom: 6px; color: #1f2d3d; }
+        input, textarea, select {
+            width: 100%; padding: 12px 14px; border: 1px solid #cbd5e1;
+            border-radius: 20px; font-size: .95rem; font-family: inherit;
+        }
+        textarea { resize: vertical; }
+        .frente-card {
+            background: #fafcff; border: 1px solid #e2e8f0;
+            border-radius: 24px; padding: 1.2rem; margin-bottom: 2rem;
+        }
+        .frente-header {
+            display: flex; justify-content: space-between; align-items: center;
+            flex-wrap: wrap; margin-bottom: 1rem; padding-bottom: .5rem;
+            border-bottom: 2px dashed #cbd5e1;
+        }
+        .frente-titulo { font-size: 1.3rem; font-weight: 700; color: #1e6f3f; flex: 1; }
+        .frente-titulo input {
+            font-size: 1.2rem; font-weight: bold; background: #f1f5f9;
+            border: 1px solid #cbd5e1; border-radius: 30px; padding: 6px 12px; width: 80%;
+        }
+        .btn-eliminar-frente {
+            background: #b91c1c; color: white; border: none;
+            padding: 6px 15px; border-radius: 30px; cursor: pointer;
+        }
+        .categoria { margin-bottom: 1.5rem; background: #fff; padding: .5rem; border-radius: 20px; }
+        .cat-titulo {
+            font-size: 1.1rem; font-weight: 700; margin-bottom: .8rem;
+            padding-left: 8px; border-left: 4px solid #2b9348;
+        }
+        .items-grid { display: flex; flex-direction: column; gap: 10px; }
+        .item-card { background: white; border: 1px solid #e0e7ef; border-radius: 20px; padding: 10px 14px; }
+        .item-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between; }
+        .item-desc { flex: 3; font-weight: 500; }
+        .estado-btns { display: flex; gap: 8px; background: #f1f5f9; padding: 4px 10px; border-radius: 40px; }
+        .btn-cumple, .btn-nocumple {
+            border: none; background: transparent; padding: 5px 10px;
+            border-radius: 30px; font-weight: 600; cursor: pointer; font-size: .8rem;
+        }
+        .btn-cumple.activo { background: #2b9348; color: white; }
+        .btn-nocumple.activo { background: #dc2626; color: white; }
+        .btn-cumple:not(.activo), .btn-nocumple:not(.activo) { background: #e2e8f0; color: #334155; }
+        .btn-editar, .btn-eliminar {
+            background: none; border: none; font-size: 1.1rem; cursor: pointer; padding: 4px 6px;
+        }
+        .item-obs input {
+            width: 100%; margin-top: 8px; padding: 6px 10px;
+            border-radius: 30px; border: 1px solid #e2e8f0;
+            background: #f9fafb; font-size: .85rem;
+        }
+        .agregar-item {
+            margin-top: 12px; background: #f1f5f9; border: 1px dashed #2b9348;
+            border-radius: 40px; padding: 6px 14px; display: inline-flex;
+            align-items: center; gap: 6px; font-weight: 600; cursor: pointer; font-size: .85rem;
+        }
+        .frente-fotos-area { margin-top: 1rem; border-top: 1px solid #e2e8f0; padding-top: 1rem; }
+        .fotos-grid { display: flex; flex-wrap: wrap; gap: 12px; margin: 10px 0; }
+        .foto-thumb { position: relative; width: 90px; height: 90px; border-radius: 16px; overflow: hidden; border: 1px solid #ddd; }
+        .foto-thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .del-foto {
+            position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,.6);
+            color: white; border: none; border-radius: 20px; width: 22px; height: 22px; cursor: pointer;
+        }
+        .btn-foto {
+            background: #eef2ff; border: 1px dashed #2b9348; padding: 6px 14px;
+            border-radius: 30px; display: inline-flex; align-items: center; gap: 6px;
+            cursor: pointer; font-size: .8rem;
+        }
+        .frente-obs-area, .frente-recomendaciones-area {
+            margin-top: 1rem; border-top: 1px solid #e2e8f0; padding-top: 1rem;
+        }
+        .frente-obs-area h4, .frente-recomendaciones-area h4 { font-size: 1rem; margin-bottom: 8px; color: #1e6f3f; }
+        .grab-box-mini { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+        .grab-box-mini button { background: #c2410c; font-size: .7rem; padding: 4px 10px; }
+        button {
+            background: #1e6f3f; color: white; border: none;
+            padding: 10px 20px; border-radius: 40px; font-weight: 600; cursor: pointer;
+        }
+        .btn-pdf { background: #d97706; }
+        .btn-peligro { background: #b91c1c; }
+        .btn-sec { background: #475569; }
+        .btn-agregar-frente { background: #2c5e3f; margin-top: 10px; }
+        .save-indicator { font-size: .8rem; color: #2b9348; margin-left: 10px; }
+
+        /* ── PWA: Offline badge ── */
+        #offline-badge {
+            display: none; position: fixed; top: max(10px, env(safe-area-inset-top));
+            left: 50%; transform: translateX(-50%);
+            background: #b91c1c; color: white; padding: 6px 18px;
+            border-radius: 40px; font-size: .8rem; font-weight: 700;
+            z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,.3);
+        }
+        #offline-badge.visible { display: block; }
+
+        /* ── PWA: Install banner ── */
+        #install-banner {
+            display: none; background: #1e3a2f; color: white;
+            padding: 14px 20px; border-radius: 20px; margin-bottom: 16px;
+            align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+        }
+        #install-banner.visible { display: flex; }
+        #install-banner p { font-size: .9rem; flex: 1; }
+        #install-banner strong { font-size: 1rem; display: block; }
+        #btn-install { background: #2b9348; padding: 8px 18px; font-size: .85rem; }
+        #btn-install-dismiss {
+            background: transparent; border: 1px solid rgba(255,255,255,.4);
+            color: white; padding: 8px 14px; font-size: .8rem;
+        }
+
+        /* ── PWA: iOS install guide ── */
+        #ios-guide {
+            display: none; background: #f0fdf4; border: 1px solid #86efac;
+            border-radius: 16px; padding: 14px 18px; margin-bottom: 16px; font-size: .88rem;
+        }
+        #ios-guide.visible { display: block; }
+        #ios-guide ol { padding-left: 18px; margin-top: 6px; }
+        #ios-guide li { margin-bottom: 5px; }
+
+        /* ── DB status ── */
+        #db-status { font-size: .75rem; color: #6b7280; margin-left: 8px; }
+
+        @media (max-width: 760px) {
+            .item-row { flex-direction: column; align-items: flex-start; }
+            .estado-btns { align-self: flex-end; }
+        }
+
+        /* ========== ESTILOS PDF (ventana de impresión) ========== */
+        @media print {
+            body { background: white; padding: 0; margin: 0; }
+            .no-print { display: none; }
+            .print-container { margin: 0; padding: 15px; }
+        }
+    </style>
+</head>
+<body>
+<div id="offline-badge">📵 Sin conexión — trabajando offline</div>
+
+<div class="container">
+
+    <!-- Banner de instalación (Android / Chrome) -->
+    <div id="install-banner">
+        <div>
+            <strong>📲 Instalar Inspector CARDIQUE</strong>
+            <p>Agrégala a tu pantalla de inicio para usarla sin conexión como una app nativa.</p>
+        </div>
+        <button id="btn-install">Instalar</button>
+        <button id="btn-install-dismiss">Ahora no</button>
+    </div>
+
+    <!-- Guía iOS (Safari) -->
+    <div id="ios-guide">
+        <strong>📲 Instalar en iPhone / iPad</strong>
+        <ol>
+            <li>Toca el botón <strong>Compartir</strong> (📤) en Safari</li>
+            <li>Selecciona <strong>"Agregar a pantalla de inicio"</strong></li>
+            <li>Toca <strong>Agregar</strong> — ya tendrás el ícono en tu pantalla</li>
+        </ol>
+        <button onclick="document.getElementById('ios-guide').classList.remove('visible')" style="margin-top:10px;font-size:.75rem;padding:5px 14px;">Entendido</button>
+    </div>
+
+    <!-- Header -->
+    <div class="header-cardique no-print">
+        <div class="logo-area">
+            <img id="logo-img" class="logo-img" style="display:none;" alt="Logo CARDIQUE">
+            <div id="logo-placeholder" style="background:#1e3a2f;color:white;padding:8px 16px;border-radius:40px;">🌿 CARDIQUE</div>
+            <button id="cargar-logo-btn" class="btn-cargar-logo">🖼️ Cargar logo</button>
+            <input type="file" id="logo-file-input" accept="image/*" style="display:none;">
+        </div>
+        <div>
+            <h1 style="color:#1e4620;">Inspección Ambiental y SST por Frente de Obra</h1>
+            <p>Corporación Autónoma Regional del Canal del Dique</p>
+        </div>
+    </div>
+
+    <div class="security-banner no-print">
+        🔒 MODO SEGURO: Datos no salen de su dispositivo
+        <span id="db-status">⏳ cargando…</span>
+    </div>
+
+    <!-- Datos generales -->
+    <div class="card no-print">
+        <div class="card-header"><h2>📋 Datos generales de la inspección</h2></div>
+        <div class="form-row">
+            <div class="form-group"><label>🏭 Proyecto</label><input type="text" id="proyecto" value="Proyecto Integral - Varios Frentes"></div>
+            <div class="form-group"><label>📅 Fecha</label><input type="date" id="fecha"></div>
+            <div class="form-group"><label>📍 Ubicación general</label><input type="text" id="ubicacion" value="Jurisdicción CARDIQUE"></div>
+            <div class="form-group"><label>👤 Inspector</label><input type="text" id="inspector"></div>
+        </div>
+    </div>
+
+    <!-- Frentes -->
+    <div class="card no-print">
+        <div class="card-header"><h2>🏗️ Frentes de obra</h2></div>
+        <div id="frentes-container"></div>
+        <button id="agregar-frente" class="btn-agregar-frente">➕ Agregar nuevo frente</button>
+    </div>
+
+    <!-- Acciones -->
+    <div class="no-print" style="display:flex;flex-wrap:wrap;gap:16px;margin-bottom:20px;align-items:center;">
+        <button id="exportar-json" class="btn-sec">📥 Exportar respaldo JSON</button>
+        <button id="importar-json" class="btn-sec">📤 Importar JSON</button>
+        <input type="file" id="importar-json-input" accept=".json" style="display:none;">
+        <button id="generar-pdf" class="btn-pdf">📄 Generar Informe para Dirección</button>
+        <button id="reset-global" class="btn-peligro">🔄 Reiniciar todo</button>
+        <button id="guardar-manual" style="background:#2c5e3f;">💾 Guardar</button>
+        <span id="save-indicator" class="save-indicator"></span>
+    </div>
+
+</div><!-- /container -->
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  CARDIQUE Inspector SST — PWA Core v1.0
+//  Almacenamiento: IndexedDB (principal) + localStorage (fallback)
+// ═══════════════════════════════════════════════════════════════
+
+// ── 1. REGISTRO DEL SERVICE WORKER ──────────────────────────
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+            .then(reg => {
+                console.log('[SW] Registrado:', reg.scope);
+                // Escuchar mensajes del SW (sync, updates)
+                navigator.serviceWorker.addEventListener('message', e => {
+                    if (e.data?.type === 'SYNC_COMPLETE') {
+                        showToast('☁️ Datos sincronizados correctamente');
+                    }
+                });
+            })
+            .catch(err => console.warn('[SW] Error de registro:', err));
+    });
+}
+
+// ── 2. DETECCIÓN OFFLINE ─────────────────────────────────────
+const offlineBadge = document.getElementById('offline-badge');
+function updateOnlineStatus() {
+    if (navigator.onLine) {
+        offlineBadge.classList.remove('visible');
+        // Intentar Background Sync si hay SW registrado
+        if ('serviceWorker' in navigator && 'SyncManager' in window) {
+            navigator.serviceWorker.ready.then(reg => {
+                reg.sync.register('sync-inspecciones').catch(() => {});
+            });
+        }
+    } else {
+        offlineBadge.classList.add('visible');
+    }
+}
+window.addEventListener('online',  updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+updateOnlineStatus();
+
+// ── 3. INSTALL PROMPT (Android/Chrome) ───────────────────────
+let deferredPrompt = null;
+const installBanner  = document.getElementById('install-banner');
+const btnInstall     = document.getElementById('btn-install');
+const btnDismiss     = document.getElementById('btn-install-dismiss');
+
+window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredPrompt = e;
+    installBanner.classList.add('visible');
+});
+btnInstall.onclick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') showToast('✅ App instalada correctamente');
+    deferredPrompt = null;
+    installBanner.classList.remove('visible');
+};
+btnDismiss.onclick = () => {
+    installBanner.classList.remove('visible');
+    localStorage.setItem('install-dismissed', '1');
+};
+window.addEventListener('appinstalled', () => {
+    installBanner.classList.remove('visible');
+    showToast('🎉 Inspector CARDIQUE instalado como app');
+});
+
+// Guía iOS: mostrar solo en Safari iOS si no está instalado
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+if (isIOS && !isInStandaloneMode && !localStorage.getItem('ios-guide-dismissed')) {
+    document.getElementById('ios-guide').classList.add('visible');
+}
+
+// ── 4. INDEXEDDB ─────────────────────────────────────────────
+const DB_NAME    = 'cardique_inspector';
+const DB_VERSION = 1;
+const STORE_DATA = 'inspecciones';
+const STORE_LOGO = 'config';
+let db = null;
+const dbStatus = document.getElementById('db-status');
+
+function initDB() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = e => {
+            const database = e.target.result;
+            if (!database.objectStoreNames.contains(STORE_DATA)) {
+                database.createObjectStore(STORE_DATA, { keyPath: 'id' });
+            }
+            if (!database.objectStoreNames.contains(STORE_LOGO)) {
+                database.createObjectStore(STORE_LOGO, { keyPath: 'key' });
+            }
+        };
+        req.onsuccess = e => {
+            db = e.target.result;
+            dbStatus.textContent = '🟢 IndexedDB activa';
+            resolve(db);
+        };
+        req.onerror = () => {
+            dbStatus.textContent = '🟡 Modo localStorage';
+            reject(req.error);
+        };
+    });
+}
+
+function dbPut(storeName, value) {
+    return new Promise((resolve, reject) => {
+        if (!db) { resolve(false); return; }
+        const tx = db.transaction(storeName, 'readwrite');
+        const req = tx.objectStore(storeName).put(value);
+        req.onsuccess = () => resolve(true);
+        req.onerror  = () => reject(req.error);
+    });
+}
+
+function dbGet(storeName, key) {
+    return new Promise((resolve, reject) => {
+        if (!db) { resolve(null); return; }
+        const tx = db.transaction(storeName, 'readonly');
+        const req = tx.objectStore(storeName).get(key);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror  = () => reject(req.error);
+    });
+}
+
+// ── 5. GUARDAR / CARGAR datos (IndexedDB + localStorage fallback) ──
+async function saveData() {
+    const data = {
+        id: 'main',
+        frentes,
+        proyecto: proyectoInput.value,
+        fecha:    fechaInput.value,
+        ubicacion: ubicacionInput.value,
+        inspector: inspectorInput.value,
+        updatedAt: Date.now()
+    };
+    try {
+        if (db) {
+            await dbPut(STORE_DATA, data);
+        }
+        // Guardar siempre en localStorage como respaldo (sin fotos para no saturar)
+        const dataNoFotos = { ...data, frentes: data.frentes.map(f => ({ ...f, fotos: [] })) };
+        localStorage.setItem('cardique_meta', JSON.stringify(dataNoFotos));
+        showSavedMessage();
+    } catch(e) {
+        console.error('[Save]', e);
+        // Fallback total a localStorage
+        try {
+            localStorage.setItem('inspectorFrentesData', JSON.stringify(data));
+            showSavedMessage();
+        } catch(e2) {
+            alert('⚠️ Error al guardar. El almacenamiento puede estar lleno.');
+        }
+    }
+}
+
+async function loadData() {
+    try {
+        let data = null;
+        if (db) {
+            data = await dbGet(STORE_DATA, 'main');
+        }
+        if (!data) {
+            // Intentar localStorage
+            const raw = localStorage.getItem('inspectorFrentesData') || localStorage.getItem('cardique_meta');
+            if (raw) data = JSON.parse(raw);
+        }
+        if (data) {
+            frentes = data.frentes || frentes;
+            proyectoInput.value  = data.proyecto  || '';
+            fechaInput.value     = data.fecha      || '';
+            ubicacionInput.value = data.ubicacion  || '';
+            inspectorInput.value = data.inspector  || '';
+        }
+    } catch(e) {
+        console.warn('[Load]', e);
+    }
+    renderFrentes();
+}
+
+async function saveLogo(dataUrl) {
+    if (db) await dbPut(STORE_LOGO, { key: 'logo', value: dataUrl });
+    localStorage.setItem('cardique_logo', dataUrl);
+}
+
+async function loadLogo() {
+    let logoData = null;
+    if (db) {
+        const rec = await dbGet(STORE_LOGO, 'logo');
+        logoData = rec?.value || null;
+    }
+    if (!logoData) logoData = localStorage.getItem('cardique_logo');
+    if (logoData) {
+        logoImg.src = logoData;
+        logoImg.style.display = 'block';
+        logoPlaceholder.style.display = 'none';
+    }
+}
+
+// ── 6. TOAST ─────────────────────────────────────────────────
+function showToast(msg, duration = 2500) {
+    let t = document.getElementById('pwa-toast');
+    if (!t) {
+        t = document.createElement('div');
+        t.id = 'pwa-toast';
+        t.style.cssText = `
+            position:fixed;bottom:max(24px,env(safe-area-inset-bottom));left:50%;
+            transform:translateX(-50%);background:#1e3a2f;color:#d1fae5;
+            padding:10px 22px;border-radius:40px;font-size:.85rem;font-weight:600;
+            z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.3);
+            transition:opacity .3s;pointer-events:none;`;
+        document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.style.opacity = '0'; }, duration);
+}
+
+// ── 7. MODELO DE DATOS ───────────────────────────────────────
+const CATEGORIAS_BASE = [
+    { id: 'ambiental', nombre: '🌱 Ambiental', items: [
+        { id: 'amb1', texto: 'Buen orden y aseo en el frente de obra.', cumple: null, obs: '' },
+        { id: 'amb2', texto: 'Manejo adecuado de residuos sólidos.', cumple: null, obs: '' },
+        { id: 'amb3', texto: 'Puntos ecologicos en buen estado.', cumple: null, obs: '' },
+        { id: 'amb4', texto: 'Control de material particulado (Carque y descargue de material por volquetas)', cumple: null, obs: '' }
+    ]},
+    { id: 'sst', nombre: '⛑️ Seguridad y Salud (SST)', items: [
+        { id: 'sst1', texto: 'Uso de EPP por cada trabajador, segun su actividad.', cumple: null, obs: '' },
+        { id: 'sst2', texto: 'Señalización y aislamiento.', cumple: null, obs: '' },
+        { id: 'sst3', texto: 'Capacitaciones e inducciones de seguridad al dia.', cumple: null, obs: '' },
+        { id: 'sst4', texto: 'Paletero en cruces viales.', cumple: null, obs: '' },
+        { id: 'sst5', texto: 'Botiquín, kit antiderrame y extintor disponible.', cumple: null, obs: '' },
+        { id: 'sst6', texto: 'Inspecciones diarias preoperacionales.', cumple: null, obs: '' },
+        { id: 'sst7', texto: 'Plan de contingencia Actualizado e implementado.', cumple: null, obs: '' }
+    ]}
+];
+
+let frentes = [
+    { nombre: 'Frente 1 - Arroyo Ají Molido', categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: '', recomendaciones: '' },
+    { nombre: 'Frente 2 - Box Matagente',      categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: '', recomendaciones: '' }
+];
+
+// ── 8. DOM REFS ───────────────────────────────────────────────
+const frentesContainer = document.getElementById('frentes-container');
+const btnResetGlobal   = document.getElementById('reset-global');
+const btnExportarJson  = document.getElementById('exportar-json');
+const btnImportarJson  = document.getElementById('importar-json');
+const importarInput    = document.getElementById('importar-json-input');
+const btnGenerarPdf    = document.getElementById('generar-pdf');
+const btnGuardarManual = document.getElementById('guardar-manual');
+const saveIndicator    = document.getElementById('save-indicator');
+const fechaInput       = document.getElementById('fecha');
+const btnAgregarFrente = document.getElementById('agregar-frente');
+const logoImg          = document.getElementById('logo-img');
+const logoPlaceholder  = document.getElementById('logo-placeholder');
+const cargarLogoBtn    = document.getElementById('cargar-logo-btn');
+const logoFileInput    = document.getElementById('logo-file-input');
+const proyectoInput    = document.getElementById('proyecto');
+const ubicacionInput   = document.getElementById('ubicacion');
+const inspectorInput   = document.getElementById('inspector');
+
+fechaInput.valueAsDate = new Date();
+
+function showSavedMessage() {
+    saveIndicator.textContent = '✅ Guardado';
+    setTimeout(() => saveIndicator.textContent = '', 2000);
+}
+
+// ── 9. LOGO ───────────────────────────────────────────────────
+cargarLogoBtn.onclick = () => logoFileInput.click();
+logoFileInput.onchange = e => {
+    const file = e.target.files[0];
+    if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = async ev => {
+            const d = ev.target.result;
+            logoImg.src = d; logoImg.style.display = 'block';
+            logoPlaceholder.style.display = 'none';
+            await saveLogo(d);
+        };
+        reader.readAsDataURL(file);
+    }
+};
+
+// ── 10. DICTADO ───────────────────────────────────────────────
+function addDictationToTextarea(textarea, idx, fieldName) {
+    const grabDiv   = document.createElement('div');   grabDiv.className = 'grab-box-mini';
+    const btnGrabar = document.createElement('button'); btnGrabar.innerText = '🎤 Dictar';
+    btnGrabar.style.background = '#c2410c'; btnGrabar.style.fontSize = '.7rem';
+    const estadoSpan = document.createElement('span');  estadoSpan.innerText = '⚪'; estadoSpan.style.fontSize = '.7rem';
+    grabDiv.appendChild(btnGrabar); grabDiv.appendChild(estadoSpan);
+    let recognition = null, grabando = false;
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SR();
+        recognition.lang = 'es-ES'; recognition.continuous = false;
+        recognition.onstart  = () => { grabando = true;  estadoSpan.innerText = '🔴 Grabando…'; btnGrabar.innerText = '⏹️ Detener'; };
+        recognition.onend    = () => { grabando = false; estadoSpan.innerText = '⚪ Listo';     btnGrabar.innerText = '🎤 Dictar'; };
+        recognition.onresult = e => {
+            const t = e.results[0][0].transcript;
+            textarea.value = textarea.value ? textarea.value + ' ' + t : t;
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        };
+        recognition.onerror = () => { estadoSpan.innerText = '❌ Error'; grabando = false; };
+        btnGrabar.onclick = () => { if (!recognition) return; grabando ? recognition.stop() : recognition.start(); };
+    } else { btnGrabar.disabled = true; estadoSpan.innerText = '❌ No soportado'; }
+    return grabDiv;
+}
+
+// ── 11. RENDER FRENTES ────────────────────────────────────────
+function renderFrentes() {
+    frentesContainer.innerHTML = '';
+    frentes.forEach((frente, idx) => {
+        const frenteDiv  = document.createElement('div');  frenteDiv.className = 'frente-card';
+        const headerDiv  = document.createElement('div');  headerDiv.className = 'frente-header';
+        const tituloDiv  = document.createElement('div');  tituloDiv.className = 'frente-titulo';
+        const nombreInput = document.createElement('input'); nombreInput.type = 'text'; nombreInput.value = frente.nombre;
+        nombreInput.style.width = '70%'; nombreInput.style.fontWeight = 'bold';
+        nombreInput.addEventListener('change', e => { frentes[idx].nombre = e.target.value; saveData(); });
+        tituloDiv.appendChild(nombreInput);
+        const btnEliminar = document.createElement('button'); btnEliminar.innerText = '🗑️ Eliminar frente';
+        btnEliminar.className = 'btn-eliminar-frente';
+        btnEliminar.onclick = () => { if (confirm('¿Eliminar este frente?')) { frentes.splice(idx, 1); saveData(); renderFrentes(); } };
+        headerDiv.appendChild(tituloDiv); headerDiv.appendChild(btnEliminar);
+        frenteDiv.appendChild(headerDiv);
+
+        frente.categorias.forEach((cat, catIdx) => {
+            const catDiv = document.createElement('div'); catDiv.className = 'categoria';
+            const catTitulo = document.createElement('div'); catTitulo.className = 'cat-titulo'; catTitulo.innerText = cat.nombre;
+            catDiv.appendChild(catTitulo);
+            const itemsDiv = document.createElement('div'); itemsDiv.className = 'items-grid';
+            cat.items.forEach((item, itemIdx) => {
+                const itemCard = document.createElement('div'); itemCard.className = 'item-card';
+                const row = document.createElement('div'); row.className = 'item-row';
+                const desc = document.createElement('div'); desc.className = 'item-desc'; desc.innerText = item.texto;
+                const acciones = document.createElement('div'); acciones.className = 'item-actions';
+                const estadoDiv = document.createElement('div'); estadoDiv.className = 'estado-btns';
+                const btnSi = document.createElement('button'); btnSi.innerText = '✅ Cumple'; btnSi.className = `btn-cumple ${item.cumple === true ? 'activo' : ''}`;
+                const btnNo = document.createElement('button'); btnNo.innerText = '❌ No cumple'; btnNo.className = `btn-nocumple ${item.cumple === false ? 'activo' : ''}`;
+                btnSi.onclick = () => { item.cumple = true;  saveData(); renderFrentes(); };
+                btnNo.onclick = () => { item.cumple = false; saveData(); renderFrentes(); };
+                estadoDiv.appendChild(btnSi); estadoDiv.appendChild(btnNo);
+                const editar  = document.createElement('button'); editar.innerHTML  = '✏️'; editar.className = 'btn-editar';
+                editar.onclick  = () => { const n = prompt('Editar ítem:', item.texto); if (n) { item.texto = n; saveData(); renderFrentes(); } };
+                const eliminar = document.createElement('button'); eliminar.innerHTML = '🗑️'; eliminar.className = 'btn-eliminar';
+                eliminar.onclick = () => { if (confirm('¿Eliminar ítem?')) { cat.items.splice(itemIdx, 1); saveData(); renderFrentes(); } };
+                acciones.appendChild(estadoDiv); acciones.appendChild(editar); acciones.appendChild(eliminar);
+                row.appendChild(desc); row.appendChild(acciones);
+                const obsDiv   = document.createElement('div'); obsDiv.className = 'item-obs';
+                const obsInput = document.createElement('input'); obsInput.placeholder = 'Observación del ítem'; obsInput.value = item.obs || '';
+                obsInput.onchange = e => { item.obs = e.target.value; saveData(); };
+                obsDiv.appendChild(obsInput);
+                itemCard.appendChild(row); itemCard.appendChild(obsDiv);
+                itemsDiv.appendChild(itemCard);
+            });
+            catDiv.appendChild(itemsDiv);
+            const btnAgregarItem = document.createElement('div'); btnAgregarItem.className = 'agregar-item';
+            btnAgregarItem.innerHTML = '➕ Agregar ítem';
+            btnAgregarItem.onclick = () => { const t = prompt('Nuevo ítem:'); if (t) { cat.items.push({ id: Date.now()+'_'+Math.random(), texto: t, cumple: null, obs: '' }); saveData(); renderFrentes(); } };
+            catDiv.appendChild(btnAgregarItem);
+            frenteDiv.appendChild(catDiv);
+        });
+
+        // Fotos
+        const fotosDiv = document.createElement('div'); fotosDiv.className = 'frente-fotos-area';
+        const fotosTitulo = document.createElement('h4'); fotosTitulo.innerText = '📸 Evidencia fotográfica';
+        fotosDiv.appendChild(fotosTitulo);
+        const fotosGrid = document.createElement('div'); fotosGrid.className = 'fotos-grid';
+        if (frente.fotos?.length > 0) {
+            frente.fotos.forEach((foto, fotoIdx) => {
+                const thumb  = document.createElement('div'); thumb.className = 'foto-thumb';
+                const img    = document.createElement('img'); img.src = foto;
+                const btnDel = document.createElement('button'); btnDel.innerText = '✕'; btnDel.className = 'del-foto';
+                btnDel.onclick = () => { frentes[idx].fotos.splice(fotoIdx, 1); saveData(); renderFrentes(); };
+                thumb.appendChild(img); thumb.appendChild(btnDel);
+                fotosGrid.appendChild(thumb);
+            });
+        } else {
+            const empty = document.createElement('p'); empty.innerText = 'No hay fotos.';
+            empty.style.cssText = 'font-size:.8rem;color:#6c757d;'; fotosGrid.appendChild(empty);
+        }
+        fotosDiv.appendChild(fotosGrid);
+        const btnFoto = document.createElement('button'); btnFoto.className = 'btn-foto'; btnFoto.innerHTML = '📷 Subir fotos';
+        btnFoto.onclick = () => {
+            const input = document.createElement('input'); input.type = 'file'; input.multiple = true; input.accept = 'image/*';
+            input.onchange = e => {
+                Array.from(e.target.files).forEach(file => {
+                    if (!file.type.startsWith('image/')) return;
+                    const reader = new FileReader();
+                    reader.onload = ev => { if (!frentes[idx].fotos) frentes[idx].fotos = []; frentes[idx].fotos.push(ev.target.result); saveData(); renderFrentes(); };
+                    reader.readAsDataURL(file);
+                });
+            };
+            input.click();
+        };
+        fotosDiv.appendChild(btnFoto);
+        frenteDiv.appendChild(fotosDiv);
+
+        // Observaciones
+        const obsDiv = document.createElement('div'); obsDiv.className = 'frente-obs-area';
+        const obsTitulo = document.createElement('h4'); obsTitulo.innerText = '📝 Observaciones específicas';
+        obsDiv.appendChild(obsTitulo);
+        const obsTA = document.createElement('textarea'); obsTA.rows = 2; obsTA.placeholder = 'Observaciones particulares…'; obsTA.value = frente.observaciones || '';
+        obsTA.addEventListener('input', e => { frentes[idx].observaciones = e.target.value; saveData(); });
+        obsDiv.appendChild(obsTA); obsDiv.appendChild(addDictationToTextarea(obsTA, idx, 'observaciones'));
+        frenteDiv.appendChild(obsDiv);
+
+        // Recomendaciones
+        const recDiv = document.createElement('div'); recDiv.className = 'frente-recomendaciones-area';
+        const recTitulo = document.createElement('h4'); recTitulo.innerText = '📋 Recomendaciones';
+        recDiv.appendChild(recTitulo);
+        const recTA = document.createElement('textarea'); recTA.rows = 3; recTA.placeholder = 'Recomendaciones específicas…'; recTA.value = frente.recomendaciones || '';
+        recTA.addEventListener('input', e => { frentes[idx].recomendaciones = e.target.value; saveData(); });
+        recDiv.appendChild(recTA); recDiv.appendChild(addDictationToTextarea(recTA, idx, 'recomendaciones'));
+        frenteDiv.appendChild(recDiv);
+
+        frentesContainer.appendChild(frenteDiv);
+    });
+}
+
+// ── 12. ACCIONES BOTONES ─────────────────────────────────────
+btnGuardarManual.onclick = () => { saveData(); showToast('💾 Datos guardados correctamente'); };
+
+btnExportarJson.onclick = () => {
+    const data = { proyecto: proyectoInput.value, fecha: fechaInput.value, ubicacion: ubicacionInput.value, inspector: inspectorInput.value, frentes, exportadoEn: new Date().toISOString() };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url;
+    a.download = `inspeccion_${fechaInput.value || 'sin-fecha'}.json`; a.click();
+    URL.revokeObjectURL(url);
+};
+
+btnImportarJson.onclick = () => importarInput.click();
+importarInput.onchange = e => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async ev => {
+        try {
+            const data = JSON.parse(ev.target.result);
+            if (!data.frentes) throw new Error('Archivo inválido');
+            frentes = data.frentes;
+            proyectoInput.value  = data.proyecto  || '';
+            fechaInput.value     = data.fecha      || '';
+            ubicacionInput.value = data.ubicacion  || '';
+            inspectorInput.value = data.inspector  || '';
+            await saveData();
+            renderFrentes();
+            showToast('📤 Datos importados correctamente');
+        } catch(err) { alert('❌ Error al importar: ' + err.message); }
+    };
+    reader.readAsText(file);
+};
+
+btnResetGlobal.onclick = async () => {
+    if (!confirm('⚠️ Reiniciar borrará todos los datos. ¿Continuar?')) return;
+    frentes = [
+        { nombre: 'Frente 1 - Arroyo Ají Molido', categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: '', recomendaciones: '' },
+        { nombre: 'Frente 2 - Box Matagente',      categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: '', recomendaciones: '' }
+    ];
+    proyectoInput.value = 'Proyecto Integral - Varios Frentes';
+    fechaInput.valueAsDate = new Date();
+    ubicacionInput.value = 'Jurisdicción CARDIQUE';
+    inspectorInput.value = '';
+    await saveData(); renderFrentes();
+};
+
+btnAgregarFrente.onclick = () => {
+    const n = prompt('Nombre del nuevo frente:', 'Nuevo frente');
+    if (n?.trim()) {
+        frentes.push({ nombre: n.trim(), categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: '', recomendaciones: '' });
+        saveData(); renderFrentes();
+    } else if (n !== null) alert('Debe ingresar un nombre.');
+};
+
+// Auto-guardar al cambiar campos de encabezado
+[proyectoInput, ubicacionInput, inspectorInput].forEach(el => el.addEventListener('input', saveData));
+fechaInput.addEventListener('change', saveData);
+
+// ── 13. GENERACIÓN PDF (sin cambios funcionales) ──────────────
+function svgPieChart(cumple, noCumple, sinCalif, size) {
+    const total = cumple + noCumple + sinCalif;
+    if (total === 0) return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${size/2}" cy="${size/2}" r="${size/2-4}" fill="#e2e8f0"/><text x="${size/2}" y="${size/2+5}" text-anchor="middle" font-size="11" fill="#64748b">Sin datos</text></svg>`;
+    const cx = size/2, cy = size/2, r = size/2-6;
+    const colors = ['#2b9348','#dc2626','#f59e0b'], valores = [cumple, noCumple, sinCalif];
+    let paths = '', startAngle = -90;
+    for (let i = 0; i < 3; i++) {
+        if (valores[i] === 0) continue;
+        const slice = (valores[i]/total)*360, endAngle = startAngle + slice, rad = Math.PI/180;
+        const x1 = cx + r*Math.cos(startAngle*rad), y1 = cy + r*Math.sin(startAngle*rad);
+        const x2 = cx + r*Math.cos(endAngle*rad),   y2 = cy + r*Math.sin(endAngle*rad);
+        const la = slice > 180 ? 1 : 0;
+        if (valores[i] === total) paths += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${colors[i]}"/>`;
+        else paths += `<path d="M${cx},${cy} L${x1.toFixed(2)},${y1.toFixed(2)} A${r},${r} 0 ${la},1 ${x2.toFixed(2)},${y2.toFixed(2)} Z" fill="${colors[i]}"/>`;
+        startAngle = endAngle;
+    }
+    return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="filter:drop-shadow(0 2px 4px rgba(0,0,0,.15))">${paths}<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="white" stroke-width="1.5"/></svg>`;
+}
+function svgProgressBar(pct, width, height, color) {
+    const p = Math.max(0, Math.min(100, parseFloat(pct)||0));
+    const f = (p/100*width).toFixed(1);
+    return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect x="0" y="0" width="${width}" height="${height}" rx="${height/2}" fill="#e2e8f0"/><rect x="0" y="0" width="${f}" height="${height}" rx="${height/2}" fill="${color}"/><text x="${Math.max(parseFloat(f)-4,8)}" y="${height/2+4}" text-anchor="end" font-size="${height*.65}" fill="white" font-weight="bold">${p}%</text></svg>`;
+}
+function estadoColor(cumple) {
+    if (cumple === true)  return { bg:'#dcfce7', text:'#166534', label:'CUMPLE' };
+    if (cumple === false) return { bg:'#fee2e2', text:'#991b1b', label:'NO CUMPLE' };
+    return { bg:'#fef9c3', text:'#78350f', label:'SIN CALIFICAR' };
+}
+function svgEstado(cumple) {
+    if (cumple === true)  return `<svg width="14" height="14" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="#2b9348"/><path d="M4.5 8l2.5 2.5 4.5-4.5" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/></svg>`;
+    if (cumple === false) return `<svg width="14" height="14" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="#dc2626"/><path d="M5 5l6 6M11 5l-6 6" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>`;
+    return `<svg width="14" height="14" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="#f59e0b"/><rect x="7" y="4" width="2" height="5" rx="1" fill="white"/><rect x="7" y="10.5" width="2" height="2" rx="1" fill="white"/></svg>`;
+}
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;');
+}
+
+function generarInformeDireccion() {
+    if (frentes.length === 0) { alert('Debe haber al menos un frente de obra para generar el informe.'); return; }
+    let gC=0, gN=0, gS=0, fStats=[];
+    for (let f of frentes) {
+        let c=0,n=0,s=0;
+        for (let cat of f.categorias) for (let it of cat.items) { if(it.cumple===true)c++; else if(it.cumple===false)n++; else s++; }
+        const total=c+n+s, pct=total>0?(c/total*100).toFixed(1):0;
+        fStats.push({ nombre:f.nombre, cumple:c, noCumple:n, sinCalificar:s, total, pctCumple:pct });
+        gC+=c; gN+=n; gS+=s;
+    }
+    const tG=gC+gN+gS, pG=tG>0?(gC/tG*100).toFixed(1):0;
+    const proyecto=proyectoInput.value, fecha=fechaInput.value, ubicacion=ubicacionInput.value;
+    const inspector=inspectorInput.value||'No especificado';
+    const logoData=(logoImg.style.display!=='none'&&logoImg.src?.startsWith('data:'))?logoImg.src:null;
+    const ahora=new Date().toLocaleString('es-CO');
+    const pN=parseFloat(pG);
+    const semColor=pN>=80?'#16a34a':pN>=50?'#d97706':'#dc2626';
+    const semLabel=pN>=80?'ACEPTABLE':pN>=50?'EN PROCESO':'CRÍTICO';
+
+    const css = `
+        @page{size:A4;margin:2cm 1.8cm 2.2cm 1.8cm;}
+        *{box-sizing:border-box;}
+        body{font-family:'Calibri','Segoe UI',Arial,sans-serif;font-size:10pt;line-height:1.5;color:#1f2d3d;background:white;}
+        .portada{text-align:center;page-break-after:always;}
+        .portada-header{background:linear-gradient(160deg,#0a2e1a 0%,#1a5c32 55%,#2b9348 100%);padding:38px 30px 32px;color:white;}
+        .portada-org{font-size:16pt;font-weight:800;color:#fff;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;line-height:1.3;}
+        .portada-sub{font-size:12pt;font-weight:600;color:#fff;opacity:.88;}
+        .portada-accent{width:60px;height:3px;background:#6ee7a0;margin:14px auto 0;border-radius:4px;}
+        .portada-body{padding:36px 30px 28px;background:white;display:flex;flex-direction:column;align-items:center;}
+        .portada-titulo{font-size:26pt;font-weight:900;color:#0a2e1a;line-height:1.15;margin:0 0 8px;}
+        .portada-tipo{font-size:11pt;color:#4b5563;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:32px;}
+        .portada-divider{width:72%;height:1px;background:linear-gradient(90deg,transparent,#2b9348,transparent);margin:0 auto 28px;}
+        .portada-ficha{display:inline-block;background:#f0fdf4;border:1.5px solid #86efac;border-radius:14px;padding:18px 30px;text-align:left;font-size:9.5pt;min-width:340px;}
+        .portada-ficha td:first-child{font-weight:700;color:#166534;padding-right:16px;padding-bottom:8px;white-space:nowrap;}
+        .portada-ficha td:last-child{color:#1f2d3d;padding-bottom:8px;font-weight:500;}
+        .portada-footer-strip{background:#f0fdf4;border-top:2px solid #bbf7d0;padding:11px 20px;text-align:center;font-size:7.5pt;color:#4b7a5a;margin-top:28px;}
+        .sem-badge{display:inline-block;background:${semColor};color:white;font-size:11pt;font-weight:800;padding:8px 22px;border-radius:40px;margin-top:22px;}
+        .sec-h{background:#1e3a2f;color:white;padding:9px 16px;border-radius:8px 8px 0 0;font-size:13pt;font-weight:700;margin-top:22px;page-break-after:avoid;}
+        .sec-b{border:1px solid #d1fae5;border-top:none;border-radius:0 0 8px 8px;padding:14px 16px;margin-bottom:18px;background:#fafffe;}
+        .kpi-row{display:flex;gap:12px;margin:12px 0;}
+        .kpi-card{flex:1;background:white;border:1px solid #e2e8f0;border-radius:10px;padding:12px 8px;text-align:center;}
+        .kpi-num{font-size:22pt;font-weight:800;line-height:1.1;}
+        .kpi-lbl{font-size:8.5pt;color:#6b7280;margin-top:3px;}
+        .t-resumen{width:100%;border-collapse:collapse;margin:14px 0;font-size:9.5pt;}
+        .t-resumen thead th{background:#1e3a2f;color:white;padding:8px 10px;text-align:center;font-weight:700;}
+        .t-resumen thead th:first-child{text-align:left;}
+        .t-resumen tbody tr:nth-child(even){background:#f8fafc;}
+        .t-resumen tbody td{padding:7px 10px;border-bottom:1px solid #e2e8f0;vertical-align:middle;}
+        .t-resumen tbody td:first-child{font-weight:600;}
+        .frente-pg{page-break-before:always;}
+        .frente-banner{background:linear-gradient(135deg,#1e3a2f 0%,#2b9348 100%);color:white;padding:14px 20px;border-radius:10px;margin-bottom:14px;}
+        .frente-banner h2{margin:0;font-size:14pt;}
+        .frente-banner p{margin:3px 0 0;font-size:9pt;opacity:.85;}
+        .mini-kpi-row{display:flex;gap:10px;margin:10px 0;}
+        .mini-kpi{flex:1;background:white;border:1px solid #e2e8f0;border-radius:8px;padding:8px;text-align:center;}
+        .mini-kpi .num{font-size:15pt;font-weight:800;}
+        .mini-kpi .lbl{font-size:8pt;color:#6b7280;}
+        .ck-table{width:100%;border-collapse:collapse;margin:8px 0 16px;font-size:9pt;}
+        .ck-table thead tr{background:#1e6f3f;color:white;}
+        .ck-table thead th{padding:7px 9px;text-align:center;font-weight:700;}
+        .ck-table thead th:first-child{text-align:left;width:54%;}
+        .ck-table thead th:nth-child(2){width:19%;}
+        .ck-table thead th:nth-child(3){width:27%;}
+        .ck-table tbody tr{page-break-inside:avoid;}
+        .ck-table tbody tr:nth-child(even){background:#f8fafc;}
+        .ck-table tbody td{padding:6px 9px;border-bottom:1px solid #e2e8f0;vertical-align:middle;}
+        .ck-table tbody td:nth-child(2){text-align:center;}
+        .e-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:8pt;font-weight:700;white-space:nowrap;}
+        .cat-h{font-size:10.5pt;font-weight:700;color:#1e6f3f;margin:14px 0 6px;padding:5px 10px;background:#f0fdf4;border-left:4px solid #2b9348;border-radius:0 6px 6px 0;page-break-after:avoid;}
+        .photo-grid{margin:10px 0;}
+        .photo-row{display:flex;gap:10px;margin-bottom:10px;page-break-inside:avoid;break-inside:avoid;}
+        .photo-card{flex:1;page-break-inside:avoid;break-inside:avoid;text-align:center;}
+        .photo-card img{width:100%;max-height:200px;object-fit:cover;border-radius:6px;border:1px solid #cbd5e1;}
+        .photo-card figcaption{font-size:8pt;color:#6b7280;margin-top:3px;}
+        .obs-box{background:#f9fafb;border:1px solid #e2e8f0;border-left:4px solid #2b9348;border-radius:0 6px 6px 0;padding:10px 14px;font-size:9.5pt;margin:8px 0;page-break-inside:avoid;}
+        .rec-box{background:#fffbeb;border:1px solid #fde68a;border-left:4px solid #d97706;border-radius:0 6px 6px 0;padding:10px 14px;font-size:9.5pt;margin:8px 0;page-break-inside:avoid;}
+        .sub-t{font-size:10.5pt;font-weight:700;color:#1e3a2f;margin:14px 0 6px;page-break-after:avoid;}
+        .footer-pdf{text-align:center;font-size:7.5pt;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:8px;margin-top:28px;}
+        @media print{body{margin:0;}.frente-pg{page-break-before:always;}.ck-table tbody tr{page-break-inside:avoid;}}`;
+
+    let html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Informe Inspección CARDIQUE</title><style>${css}</style></head><body>`;
+    html += `<div class="portada"><div class="portada-header">`;
+    html += `<div style="margin-bottom:20px;">`;
+    if (logoData) html += `<img src="${logoData}" style="height:90px;max-width:260px;object-fit:contain;">`;
+    else html += `<div style="border:2px solid rgba(255,255,255,.4);border-radius:10px;padding:10px 28px;display:inline-block;"><span style="font-size:20pt;font-weight:900;color:white;letter-spacing:4px;">CARDIQUE</span></div>`;
+    html += `</div>`;
+    html += `<div class="portada-org">CORPORACIÓN AUTÓNOMA REGIONAL DEL CANAL DEL DIQUE</div>`;
+    html += `<div class="portada-sub">Área Técnica de Planeación</div>`;
+    html += `<div class="portada-accent"></div></div>`;
+    html += `<div class="portada-body">`;
+    html += `<div class="portada-titulo">INFORME DE INSPECCIÓN<br>AMBIENTAL Y SST</div>`;
+    html += `<div class="portada-tipo">Por Frente de Obra</div>`;
+    html += `<div class="portada-divider"></div>`;
+    html += `<table class="portada-ficha"><tbody>
+        <tr><td>📋 Proyecto:</td><td>${escapeHtml(proyecto)}</td></tr>
+        <tr><td>📅 Fecha:</td><td>${fecha}</td></tr>
+        <tr><td>📍 Ubicación:</td><td>${escapeHtml(ubicacion)}</td></tr>
+        <tr><td>👤 Inspector:</td><td>${escapeHtml(inspector)}</td></tr>
+        <tr><td>🏗️ Frentes evaluados:</td><td>${frentes.length}</td></tr>
+    </tbody></table>`;
+    html += `<div class="sem-badge">${semLabel} — ${pG}%</div>`;
+    html += `</div><div class="portada-footer-strip">CARDIQUE · Inspección Ambiental y SST · Documento de uso interno</div></div>`;
+
+    html += `<div class="sec-h">1. Resumen Global de Cumplimiento</div><div class="sec-b">`;
+    html += `<div class="kpi-row">
+        <div class="kpi-card"><div class="kpi-num" style="color:#1e3a2f;">${tG}</div><div class="kpi-lbl">Total Ítems</div></div>
+        <div class="kpi-card"><div class="kpi-num" style="color:#16a34a;">${gC}</div><div class="kpi-lbl">✔ Cumplen</div></div>
+        <div class="kpi-card"><div class="kpi-num" style="color:#dc2626;">${gN}</div><div class="kpi-lbl">✘ No cumplen</div></div>
+        <div class="kpi-card"><div class="kpi-num" style="color:#d97706;">${gS}</div><div class="kpi-lbl">◻ Sin calificar</div></div>
+        <div class="kpi-card"><div class="kpi-num" style="color:${semColor};">${pG}%</div><div class="kpi-lbl">Cumplimiento</div></div>
+    </div>`;
+    html += `<div style="margin-bottom:12px;">${svgProgressBar(pG,560,22,semColor)}</div>`;
+    html += `<table style="width:100%;border-collapse:collapse;"><tr>`;
+    html += `<td style="width:130px;vertical-align:middle;text-align:center;padding-right:20px;">${svgPieChart(gC,gN,gS,120)}</td>`;
+    html += `<td style="vertical-align:top;"><p style="font-weight:700;margin:0 0 8px;">Cumplimiento por frente</p>`;
+    for (let s of fStats) {
+        const bc=parseFloat(s.pctCumple)>=80?'#16a34a':parseFloat(s.pctCumple)>=50?'#d97706':'#dc2626';
+        html += `<div style="margin-bottom:9px;"><div style="font-size:9pt;font-weight:600;margin-bottom:3px;">${escapeHtml(s.nombre)}</div>${svgProgressBar(s.pctCumple,390,18,bc)}<div style="font-size:8pt;color:#6b7280;margin-top:2px;">${s.cumple} cumple · ${s.noCumple} no cumple · ${s.sinCalificar} sin calificar</div></div>`;
+    }
+    html += `</td></tr></table>`;
+    html += `<p style="font-weight:700;margin:16px 0 8px;">Tabla comparativa por frente</p>`;
+    html += `<table class="t-resumen"><thead><tr><th>Frente de Obra</th><th>Total</th><th>Cumple</th><th>No Cumple</th><th>Sin Cal.</th><th>% Cumpl.</th></tr></thead><tbody>`;
+    for (let s of fStats) {
+        const rb=parseFloat(s.pctCumple)>=80?'#f0fdf4':parseFloat(s.pctCumple)>=50?'#fffbeb':'#fff1f2';
+        const tb=parseFloat(s.pctCumple)>=80?'#16a34a':parseFloat(s.pctCumple)>=50?'#d97706':'#dc2626';
+        html += `<tr style="background:${rb};"><td>${escapeHtml(s.nombre)}</td><td style="text-align:center;">${s.total}</td><td style="text-align:center;color:#166534;font-weight:700;">${s.cumple}</td><td style="text-align:center;color:#991b1b;font-weight:700;">${s.noCumple}</td><td style="text-align:center;color:#92400e;font-weight:700;">${s.sinCalificar}</td><td style="text-align:center;font-weight:800;color:${tb};">${s.pctCumple}%</td></tr>`;
+    }
+    html += `</tbody></table></div>`;
+
+    for (let i=0; i<frentes.length; i++) {
+        const f=frentes[i], s=fStats[i];
+        const bc=parseFloat(s.pctCumple)>=80?'#16a34a':parseFloat(s.pctCumple)>=50?'#d97706':'#dc2626';
+        html += `<div class="frente-pg">`;
+        html += `<div class="frente-banner"><h2>🏗️ ${escapeHtml(f.nombre)}</h2><p>Sección ${i+2} de ${frentes.length+1} &nbsp;|&nbsp; Inspector: ${escapeHtml(inspector)} &nbsp;|&nbsp; Fecha: ${fecha}</p></div>`;
+        html += `<div class="mini-kpi-row"><div class="mini-kpi"><div class="num" style="color:#1e3a2f;">${s.total}</div><div class="lbl">Total</div></div><div class="mini-kpi"><div class="num" style="color:#16a34a;">${s.cumple}</div><div class="lbl">Cumple</div></div><div class="mini-kpi"><div class="num" style="color:#dc2626;">${s.noCumple}</div><div class="lbl">No Cumple</div></div><div class="mini-kpi"><div class="num" style="color:#d97706;">${s.sinCalificar}</div><div class="lbl">Sin Cal.</div></div><div class="mini-kpi"><div class="num" style="color:${bc};">${s.pctCumple}%</div><div class="lbl">Cumplimiento</div></div></div>`;
+        html += `<table style="width:100%;border-collapse:collapse;margin:10px 0;"><tr><td style="width:110px;text-align:center;vertical-align:middle;padding-right:16px;">${svgPieChart(s.cumple,s.noCumple,s.sinCalificar,100)}</td><td style="vertical-align:middle;"><div style="font-size:9pt;font-weight:600;margin-bottom:5px;">Barra de cumplimiento</div>${svgProgressBar(s.pctCumple,380,20,bc)}</td></tr></table>`;
+        html += `<div class="sub-t">Checklist de Inspección</div>`;
+        for (let cat of f.categorias) {
+            if (!cat.items.length) continue;
+            let cc=0,cn=0; cat.items.forEach(it=>{ if(it.cumple===true)cc++; else if(it.cumple===false)cn++; });
+            html += `<div class="cat-h">${cat.nombre} <span style="font-weight:400;font-size:8.5pt;color:#4b5563;">(${cc} ✔ / ${cn} ✘ / ${cat.items.length-cc-cn} ◻)</span></div>`;
+            html += `<table class="ck-table"><thead><tr><th>Ítem de Verificación</th><th>Estado</th><th>Observación</th></tr></thead><tbody>`;
+            for (let item of cat.items) {
+                const ec=estadoColor(item.cumple);
+                html += `<tr><td>${escapeHtml(item.texto)}</td><td><span class="e-badge" style="background:${ec.bg};color:${ec.text};">${svgEstado(item.cumple)} ${ec.label}</span></td><td style="color:#4b5563;">${escapeHtml(item.obs||'—')}</td></tr>`;
+            }
+            html += `</tbody></table>`;
+        }
+        if (f.fotos?.length > 0) {
+            html += `<div class="sub-t">📸 Evidencia Fotográfica (${f.fotos.length} foto${f.fotos.length>1?'s':''})</div>`;
+            html += `<div class="photo-grid">`;
+            for (let j=0; j<f.fotos.length; j+=2) {
+                html += `<div class="photo-row">`;
+                html += `<figure class="photo-card"><img src="${f.fotos[j]}" alt="Evidencia ${j+1}"><figcaption>Fotografía ${j+1} — ${escapeHtml(f.nombre)}</figcaption></figure>`;
+                if (j+1 < f.fotos.length) html += `<figure class="photo-card"><img src="${f.fotos[j+1]}" alt="Evidencia ${j+2}"><figcaption>Fotografía ${j+2} — ${escapeHtml(f.nombre)}</figcaption></figure>`;
+                else html += `<div class="photo-card"></div>`;
+                html += `</div>`;
+            }
+            html += `</div>`;
+        }
+        if (f.observaciones)   html += `<div class="sub-t">📝 Observaciones Específicas</div><div class="obs-box">${escapeHtml(f.observaciones).replace(/\n/g,'<br>')}</div>`;
+        if (f.recomendaciones) html += `<div class="sub-t">⚠️ Recomendaciones Técnicas</div><div class="rec-box">${escapeHtml(f.recomendaciones).replace(/\n/g,'<br>')}</div>`;
+        html += `</div>`;
+    }
+    html += `<div class="footer-pdf">Informe generado por Inspector CARDIQUE &nbsp;|&nbsp; Datos no salen del dispositivo<br>Proyecto: ${escapeHtml(proyecto)} &nbsp;|&nbsp; Fecha de emisión: ${ahora}</div>`;
+    html += `</body></html>`;
+
+    const win = window.open('','_blank');
+    if (!win) { alert('Por favor, permita las ventanas emergentes para generar el informe.'); return; }
+    win.document.write(html); win.document.close(); win.focus();
+    setTimeout(() => win.print(), 700);
+}
+
+btnGenerarPdf.onclick = generarInformeDireccion;
+
+// ── 14. ARRANQUE ─────────────────────────────────────────────
+(async () => {
+    try { await initDB(); } catch(e) { /* continúa con localStorage */ }
+    await loadLogo();
+    await loadData();
+})();
+</script>
+</body>
+</html>
