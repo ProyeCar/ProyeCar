@@ -520,10 +520,63 @@
             page-break-inside: avoid;
             break-inside: avoid;
         }
+
+        /* ── NAVEGACIÓN INFERIOR ── */
+        .nav-bar {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: white; border-top: 1px solid #e2e8f0;
+            display: flex; justify-content: space-around; align-items: center;
+            padding: 8px 0; padding-bottom: max(8px, env(safe-area-inset-bottom));
+            z-index: 1000; box-shadow: 0 -4px 12px rgba(0,0,0,.06);
+        }
+        .nav-btn {
+            display: flex; flex-direction: column; align-items: center; gap: 3px;
+            background: none; border: none; color: #94a3b8;
+            font-size: 0.7rem; font-weight: 600; padding: 6px 20px;
+            border-radius: 12px; cursor: pointer;
+            touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+        }
+        .nav-icon { font-size: 1.4rem; }
+        .nav-btn.activo { color: #1e6f3f; }
+        .pantalla { display: none; }
+        .pantalla.activa { display: block; }
+        body { padding-bottom: 80px !important; }
+
+        /* ── HISTORIAL ── */
+        .hist-item {
+            background: white; border-radius: 20px; padding: 16px 18px;
+            margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.05);
+            cursor: pointer;
+        }
+        .hist-fecha { font-size: .8rem; color: #64748b; }
+        .hist-proyecto { font-size: 1rem; font-weight: 700; color: #1e3a2f; margin-bottom: 4px; }
+        .hist-inspector { font-size: .82rem; color: #64748b; }
+        .hist-pct { font-size: 1.2rem; font-weight: 800; }
+        .hist-frentes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+        .hist-tag { background: #f0fdf4; border: 1px solid #86efac; border-radius: 20px; padding: 3px 10px; font-size: .75rem; font-weight: 600; color: #166534; }
+        .hist-empty { text-align: center; padding: 60px 20px; color: #94a3b8; font-size: 1rem; }
+        .hist-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+
+        /* ── COMPARAR ── */
+        .comp-select { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+        .comp-label { font-weight: 600; color: #1e3a2f; margin-bottom: 4px; display: block; }
+        .comp-sel { width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 20px; font-size: .9rem; background: white; }
+        .comp-resultado { margin-top: 16px; }
+        .comp-card { background: white; border-radius: 20px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,.05); }
+        .comp-titulo { font-size: 1rem; font-weight: 700; color: #1e3a2f; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
+        .comp-row { display: flex; gap: 10px; margin-bottom: 10px; }
+        .comp-col { flex: 1; background: #f8fafc; border-radius: 14px; padding: 12px; }
+        .comp-col-title { font-size: .8rem; font-weight: 700; color: #475569; margin-bottom: 8px; text-align: center; }
+        .comp-pct { font-size: 1.6rem; font-weight: 800; text-align: center; margin-bottom: 4px; }
+        .comp-detail { font-size: .78rem; color: #64748b; text-align: center; }
+        .comp-delta { font-size: 1rem; font-weight: 800; text-align: center; padding: 8px; }
+        .delta-pos { color: #16a34a; } .delta-neg { color: #dc2626; } .delta-neu { color: #94a3b8; }
+        .btn-comparar { background: #1e6f3f; margin-top: 8px; width: 100%; }
+
     </style>
 </head>
 <body>
-<div class="container">
+<div id="pantalla-inspeccion" class="pantalla activa"><div class="container">
     <div class="header-cardique no-print">
         <div class="logo-area">
             <img id="logo-img" class="logo-img" style="display:none;" alt="Logo CARDIQUE">
@@ -559,6 +612,49 @@
         <span id="save-indicator" class="save-indicator"></span>
     </div>
 </div>
+</div>
+
+<!-- PANTALLA HISTORIAL -->
+<div id="pantalla-historial" class="pantalla">
+<div class="container">
+    <div class="card">
+        <div class="card-header"><h2>🕐 Historial de Inspecciones</h2></div>
+        <div id="hist-lista"></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;">
+            <button id="btn-archivar" style="background:#2c5e3f;">📥 Archivar inspección actual</button>
+            <button id="btn-limpiar-hist" class="btn-peligro" style="font-size:.8rem;padding:8px 14px;">🗑️ Limpiar historial</button>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- PANTALLA COMPARAR -->
+<div id="pantalla-comparar" class="pantalla">
+<div class="container">
+    <div class="card">
+        <div class="card-header"><h2>📊 Comparar Inspecciones</h2></div>
+        <div class="comp-select">
+            <div><span class="comp-label">Inspección A</span><select id="comp-sel-a" class="comp-sel"><option value="">— Selecciona —</option></select></div>
+            <div><span class="comp-label">Inspección B</span><select id="comp-sel-b" class="comp-sel"><option value="">— Selecciona —</option></select></div>
+        </div>
+        <button id="btn-comparar" style="background:#1e6f3f;width:100%;">📊 Comparar</button>
+        <div id="comp-resultado" class="comp-resultado"></div>
+    </div>
+</div>
+</div>
+
+<!-- NAV BAR -->
+<nav class="nav-bar no-print">
+    <button class="nav-btn activo" id="nav-inspeccion" onclick="mostrarPantalla('inspeccion')">
+        <span class="nav-icon">📋</span>Inspección
+    </button>
+    <button class="nav-btn" id="nav-historial" onclick="mostrarPantalla('historial')">
+        <span class="nav-icon">🕐</span>Historial
+    </button>
+    <button class="nav-btn" id="nav-comparar" onclick="mostrarPantalla('comparar')">
+        <span class="nav-icon">📊</span>Comparar
+    </button>
+</nav>
 
 <script>
     // ======================== MODELO DE DATOS ========================
@@ -1165,6 +1261,179 @@
     ubicacionInput.addEventListener("input", saveToLocal);
     inspectorInput.addEventListener("input", saveToLocal);
     fechaInput.addEventListener("change", saveToLocal);
+
+    // ── FASE 2: HISTORIAL Y COMPARAR ──
+
+    function mostrarPantalla(nombre) {
+        document.querySelectorAll('.pantalla').forEach(p => p.classList.remove('activa'));
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('activo'));
+        document.getElementById('pantalla-' + nombre).classList.add('activa');
+        document.getElementById('nav-' + nombre).classList.add('activo');
+        if (nombre === 'historial') renderHistorial();
+        if (nombre === 'comparar') renderComparar();
+        window.scrollTo(0, 0);
+    }
+
+    function calcularPct(frentesData) {
+        let c = 0, n = 0, s = 0;
+        frentesData.forEach(f => f.categorias.forEach(cat => cat.items.forEach(item => {
+            if (item.cumple === true) c++;
+            else if (item.cumple === false) n++;
+            else s++;
+        })));
+        const t = c + n + s;
+        return { cumple: c, noCumple: n, sinCalif: s, total: t, pct: t > 0 ? parseFloat((c/t*100).toFixed(1)) : 0 };
+    }
+
+    function getHistorial() {
+        try { return JSON.parse(localStorage.getItem('cardique_historial') || '[]'); } catch(e) { return []; }
+    }
+
+    function saveHistorial(hist) {
+        try { localStorage.setItem('cardique_historial', JSON.stringify(hist)); } catch(e) { console.warn('Historial full'); }
+    }
+
+    document.getElementById('btn-archivar').onclick = () => {
+        const data = { frentes, proyecto: proyectoInput.value, fecha: fechaInput.value, ubicacion: ubicacionInput.value, inspector: inspectorInput.value };
+        if (!data.frentes || data.frentes.length === 0) { alert('No hay frentes para archivar.'); return; }
+        const stats = calcularPct(data.frentes);
+        const registro = {
+            id: Date.now(),
+            archivedAt: new Date().toLocaleString('es-CO'),
+            proyecto: data.proyecto,
+            fecha: data.fecha,
+            inspector: data.inspector,
+            ubicacion: data.ubicacion,
+            pct: stats.pct,
+            cumple: stats.cumple,
+            noCumple: stats.noCumple,
+            sinCalif: stats.sinCalif,
+            total: stats.total,
+            frentes: data.frentes.map(f => ({ nombre: f.nombre, fotos: [], observaciones: f.observaciones, recomendaciones: f.recomendaciones, categorias: f.categorias }))
+        };
+        const hist = getHistorial();
+        hist.unshift(registro);
+        saveHistorial(hist);
+        alert('✅ Inspección archivada en historial.');
+        mostrarPantalla('historial');
+    };
+
+    document.getElementById('btn-limpiar-hist').onclick = () => {
+        if (confirm('¿Borrar todo el historial?')) {
+            localStorage.removeItem('cardique_historial');
+            renderHistorial();
+        }
+    };
+
+    function renderHistorial() {
+        const lista = document.getElementById('hist-lista');
+        const hist = getHistorial();
+        if (hist.length === 0) {
+            lista.innerHTML = '<div class="hist-empty">Sin inspecciones archivadas.<br>Completa una inspección y toca "Archivar".</div>';
+            return;
+        }
+        lista.innerHTML = hist.map((r, i) => {
+            const color = r.pct >= 80 ? '#16a34a' : r.pct >= 50 ? '#d97706' : '#dc2626';
+            const tags = r.frentes.map(f => `<span class="hist-tag">${f.nombre}</span>`).join('');
+            return `<div class="hist-item">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                    <div>
+                        <div class="hist-proyecto">${r.proyecto || 'Sin nombre'}</div>
+                        <div class="hist-fecha">📅 ${r.fecha || ''} &nbsp;|&nbsp; Archivado: ${r.archivedAt}</div>
+                        <div class="hist-inspector">👤 ${r.inspector || 'No especificado'}</div>
+                    </div>
+                    <div class="hist-pct" style="color:${color}">${r.pct}%</div>
+                </div>
+                <div class="hist-frentes">${tags}</div>
+                <div style="margin-top:10px;display:flex;gap:8px;">
+                    <button onclick="restaurarInspeccion(${i})" style="font-size:.75rem;padding:6px 12px;background:#2c5e3f;">↩️ Restaurar</button>
+                    <button onclick="eliminarHistorial(${i})" style="font-size:.75rem;padding:6px 12px;background:#b91c1c;">🗑️ Borrar</button>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    function eliminarHistorial(idx) {
+        if (!confirm('¿Borrar esta inspección del historial?')) return;
+        const hist = getHistorial();
+        hist.splice(idx, 1);
+        saveHistorial(hist);
+        renderHistorial();
+    }
+
+    function restaurarInspeccion(idx) {
+        if (!confirm('¿Restaurar esta inspección? Se reemplazarán los datos actuales.')) return;
+        const hist = getHistorial();
+        const r = hist[idx];
+        frentes = r.frentes;
+        proyectoInput.value = r.proyecto || '';
+        fechaInput.value = r.fecha || '';
+        ubicacionInput.value = r.ubicacion || '';
+        inspectorInput.value = r.inspector || '';
+        saveToLocal();
+        renderFrentes();
+        mostrarPantalla('inspeccion');
+    }
+
+    function renderComparar() {
+        const hist = getHistorial();
+        const selA = document.getElementById('comp-sel-a');
+        const selB = document.getElementById('comp-sel-b');
+        const valA = selA.value, valB = selB.value;
+        const opts = hist.map((r, i) => `<option value="${i}">${r.proyecto || 'Sin nombre'} — ${r.fecha || ''} (${r.pct}%)</option>`).join('');
+        selA.innerHTML = '<option value="">— Selecciona —</option>' + opts;
+        selB.innerHTML = '<option value="">— Selecciona —</option>' + opts;
+        if (valA) selA.value = valA;
+        if (valB) selB.value = valB;
+    }
+
+    document.getElementById('btn-comparar').onclick = () => {
+        const hist = getHistorial();
+        const idxA = document.getElementById('comp-sel-a').value;
+        const idxB = document.getElementById('comp-sel-b').value;
+        if (idxA === '' || idxB === '') { alert('Selecciona dos inspecciones.'); return; }
+        if (idxA === idxB) { alert('Selecciona dos inspecciones diferentes.'); return; }
+        const a = hist[idxA], b = hist[idxB];
+        const delta = (b.pct - a.pct).toFixed(1);
+        const deltaClass = delta > 0 ? 'delta-pos' : delta < 0 ? 'delta-neg' : 'delta-neu';
+        const deltaIcon = delta > 0 ? '▲' : delta < 0 ? '▼' : '=';
+        document.getElementById('comp-resultado').innerHTML = `
+            <div class="comp-card">
+                <div class="comp-titulo">📊 Comparación de Cumplimiento Global</div>
+                <div class="comp-row">
+                    <div class="comp-col">
+                        <div class="comp-col-title">A — ${a.proyecto || 'Sin nombre'}</div>
+                        <div class="comp-pct" style="color:${a.pct>=80?'#16a34a':a.pct>=50?'#d97706':'#dc2626'}">${a.pct}%</div>
+                        <div class="comp-detail">📅 ${a.fecha || ''}<br>👤 ${a.inspector || ''}<br>✔ ${a.cumple} / ✘ ${a.noCumple} / ◻ ${a.sinCalif}</div>
+                    </div>
+                    <div style="display:flex;align-items:center;padding:0 8px;">
+                        <div class="comp-delta ${deltaClass}">${deltaIcon} ${Math.abs(delta)}%</div>
+                    </div>
+                    <div class="comp-col">
+                        <div class="comp-col-title">B — ${b.proyecto || 'Sin nombre'}</div>
+                        <div class="comp-pct" style="color:${b.pct>=80?'#16a34a':b.pct>=50?'#d97706':'#dc2626'}">${b.pct}%</div>
+                        <div class="comp-detail">📅 ${b.fecha || ''}<br>👤 ${b.inspector || ''}<br>✔ ${b.cumple} / ✘ ${b.noCumple} / ◻ ${b.sinCalif}</div>
+                    </div>
+                </div>
+            </div>
+            ${a.frentes.map((fa, fi) => {
+                const fb = b.frentes[fi];
+                if (!fb) return '';
+                const statsA = calcularPct([fa]), statsB = calcularPct([fb]);
+                const d = (statsB.pct - statsA.pct).toFixed(1);
+                const dc = d > 0 ? 'delta-pos' : d < 0 ? 'delta-neg' : 'delta-neu';
+                return `<div class="comp-card">
+                    <div class="comp-titulo">🏗️ ${fa.nombre}</div>
+                    <div class="comp-row">
+                        <div class="comp-col"><div class="comp-pct" style="color:${statsA.pct>=80?'#16a34a':statsA.pct>=50?'#d97706':'#dc2626'}">${statsA.pct}%</div><div class="comp-detail">✔ ${statsA.cumple} / ✘ ${statsA.noCumple}</div></div>
+                        <div style="display:flex;align-items:center;padding:0 8px;"><div class="comp-delta ${dc}">${d>0?'▲':d<0?'▼':'='} ${Math.abs(d)}%</div></div>
+                        <div class="comp-col"><div class="comp-pct" style="color:${statsB.pct>=80?'#16a34a':statsB.pct>=50?'#d97706':'#dc2626'}">${statsB.pct}%</div><div class="comp-detail">✔ ${statsB.cumple} / ✘ ${statsB.noCumple}</div></div>
+                    </div>
+                </div>`;
+            }).join('')}
+        `;
+    };
+
     loadFromLocal();
 </script>
 </body>
