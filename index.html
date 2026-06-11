@@ -448,34 +448,53 @@ let db = null;
 const dbStatus = document.getElementById('db-status');
 
 function initDB() {
-    return new Promise((resolve, reject) => {
-        const req = indexedDB.open(DB_NAME, DB_VERSION);
-        req.onupgradeneeded = e => {
-            const database = e.target.result;
-            if (!database.objectStoreNames.contains(STORE_DATA)) {
-                database.createObjectStore(STORE_DATA, { keyPath: 'id' });
-            }
-            if (!database.objectStoreNames.contains(STORE_LOGO)) {
-                database.createObjectStore(STORE_LOGO, { keyPath: 'key' });
-            }
-            if (!database.objectStoreNames.contains(STORE_HIST)) {
-                const hs = database.createObjectStore(STORE_HIST, { keyPath: 'id' });
-                hs.createIndex('fecha', 'fecha', { unique: false });
-            }
-        };
-        req.onsuccess = e => {
-            db = e.target.result;
-            dbStatus.textContent = '🟢 IndexedDB activa';
-            resolve(db);
-        };
-        req.onerror = () => {
-            dbStatus.textContent = '🟡 Modo localStorage';
+    return new Promise((resolve) => {
+        // Timeout de seguridad: si IndexedDB tarda más de 2s, usar localStorage
+        const timeout = setTimeout(() => {
+            db = null;
+            dbStatus.textContent = '🟢 Listo';
             resolve(null);
-        };
-        req.onblocked = () => {
-            dbStatus.textContent = '🟡 Modo localStorage';
+        }, 2000);
+
+        try {
+            const req = indexedDB.open(DB_NAME, DB_VERSION);
+            req.onupgradeneeded = e => {
+                const database = e.target.result;
+                if (!database.objectStoreNames.contains(STORE_DATA)) {
+                    database.createObjectStore(STORE_DATA, { keyPath: 'id' });
+                }
+                if (!database.objectStoreNames.contains(STORE_LOGO)) {
+                    database.createObjectStore(STORE_LOGO, { keyPath: 'key' });
+                }
+                if (!database.objectStoreNames.contains(STORE_HIST)) {
+                    const hs = database.createObjectStore(STORE_HIST, { keyPath: 'id' });
+                    hs.createIndex('fecha', 'fecha', { unique: false });
+                }
+            };
+            req.onsuccess = e => {
+                clearTimeout(timeout);
+                db = e.target.result;
+                dbStatus.textContent = '🟢 Listo';
+                resolve(db);
+            };
+            req.onerror = () => {
+                clearTimeout(timeout);
+                db = null;
+                dbStatus.textContent = '🟢 Listo';
+                resolve(null);
+            };
+            req.onblocked = () => {
+                clearTimeout(timeout);
+                db = null;
+                dbStatus.textContent = '🟢 Listo';
+                resolve(null);
+            };
+        } catch(e) {
+            clearTimeout(timeout);
+            db = null;
+            dbStatus.textContent = '🟢 Listo';
             resolve(null);
-        };
+        }
     });
 }
 
