@@ -374,30 +374,13 @@
 // ═══════════════════════════════════════════════════════════════
 
 // ── 1. REGISTRO DEL SERVICE WORKER ──────────────────────────
-// Desregistrar Service Workers viejos y registrar el nuevo
+// Limpiar SW y cachés viejos al cargar
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', async () => {
-        try {
-            const registrations = await navigator.serviceWorker.getRegistrations();
-            for (let reg of registrations) {
-                await reg.unregister();
-            }
-            // Limpiar todos los cachés viejos
-            const keys = await caches.keys();
-            for (let key of keys) {
-                await caches.delete(key);
-            }
-            // Registrar el nuevo SW
-            const reg = await navigator.serviceWorker.register('./sw.js?v=4');
-            console.log('[SW] Registrado v4:', reg.scope);
-            navigator.serviceWorker.addEventListener('message', e => {
-                if (e.data?.type === 'SYNC_COMPLETE') {
-                    showToast('☁️ Datos sincronizados correctamente');
-                }
-            });
-        } catch(err) {
-            console.warn('[SW] Error:', err);
-        }
+    navigator.serviceWorker.getRegistrations().then(regs => {
+        regs.forEach(r => r.unregister());
+    });
+    caches.keys().then(keys => {
+        keys.forEach(k => caches.delete(k));
     });
 }
 
