@@ -3,7 +3,7 @@
 //  Estrategia: Cache-First para assets, Network-First para datos
 // ============================================================
 
-const CACHE_NAME     = 'cardique-v1';
+const CACHE_NAME     = 'cardique-v3';
 const SYNC_QUEUE_KEY = 'cardique-sync-queue';
 
 // Assets que se cachean al instalar

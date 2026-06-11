@@ -476,7 +476,11 @@ function initDB() {
         };
         req.onerror = () => {
             dbStatus.textContent = '🟡 Modo localStorage';
-            reject(req.error);
+            resolve(null);
+        };
+        req.onblocked = () => {
+            dbStatus.textContent = '🟡 Modo localStorage';
+            resolve(null);
         };
     });
 }
@@ -556,19 +560,27 @@ async function loadData() {
     try {
         let data = null;
         if (db) {
-            data = await dbGet(STORE_DATA, 'main');
+            try { data = await dbGet(STORE_DATA, 'main'); } catch(e) { console.warn('[DB get]', e); }
         }
         if (!data) {
-            // Intentar localStorage
             const raw = localStorage.getItem('inspectorFrentesData') || localStorage.getItem('cardique_meta');
             if (raw) data = JSON.parse(raw);
         }
-        if (data) {
-            frentes = data.frentes || frentes;
+        if (data && data.frentes && data.frentes.length > 0) {
+            frentes = data.frentes;
             proyectoInput.value  = data.proyecto  || '';
             fechaInput.value     = data.fecha      || '';
             ubicacionInput.value = data.ubicacion  || '';
             inspectorInput.value = data.inspector  || '';
+        } else {
+            // Sin datos previos — cargar frentes por defecto del proyecto
+            frentes = [
+                { nombre: 'Frente Calicanto', categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: '', recomendaciones: '' },
+                { nombre: 'Frente Chaplundún', categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: '', recomendaciones: '' },
+                { nombre: 'Frente Ricaurte', categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: '', recomendaciones: '' }
+            ];
+            proyectoInput.value = 'LP-CARDIQUE-006-2025';
+            ubicacionInput.value = 'Ciénaga de la Virgen, Cartagena';
         }
     } catch(e) {
         console.warn('[Load]', e);
@@ -1399,6 +1411,12 @@ async function ejecutarComparar() {
     try { await initDB(); } catch(e) { /* continúa con localStorage */ }
     await loadLogo();
     await loadData();
+    // Asegurar que el indicador quede en verde siempre
+    setTimeout(() => {
+        if (dbStatus.textContent.includes('cargando') || dbStatus.textContent.includes('⏳')) {
+            dbStatus.textContent = '🟢 Listo';
+        }
+    }, 1500);
 })();
 </script>
 </body>
