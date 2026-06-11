@@ -946,9 +946,8 @@
         .ck-table tbody td:nth-child(2){text-align:center;}
         .e-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:8pt;font-weight:700;white-space:nowrap;}
         .cat-h{font-size:10.5pt;font-weight:700;color:#1e6f3f;margin:14px 0 6px;padding:5px 10px;background:#f0fdf4;border-left:4px solid #2b9348;border-radius:0 6px 6px 0;page-break-after:avoid;}
-        .photo-grid{margin:10px 0;}
-        .photo-row{display:flex;gap:10px;margin-bottom:10px;page-break-inside:avoid;break-inside:avoid;}
-        .photo-card{flex:1;page-break-inside:avoid;break-inside:avoid;text-align:center;}
+        .photo-grid{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0;}
+        .photo-card{width:calc(50% - 8px);page-break-inside:avoid;break-inside:avoid;text-align:center;margin-bottom:10px;}
         .photo-card img{width:100%;max-height:200px;object-fit:cover;border-radius:6px;border:1px solid #cbd5e1;}
         .photo-card figcaption{font-size:8pt;color:#6b7280;margin-top:3px;}
         .obs-box{background:#f9fafb;border:1px solid #e2e8f0;border-left:4px solid #2b9348;border-radius:0 6px 6px 0;padding:10px 14px;font-size:9.5pt;margin:8px 0;page-break-inside:avoid;}
@@ -1071,16 +1070,9 @@
             if (frente.fotos && frente.fotos.length > 0) {
                 html += `<div class="sub-t">📸 Evidencia Fotográfica (${frente.fotos.length} foto${frente.fotos.length>1?"s":""})</div>`;
                 html += `<div class="photo-grid">`;
-                for (let j = 0; j < frente.fotos.length; j += 2) {
-                    html += `<div class="photo-row">`;
-                    html += `<figure class="photo-card"><img src="${frente.fotos[j]}" alt="Evidencia ${j+1}"><figcaption>Fotografía ${j+1} — ${escapeHtml(frente.nombre)}</figcaption></figure>`;
-                    if (j + 1 < frente.fotos.length) {
-                        html += `<figure class="photo-card"><img src="${frente.fotos[j+1]}" alt="Evidencia ${j+2}"><figcaption>Fotografía ${j+2} — ${escapeHtml(frente.nombre)}</figcaption></figure>`;
-                    } else {
-                        html += `<div class="photo-card"></div>`;
-                    }
-                    html += `</div>`;
-                }
+                frente.fotos.forEach((foto, j) => {
+                    html += `<figure class="photo-card"><img src="${foto}" alt="Evidencia ${j+1}"><figcaption>Fotografía ${j+1} — ${escapeHtml(frente.nombre)}</figcaption></figure>`;
+                });
                 html += `</div>`;
             }
             if (frente.observaciones) {
