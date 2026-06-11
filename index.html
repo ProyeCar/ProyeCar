@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>CARDIQUE - Inspección Ambiental y SST por Frente de Obra</title>
@@ -338,9 +337,8 @@
             margin-left: 10px;
         }
 
-        button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; cursor: pointer; }
-        .agregar-item, .btn-foto { touch-action: manipulation; -webkit-tap-highlight-color: transparent; cursor: pointer; }
-
+        button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+        .agregar-item, .btn-foto { touch-action: manipulation; }
         @media (max-width: 760px) {
             .item-row {
                 flex-direction: column;
@@ -421,27 +419,35 @@
             text-align: center;
         }
         .print-container .photo-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            justify-content: flex-start;
-            margin: 15px 0;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin: 14px 0;
         }
         .print-container .photo-card {
-            width: calc(50% - 15px);
             break-inside: avoid;
             page-break-inside: avoid;
             text-align: center;
-            margin-bottom: 15px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            overflow: hidden;
         }
         .print-container .photo-card img {
             width: 100%;
-            border-radius: 8px;
-            border: 1px solid #cbd5e1;
+            height: auto;
+            max-height: 260px;
+            object-fit: contain;
+            display: block;
+            background: #f8fafc;
         }
         .print-container .photo-card p {
-            font-size: 9pt;
-            margin-top: 5px;
+            font-size: 8.5pt;
+            margin: 0;
+            padding: 5px 8px;
+            background: #f1f5f9;
+            border-top: 1px solid #e2e8f0;
+            font-weight: 600;
+            color: #374151;
         }
         .print-container .stats-global {
             display: flex;
@@ -602,10 +608,19 @@
     function saveToLocal() {
         try {
             const data = { frentes, proyecto: proyectoInput.value, fecha: fechaInput.value, ubicacion: ubicacionInput.value, inspector: inspectorInput.value };
-            localStorage.setItem("inspectorFrentesData", JSON.stringify(data));
+            const json = JSON.stringify(data);
+            localStorage.setItem("inspectorFrentesData", json);
             showSavedMessage();
             return true;
-        } catch(e) { console.error(e); alert("Error al guardar datos."); return false; }
+        } catch(e) {
+            // localStorage full - save without photos
+            try {
+                const dataNoFotos = { frentes: frentes.map(f => ({...f, fotos:[]})), proyecto: proyectoInput.value, fecha: fechaInput.value, ubicacion: ubicacionInput.value, inspector: inspectorInput.value };
+                localStorage.setItem("inspectorFrentesData", JSON.stringify(dataNoFotos));
+                showSavedMessage();
+            } catch(e2) { console.warn("Storage full"); }
+            return true;
+        }
     }
     function loadFromLocal() {
         const saved = localStorage.getItem("inspectorFrentesData");
@@ -752,7 +767,23 @@
                     files.forEach(file => {
                         if (file.type.startsWith("image/")) {
                             const reader = new FileReader();
-                            reader.onload = (ev) => { if (!frentes[idx].fotos) frentes[idx].fotos = []; frentes[idx].fotos.push(ev.target.result); saveToLocal(); renderFrentes(); };
+                            reader.onload = (ev) => {
+                                const img = new Image();
+                                img.onload = () => {
+                                    const canvas = document.createElement('canvas');
+                                    const MAX = 1200;
+                                    let w = img.width, h = img.height;
+                                    if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+                                    if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+                                    canvas.width = w; canvas.height = h;
+                                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                                    const compressed = canvas.toDataURL('image/jpeg', 0.75);
+                                    if (!frentes[idx].fotos) frentes[idx].fotos = [];
+                                    frentes[idx].fotos.push(compressed);
+                                    saveToLocal(); renderFrentes();
+                                };
+                                img.src = ev.target.result;
+                            };
                             reader.readAsDataURL(file);
                         }
                     });
