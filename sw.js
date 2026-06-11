@@ -1,4 +1,3 @@
-// Service Worker v4 — auto-limpieza
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', event => {
     event.waitUntil(
@@ -8,4 +7,3 @@ self.addEventListener('activate', event => {
             .then(() => self.registration.unregister())
     );
 });
-self.addEventListener('fetch', () => {});
