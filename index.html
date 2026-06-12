@@ -866,7 +866,7 @@
             // Body wrapper for collapse
             const frenteBody = document.createElement("div");
             frenteBody.className = "frente-body";
-            frenteBody.style.maxHeight = frenteBody.scrollHeight + "px";
+            frenteBody.style.maxHeight = "none";
 
             headerDiv.addEventListener("click", (e) => {
                 if (e.target.tagName === "INPUT" || e.target.tagName === "BUTTON") return;
@@ -876,8 +876,8 @@
                     requestAnimationFrame(() => { frenteBody.style.maxHeight = "0px"; frenteBody.classList.add("collapsed"); });
                     toggleArrow.classList.remove("open");
                 } else {
+                    frenteBody.style.maxHeight = "none";
                     frenteBody.classList.remove("collapsed");
-                    frenteBody.style.maxHeight = frenteBody.scrollHeight + "9999px";
                     toggleArrow.classList.add("open");
                 }
             });
@@ -889,11 +889,11 @@
                 const catNombre = document.createElement("span"); catNombre.innerText = cat.nombre;
                 catTitulo.appendChild(catNombre); catTitulo.appendChild(catToggle);
                 catDiv.appendChild(catTitulo);
-                const catBody = document.createElement("div"); catBody.className = "cat-body"; catBody.style.cssText = "padding-top:8px;max-height:9999px;";
+                const catBody = document.createElement("div"); catBody.className = "cat-body"; catBody.style.cssText = "padding-top:8px;max-height:none;";
                 catTitulo.addEventListener("click", () => {
                     const open = !catBody.classList.contains("collapsed");
                     if (open) { catBody.style.maxHeight = catBody.scrollHeight + "px"; requestAnimationFrame(() => { catBody.style.maxHeight = "0px"; catBody.classList.add("collapsed"); }); catToggle.classList.remove("open"); }
-                    else { catBody.classList.remove("collapsed"); catBody.style.maxHeight = catBody.scrollHeight + "9999px"; catToggle.classList.add("open"); }
+                    else { catBody.style.maxHeight = "none"; catBody.classList.remove("collapsed"); catToggle.classList.add("open"); }
                 });
                 const itemsDiv = document.createElement("div"); itemsDiv.className = "items-grid";
                 cat.items.forEach((item, itemIdx) => {
@@ -1076,7 +1076,7 @@
             recomendacionesDiv.appendChild(recDictation);
             frenteBody.appendChild(recomendacionesDiv);
             frenteDiv.appendChild(frenteBody);
-            setTimeout(() => { if (!frenteBody.classList.contains("collapsed")) frenteBody.style.maxHeight = frenteBody.scrollHeight + "px"; }, 50);
+            // Body is open by default - no maxHeight restriction needed
             frentesContainer.appendChild(frenteDiv);
         });
     }
