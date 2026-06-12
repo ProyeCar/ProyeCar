@@ -863,7 +863,7 @@
                     // Create obsInput first so btnNo can reference it
                     const obsDiv = document.createElement("div"); obsDiv.className = "item-obs";
                     const obsInput = document.createElement("input"); obsInput.placeholder = "Observación del ítem (auto-completa al marcar No cumple)"; obsInput.value = item.obs || "";
-                    obsInput.onchange = (e) => { item.obs = e.target.value; saveToLocal(); };
+                    obsInput.oninput = (e) => { item.obs = e.target.value; saveToLocal(); };
 
                     btnSi.onclick = (e) => {
                         e.preventDefault(); e.stopPropagation();
@@ -1105,15 +1105,28 @@
     }
 
     function generarInformeDireccion() {
-        if (frentes.length === 0) { alert("Debe haber al menos un frente de obra para generar el informe."); return; }
-
-        // Leer datos actuales desde el array (ya sincronizados con los eventos input/change)
-        const proyecto  = document.getElementById("proyecto").value;
+        // Leer directamente del DOM (fuente de verdad en pantalla)
+        const proyecto  = document.getElementById("proyecto").value.trim();
         const fecha     = document.getElementById("fecha").value;
-        const ubicacion = document.getElementById("ubicacion").value;
-        const inspector = document.getElementById("inspector").value || "No especificado";
+        const ubicacion = document.getElementById("ubicacion").value.trim();
+        const inspector = document.getElementById("inspector").value.trim() || "No especificado";
         const logoData  = (logoImg.src && logoImg.src.startsWith("data:")) ? logoImg.src : null;
         const ahora     = new Date().toLocaleString("es-CO");
+
+        // Sincronizar campos del formulario al array antes de guardar
+        // (cubre el caso en que el usuario no haya salido del campo)
+        saveToLocal();
+
+        // Recargar frentes desde localStorage para tener los estados más recientes
+        try {
+            const saved = localStorage.getItem("inspectorFrentesData");
+            if (saved) {
+                const data = JSON.parse(saved);
+                if (data.frentes && data.frentes.length > 0) frentes = data.frentes;
+            }
+        } catch(e) { /* usar frentes en memoria */ }
+
+        if (frentes.length === 0) { alert("Debe haber al menos un frente de obra para generar el informe."); return; }
 
         // Estadísticas
         let globalCumple = 0, globalNoCumple = 0, globalSinCalificar = 0;
