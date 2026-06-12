@@ -1042,7 +1042,7 @@
                 input.click();
             };
             fotosDiv.appendChild(btnSubirFotosFrente);
-            frenteDiv.appendChild(fotosDiv);
+            frenteBody.appendChild(fotosDiv);
 
             // Observaciones específicas
             const obsEspecificasDiv = document.createElement("div");
@@ -1058,7 +1058,7 @@
             obsEspecificasDiv.appendChild(obsTextarea);
             const obsDictation = addDictationToTextarea(obsTextarea, idx, "observaciones");
             obsEspecificasDiv.appendChild(obsDictation);
-            frenteDiv.appendChild(obsEspecificasDiv);
+            frenteBody.appendChild(obsEspecificasDiv);
 
             // Recomendaciones (sin "editable")
             const recomendacionesDiv = document.createElement("div");
@@ -1074,7 +1074,9 @@
             recomendacionesDiv.appendChild(recTextarea);
             const recDictation = addDictationToTextarea(recTextarea, idx, "recomendaciones");
             recomendacionesDiv.appendChild(recDictation);
-            frenteDiv.appendChild(recomendacionesDiv);
+            frenteBody.appendChild(recomendacionesDiv);
+            frenteDiv.appendChild(frenteBody);
+            setTimeout(() => { if (!frenteBody.classList.contains("collapsed")) frenteBody.style.maxHeight = frenteBody.scrollHeight + "px"; }, 50);
             frentesContainer.appendChild(frenteDiv);
         });
     }
