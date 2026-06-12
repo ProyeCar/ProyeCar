@@ -1209,18 +1209,9 @@
         @page {
             size: A4;
             margin: 2.5cm 2cm 2.5cm 2cm;
-            @bottom-center {
-                content: "Página " counter(page) " de " counter(pages);
-                font-family: Calibri, Arial, sans-serif;
-                font-size: 9pt;
-                color: #4B5563;
-            }
-            @top-left   { content: ""; }
-            @top-center { content: ""; }
-            @top-right  { content: ""; }
-            @bottom-left  { content: ""; }
-            @bottom-right { content: ""; }
         }
+        /* Suprimir header/footer automático del navegador */
+        @page { @top-left{content:""} @top-center{content:""} @top-right{content:""} @bottom-left{content:""} @bottom-right{content:""} }
         *{box-sizing:border-box;}
         body{font-family:'Calibri','Segoe UI',Arial,sans-serif;font-size:10pt;line-height:1.5;color:#1f2d3d;background:white;}
         .portada{text-align:center;padding:0;page-break-after:always;}
@@ -1435,36 +1426,48 @@
         // footer suprimido — numeración via @page counter(page) / counter(pages)
         html += `</body></html>`;
 
-        // Inject back button into generated HTML before </body>
-        const backBtn = `
-        <div style="position:fixed;top:16px;left:16px;z-index:9999;" class="no-pdf">
-            <button onclick="window.close()" style="
-                background:linear-gradient(135deg,#0d3321,#1a5c35);
-                color:white;
-                border:none;
-                border-radius:40px;
-                padding:10px 20px;
-                font-size:14px;
-                font-weight:700;
-                cursor:pointer;
-                display:flex;
-                align-items:center;
-                gap:8px;
-                box-shadow:0 4px 14px rgba(13,51,33,0.35);
-                font-family:Calibri,Arial,sans-serif;
-            ">&#8592; Volver a la aplicación</button>
-        </div>
-        <style>
-            @media print { .no-pdf { display: none !important; } }
-        </style>`;
-        html = html.replace('</body>', backBtn + '</body>');
+        // Back button + page numbering (iOS Safari safe - no nested backticks)
+        var backBtnHtml = '<div style="position:fixed;top:16px;left:16px;z-index:9999;" class="no-pdf">'
+            + '<button onclick="window.close()" style="background:linear-gradient(135deg,#0d3321,#1a5c35);color:white;border:none;border-radius:40px;padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;box-shadow:0 4px 14px rgba(13,51,33,0.35);font-family:Calibri,Arial,sans-serif;">&#8592; Volver a la aplicaci&oacute;n</button>'
+            + '</div>';
 
-        const win = window.open("","_blank");
-        if (!win) { alert("Por favor, permita las ventanas emergentes para generar el informe."); return; }
-        win.document.write(html);
-        win.document.close();
-        win.focus();
-        setTimeout(() => win.print(), 700);
+        var pageNumStyle = '<style>'
+            + '@media print {'
+            + '  .no-pdf { display:none!important; }'
+            + '  a[href]:after { content:none!important; }'
+            + '  abbr[title]:after { content:none!important; }'
+            + '  @page {'
+            + '    @bottom-center {'
+            + '      content: "P\u00E1gina " counter(page) " de " counter(pages);'
+            + '      font-family: Calibri,Arial,sans-serif;'
+            + '      font-size: 9pt;'
+            + '      color: #4B5563;'
+            + '    }'
+            + '    @top-left   { content: ""; }'
+            + '    @top-center { content: ""; }'
+            + '    @top-right  { content: ""; }'
+            + '    @bottom-left  { content: ""; }'
+            + '    @bottom-right { content: ""; }'
+            + '  }'
+            + '}'
+            + '</style>';
+
+        html = html.replace('</body>', backBtnHtml + pageNumStyle + '</body>');
+
+
+        // iOS Safari: use Blob URL instead of document.write() to allow data: images
+        const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+        const blobUrl = URL.createObjectURL(blob);
+        const win = window.open(blobUrl, "_blank");
+        if (!win) {
+            // Fallback for popup blockers
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.target = '_blank';
+            a.click();
+        }
+        // Revoke blob URL after 5 minutes to free memory
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 300000);
     }
 
         btnGenerarPdf.onclick = generarInformeDireccion;
