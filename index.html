@@ -138,7 +138,6 @@
             padding: 0;
             margin-bottom: 14px;
             box-shadow: 0 3px 16px rgba(13,51,33,0.09);
-            overflow: hidden;
             transition: box-shadow 0.2s, transform 0.2s;
         }
         .frente-card:hover { box-shadow: 0 6px 24px rgba(13,51,33,0.15); transform: translateY(-1px); }
@@ -154,8 +153,8 @@
             transition: background 0.2s;
         }
         .frente-header:hover { background: linear-gradient(90deg, #0a2818 0%, #164e2c 100%); }
-        .frente-body { overflow: visible; padding: 0 14px; }
-        .frente-body.collapsed { overflow: hidden; max-height: 0 !important; padding: 0 14px; }
+        .frente-body { display: block; padding: 0 14px 10px; }
+        .frente-body.collapsed { display: none; }
         .frente-toggle { font-size:1rem; margin-right:8px; transition: transform 0.3s; display:inline-block; color:#86efac; }
         .frente-toggle.open { transform: rotate(90deg); }
         .frente-summary { font-size:0.76rem; color:#86efac; margin-left:8px; }
@@ -200,8 +199,8 @@
         .cat-titulo:hover { background: #f1f5f9; }
         .cat-toggle { font-size:0.85rem; transition: transform 0.3s; display:inline-block; color: var(--verde-vivo); }
         .cat-toggle.open { transform: rotate(90deg); }
-        .cat-body { overflow: visible; }
-        .cat-body.collapsed { overflow: hidden; max-height: 0 !important; }
+        .cat-body { display: block; }
+        .cat-body.collapsed { display: none; }
 
         /* === ÍTEMS === */
         .items-grid { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px 12px; }
@@ -275,8 +274,6 @@
         .btn-foto:hover { background: #dbeafe; transform: scale(1.02); }
 
         /* === BOTONES GLOBALES === */
-        .grab-box-mini { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-        .grab-box-mini button { background: #c2410c; font-size: 0.7rem; padding: 4px 10px; }
         button {
             background: linear-gradient(135deg, var(--verde-medio), var(--verde-vivo));
             color: white; border: none;
@@ -791,38 +788,6 @@
             reader.readAsDataURL(file);
         }
     };
-    function addDictationToTextarea(textarea, idx, fieldName) {
-        const grabDiv = document.createElement("div");
-        grabDiv.className = "grab-box-mini";
-        const btnGrabar = document.createElement("button");
-        btnGrabar.innerText = "🎤 Dictar";
-        btnGrabar.style.background = "#c2410c";
-        btnGrabar.style.fontSize = "0.7rem";
-        const estadoSpan = document.createElement("span");
-        estadoSpan.innerText = "⚪";
-        estadoSpan.style.fontSize = "0.7rem";
-        grabDiv.appendChild(btnGrabar);
-        grabDiv.appendChild(estadoSpan);
-        let recognition = null, grabando = false;
-        if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
-            const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-            recognition = new SR();
-            recognition.lang = "es-ES";
-            recognition.continuous = false;
-            recognition.onstart = () => { grabando = true; estadoSpan.innerText = "🔴 Grabando..."; btnGrabar.innerText = "⏹️ Detener"; };
-            recognition.onend = () => { grabando = false; estadoSpan.innerText = "⚪ Listo"; btnGrabar.innerText = "🎤 Dictar"; };
-            recognition.onresult = (event) => {
-                const transcript = event.results[0][0].transcript;
-                textarea.value = textarea.value ? textarea.value + " " + transcript : transcript;
-                const inputEvent = new Event('input', { bubbles: true });
-                textarea.dispatchEvent(inputEvent);
-            };
-            recognition.onerror = () => { estadoSpan.innerText = "❌ Error"; grabando = false; };
-            btnGrabar.onclick = () => { if (!recognition) return; if (grabando) recognition.stop(); else recognition.start(); };
-        } else { btnGrabar.disabled = true; estadoSpan.innerText = "❌ No soportado"; }
-        return grabDiv;
-    }
-
     function renderFrentes() {
         frentesContainer.innerHTML = "";
         frentes.forEach((frente, idx) => {
@@ -870,13 +835,8 @@
             headerDiv.addEventListener("click", (e) => {
                 if (e.target.tagName === "INPUT" || e.target.tagName === "BUTTON") return;
                 const isOpen = !frenteBody.classList.contains("collapsed");
-                if (isOpen) {
-                    frenteBody.classList.add("collapsed");
-                    toggleArrow.classList.remove("open");
-                } else {
-                    frenteBody.classList.remove("collapsed");
-                    toggleArrow.classList.add("open");
-                }
+                frenteBody.classList.toggle("collapsed");
+                toggleArrow.classList.toggle("open");
             });
 
             frente.categorias.forEach((cat, catIdx) => {
@@ -889,8 +849,7 @@
                 const catBody = document.createElement("div"); catBody.className = "cat-body"; catBody.style.cssText = "padding-top:8px;";
                 catTitulo.addEventListener("click", () => {
                     const open = !catBody.classList.contains("collapsed");
-                    if (open) { catBody.classList.add("collapsed"); catToggle.classList.remove("open"); }
-                    else { catBody.classList.remove("collapsed"); catToggle.classList.add("open"); }
+                    catBody.classList.toggle("collapsed"); catToggle.classList.toggle("open");
                 });
                 const itemsDiv = document.createElement("div"); itemsDiv.className = "items-grid";
                 cat.items.forEach((item, itemIdx) => {
@@ -1053,8 +1012,7 @@
             obsTextarea.value = frente.observaciones || "";
             obsTextarea.addEventListener("input", (e) => { frentes[idx].observaciones = e.target.value; saveToLocal(); });
             obsEspecificasDiv.appendChild(obsTextarea);
-            const obsDictation = addDictationToTextarea(obsTextarea, idx, "observaciones");
-            obsEspecificasDiv.appendChild(obsDictation);
+
             frenteBody.appendChild(obsEspecificasDiv);
 
             // Recomendaciones (sin "editable")
@@ -1069,8 +1027,7 @@
             recTextarea.value = frente.recomendaciones || "";
             recTextarea.addEventListener("input", (e) => { frentes[idx].recomendaciones = e.target.value; saveToLocal(); });
             recomendacionesDiv.appendChild(recTextarea);
-            const recDictation = addDictationToTextarea(recTextarea, idx, "recomendaciones");
-            recomendacionesDiv.appendChild(recDictation);
+
             frenteBody.appendChild(recomendacionesDiv);
             frenteDiv.appendChild(frenteBody);
             // Body is open by default - no maxHeight restriction needed
