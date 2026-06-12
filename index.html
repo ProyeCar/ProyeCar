@@ -1115,14 +1115,23 @@
     }
 
     function generarInformeDireccion() {
-        // 1. Leer del DOM en este instante exacto (iOS Safari safe)
+        // iOS Safari: blur ALL inputs first to force commit of active field value
+        ["proyecto","fecha","ubicacion","inspector"].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.blur();
+        });
+        if (document.activeElement && document.activeElement.blur) {
+            document.activeElement.blur();
+        }
+
+        // 1. Leer del DOM (valores ya commiteados tras blur)
         const form = getFormValues();
         const proyecto  = form.proyecto.trim() || "";
         const fecha     = form.fecha || "";
         const ubicacion = form.ubicacion.trim() || "Jurisdicción CARDIQUE";
         const inspector = form.inspector.trim() || "No especificado";
 
-        console.log("[PDF] Valores leídos del DOM:", { proyecto, fecha, ubicacion, inspector });
+        console.log("[PDF] Valores DOM:", { proyecto, fecha, ubicacion, inspector });
 
         // 2. Guardar con esos valores (sincroniza localStorage)
         saveToLocal();
@@ -1426,33 +1435,29 @@
         // footer suprimido — numeración via @page counter(page) / counter(pages)
         html += `</body></html>`;
 
-        // Back button + page numbering (iOS Safari safe - no nested backticks)
-        var backBtnHtml = '<div style="position:fixed;top:16px;left:16px;z-index:9999;" class="no-pdf">'
-            + '<button onclick="window.close()" style="background:linear-gradient(135deg,#0d3321,#1a5c35);color:white;border:none;border-radius:40px;padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;box-shadow:0 4px 14px rgba(13,51,33,0.35);font-family:Calibri,Arial,sans-serif;">&#8592; Volver a la aplicaci&oacute;n</button>'
-            + '</div>';
+        // Back button + page numbering injection
+        // counter(pages) broken in Safari — inject JS-calculated page numbers instead
+        var totalPagesEstimate = 2 + frentes.length; // portada + resumen + 1 per frente
 
-        var pageNumStyle = '<style>'
-            + '@media print {'
-            + '  .no-pdf { display:none!important; }'
-            + '  a[href]:after { content:none!important; }'
-            + '  abbr[title]:after { content:none!important; }'
-            + '  @page {'
-            + '    @bottom-center {'
-            + '      content: "P\u00E1gina " counter(page) " de " counter(pages);'
-            + '      font-family: Calibri,Arial,sans-serif;'
-            + '      font-size: 9pt;'
-            + '      color: #4B5563;'
-            + '    }'
-            + '    @top-left   { content: ""; }'
-            + '    @top-center { content: ""; }'
-            + '    @top-right  { content: ""; }'
-            + '    @bottom-left  { content: ""; }'
-            + '    @bottom-right { content: ""; }'
-            + '  }'
-            + '}'
+        var injection = ''
+            + '<div style="position:fixed;top:16px;left:16px;z-index:9999;" class="no-pdf">'
+            +   '<button onclick="window.close()" style="background:linear-gradient(135deg,#0d3321,#1a5c35);color:white;border:none;border-radius:40px;padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;box-shadow:0 4px 14px rgba(13,51,33,0.35);font-family:Calibri,Arial,sans-serif;">&#8592; Volver</button>'
+            + '</div>'
+            + '<style>'
+            +   '@media print {'
+            +     '.no-pdf{display:none!important;}'
+            +     'a[href]:after{content:none!important;}'
+            +     'abbr[title]:after{content:none!important;}'
+            +   '}'
+            +   '@page{'
+            +     'margin:2.5cm 2cm 2.5cm 2cm;'
+            +     '@bottom-center{content:"P\u00E1gina " counter(page) " de ' + totalPagesEstimate + '";font-family:Calibri,Arial,sans-serif;font-size:9pt;color:#4B5563;}'
+            +     '@top-left{content:"";} @top-center{content:"";} @top-right{content:"";}'
+            +     '@bottom-left{content:"";} @bottom-right{content:"";}'
+            +   '}'
             + '</style>';
 
-        html = html.replace('</body>', backBtnHtml + pageNumStyle + '</body>');
+        html = html.replace('</body>', injection + '</body>');
 
 
         // iOS Safari: use Blob URL instead of document.write() to allow data: images
