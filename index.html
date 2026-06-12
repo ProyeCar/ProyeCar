@@ -1107,6 +1107,14 @@
     function generarInformeDireccion() {
         if (frentes.length === 0) { alert("Debe haber al menos un frente de obra para generar el informe."); return; }
 
+        // Leer datos actuales desde el array (ya sincronizados con los eventos input/change)
+        const proyecto  = document.getElementById("proyecto").value;
+        const fecha     = document.getElementById("fecha").value;
+        const ubicacion = document.getElementById("ubicacion").value;
+        const inspector = document.getElementById("inspector").value || "No especificado";
+        const logoData  = (logoImg.src && logoImg.src.startsWith("data:")) ? logoImg.src : null;
+        const ahora     = new Date().toLocaleString("es-CO");
+
         // Estadísticas
         let globalCumple = 0, globalNoCumple = 0, globalSinCalificar = 0;
         let frentesStats = [];
@@ -1120,24 +1128,56 @@
                 }
             }
             const total = cumple + noCumple + sinCalificar;
-            const pctCumple = total > 0 ? (cumple / total * 100).toFixed(1) : 0;
-            frentesStats.push({ nombre: frente.nombre, cumple, noCumple, sinCalificar, total, pctCumple });
+            const pctCumple = total > 0 ? (cumple / total * 100).toFixed(1) : "0.0";
+            const contratista = frente.contratista || "No especificado";
+            frentesStats.push({ nombre: frente.nombre, cumple, noCumple, sinCalificar, total, pctCumple, contratista });
             globalCumple += cumple; globalNoCumple += noCumple; globalSinCalificar += sinCalificar;
         }
         const totalGlobal = globalCumple + globalNoCumple + globalSinCalificar;
-        const pctGlobal = totalGlobal > 0 ? (globalCumple / totalGlobal * 100).toFixed(1) : 0;
-
-        const proyecto  = proyectoInput.value;
-        const fecha     = fechaInput.value;
-        const ubicacion = ubicacionInput.value;
-        const inspector = inspectorInput.value || "No especificado";
-        const logoData  = (logoImg.src && logoImg.src.startsWith("data:")) ? logoImg.src : null;
-        const ahora     = new Date().toLocaleString("es-CO");
+        const pctGlobal = totalGlobal > 0 ? (globalCumple / totalGlobal * 100).toFixed(1) : "0.0";
 
         const pctNum = parseFloat(pctGlobal);
         const semColor = pctNum >= 80 ? "#16a34a" : pctNum >= 50 ? "#d97706" : "#dc2626";
         const semLabel = pctNum >= 80 ? "ACEPTABLE" : pctNum >= 50 ? "EN PROCESO" : "CRÍTICO";
 
+        // ─── SVG helpers ───
+        function svgPie(c, n, s, size) {
+            const total = c + n + s;
+            if (total === 0) return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${size/2}" cy="${size/2}" r="${size/2-4}" fill="#e2e8f0"/><text x="${size/2}" y="${size/2+5}" text-anchor="middle" font-size="11" fill="#64748b">Sin datos</text></svg>`;
+            const cx = size/2, cy = size/2, r = size/2 - 6;
+            const colors = ["#2b9348","#dc2626","#f59e0b"];
+            const vals = [c, n, s];
+            let paths = "", startA = -90;
+            for (let i = 0; i < 3; i++) {
+                if (vals[i] === 0) continue;
+                const slice = (vals[i] / total) * 360;
+                const endA = startA + slice;
+                const rad = Math.PI / 180;
+                const x1 = cx + r * Math.cos(startA * rad), y1 = cy + r * Math.sin(startA * rad);
+                const x2 = cx + r * Math.cos(endA * rad),   y2 = cy + r * Math.sin(endA * rad);
+                const la = slice > 180 ? 1 : 0;
+                if (vals[i] === total) paths += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${colors[i]}"/>`;
+                else paths += `<path d="M${cx},${cy} L${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 ${la},1 ${x2.toFixed(1)},${y2.toFixed(1)} Z" fill="${colors[i]}"/>`;
+                startA = endA;
+            }
+            return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="filter:drop-shadow(0 2px 4px rgba(0,0,0,.15))">${paths}<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="white" stroke-width="1.5"/></svg>`;
+        }
+        function svgBar(pct, w, h, color) {
+            const p = Math.max(0, Math.min(100, parseFloat(pct)||0));
+            const filled = (p/100*w).toFixed(1);
+            return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><rect x="0" y="0" width="${w}" height="${h}" rx="${h/2}" fill="#e2e8f0"/><rect x="0" y="0" width="${filled}" height="${h}" rx="${h/2}" fill="${color}"/><text x="${Math.max(parseFloat(filled)-4,8)}" y="${h/2+4}" text-anchor="end" font-size="${h*0.65}" fill="white" font-weight="bold">${p}%</text></svg>`;
+        }
+        function estadoBadge(cumple) {
+            if (cumple === true)  return {bg:"#dcfce7",text:"#166534",label:"CUMPLE",     svg:`<svg width="14" height="14" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="#2b9348"/><path d="M4.5 8l2.5 2.5 4.5-4.5" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/></svg>`};
+            if (cumple === false) return {bg:"#fee2e2",text:"#991b1b",label:"NO CUMPLE",  svg:`<svg width="14" height="14" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="#dc2626"/><path d="M5 5l6 6M11 5l-6 6" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>`};
+            return                       {bg:"#fef9c3",text:"#78350f",label:"SIN CALIFICAR",svg:`<svg width="14" height="14" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="#f59e0b"/><rect x="7" y="4" width="2" height="5" rx="1" fill="white"/><rect x="7" y="10.5" width="2" height="2" rx="1" fill="white"/></svg>`};
+        }
+        function esc(str) {
+            if (!str) return "";
+            return str.replace(/[&<>]/g, m => m==="&"?"&amp;":m==="<"?"&lt;":"&gt;");
+        }
+
+        // ─── CSS ───
         const css = `
         @page { size: A4; margin: 2cm 1.8cm 2.2cm 1.8cm; }
         @page { @bottom-center { content: "Pag " counter(page) " de " counter(pages); font-family: Calibri,Arial,sans-serif; font-size: 8pt; color: #6b7280; } }
@@ -1145,12 +1185,10 @@
         body{font-family:'Calibri','Segoe UI',Arial,sans-serif;font-size:10pt;line-height:1.5;color:#1f2d3d;background:white;}
         .portada{text-align:center;padding:0;page-break-after:always;}
         .portada-header{background:linear-gradient(160deg,#0a2e1a 0%,#1a5c32 55%,#2b9348 100%);padding:38px 30px 32px;color:white;}
-        .portada-logo-wrap{margin-bottom:20px;}
         .portada-org{font-size:16pt;font-weight:800;color:#ffffff;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;line-height:1.3;}
         .portada-sub{font-size:12pt;font-weight:600;color:#ffffff;letter-spacing:1px;margin-bottom:0;line-height:1.2;opacity:.88;}
         .portada-accent{width:60px;height:3px;background:#6ee7a0;margin:14px auto 0;border-radius:4px;}
         .portada-body{padding:36px 30px 28px;background:white;display:flex;flex-direction:column;align-items:center;justify-content:center;}
-        .portada-label{font-size:8pt;font-weight:700;color:#2b9348;letter-spacing:3px;text-transform:uppercase;margin-bottom:10px;}
         .portada-titulo{font-size:26pt;font-weight:900;color:#0a2e1a;line-height:1.15;margin:0 0 8px;letter-spacing:-.5px;}
         .portada-tipo{font-size:11pt;color:#4b5563;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:32px;}
         .portada-divider{width:72%;height:1px;background:linear-gradient(90deg,transparent,#2b9348,transparent);margin:0 auto 28px;}
@@ -1158,19 +1196,18 @@
         .portada-ficha td:first-child{font-weight:700;color:#166534;padding-right:16px;padding-bottom:8px;white-space:nowrap;}
         .portada-ficha td:last-child{color:#1f2d3d;padding-bottom:8px;font-weight:500;}
         .portada-footer-strip{background:#f0fdf4;border-top:2px solid #bbf7d0;padding:11px 20px;text-align:center;font-size:7.5pt;color:#4b7a5a;letter-spacing:.5px;margin-top:28px;}
-        .sem-badge{display:inline-block;background:${semColor};color:white;font-size:11pt;font-weight:800;padding:8px 22px;border-radius:40px;letter-spacing:1px;margin-top:22px;}
         .sec-h{background:#1e3a2f;color:white;padding:9px 16px;border-radius:8px 8px 0 0;font-size:13pt;font-weight:700;margin-top:22px;page-break-after:avoid;}
         .sec-b{border:1px solid #d1fae5;border-top:none;border-radius:0 0 8px 8px;padding:14px 16px;margin-bottom:18px;background:#fafffe;}
         .kpi-row{display:flex;gap:12px;margin:12px 0;}
         .kpi-card{flex:1;background:white;border:1px solid #e2e8f0;border-radius:10px;padding:12px 8px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.06);}
         .kpi-num{font-size:22pt;font-weight:800;line-height:1.1;}
         .kpi-lbl{font-size:8.5pt;color:#6b7280;margin-top:3px;}
-        .t-resumen{width:100%;border-collapse:collapse;margin:14px 0;font-size:9.5pt;}
-        .t-resumen thead th{background:#1e3a2f;color:white;padding:8px 10px;text-align:center;font-weight:700;}
-        .t-resumen thead th:first-child{text-align:left;}
-        .t-resumen tbody tr:nth-child(even){background:#f8fafc;}
-        .t-resumen tbody td{padding:7px 10px;border-bottom:1px solid #e2e8f0;vertical-align:middle;}
-        .t-resumen tbody td:first-child{font-weight:600;}
+        .t-res{width:100%;border-collapse:collapse;margin:14px 0;font-size:9.5pt;}
+        .t-res thead th{background:#1e3a2f;color:white;padding:8px 10px;text-align:center;font-weight:700;}
+        .t-res thead th:first-child{text-align:left;}
+        .t-res tbody tr:nth-child(even){background:#f8fafc;}
+        .t-res tbody td{padding:7px 10px;border-bottom:1px solid #e2e8f0;vertical-align:middle;}
+        .t-res tbody td:first-child{font-weight:600;}
         .frente-pg{page-break-before:always;}
         .frente-banner{background:linear-gradient(135deg,#1e3a2f 0%,#2b9348 100%);color:white;padding:14px 20px;border-radius:10px;margin-bottom:14px;}
         .frente-banner h2{margin:0;font-size:14pt;}
@@ -1182,13 +1219,13 @@
         .ck-table{width:100%;border-collapse:collapse;margin:8px 0 16px;font-size:9pt;page-break-inside:auto;}
         .ck-table thead tr{background:#1e6f3f;color:white;}
         .ck-table thead th{padding:7px 9px;text-align:center;font-weight:700;}
-        .ck-table thead th:first-child{text-align:left;width:54%;}
-        .ck-table thead th:nth-child(2){width:19%;}
-        .ck-table thead th:nth-child(3){width:27%;}
+        .ck-table thead th:first-child{text-align:left;width:46%;}
+        .ck-table thead th:nth-child(2){width:17%;}
+        .ck-table thead th:nth-child(3){width:37%;}
         .ck-table tbody tr{page-break-inside:avoid;}
         .ck-table tbody tr:nth-child(even){background:#f8fafc;}
-        .ck-table tbody td{padding:6px 9px;border-bottom:1px solid #e2e8f0;vertical-align:middle;}
-        .ck-table tbody td:nth-child(2){text-align:center;}
+        .ck-table tbody td{padding:6px 9px;border-bottom:1px solid #e2e8f0;vertical-align:top;}
+        .ck-table tbody td:nth-child(2){text-align:center;vertical-align:middle;}
         .e-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:8pt;font-weight:700;white-space:nowrap;}
         .cat-h{font-size:10.5pt;font-weight:700;color:#1e6f3f;margin:14px 0 6px;padding:5px 10px;background:#f0fdf4;border-left:4px solid #2b9348;border-radius:0 6px 6px 0;page-break-after:avoid;}
         .photo-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0;}
@@ -1199,32 +1236,27 @@
         .rec-box{background:#fffbeb;border:1px solid #fde68a;border-left:4px solid #d97706;border-radius:0 6px 6px 0;padding:10px 14px;font-size:9.5pt;margin:8px 0;page-break-inside:avoid;}
         .sub-t{font-size:10.5pt;font-weight:700;color:#1e3a2f;margin:14px 0 6px;page-break-after:avoid;}
         .footer-pdf{text-align:center;font-size:7.5pt;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:8px;margin-top:28px;}
-        @media print{body{margin:0;}.frente-pg{page-break-before:always;}.ck-table tbody tr{page-break-inside:avoid;}}`;
+        @media print{.frente-pg{page-break-before:always;}.ck-table tbody tr{page-break-inside:avoid;}}`;
 
         let html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Informe Inspección CARDIQUE</title><style>${css}</style></head><body>`;
 
         // ── PORTADA ──
         html += `<div class="portada">`;
-        // — Header verde oscuro con logo y nombre institución —
         html += `<div class="portada-header">`;
-        html += `<div class="portada-logo-wrap">`;
-        if (logoData) html += `<img src="${logoData}" style="height:90px;max-width:260px;object-fit:contain;">`;
-        else html += `<div style="border:2px solid rgba(255,255,255,.4);border-radius:10px;padding:10px 28px;display:inline-block;margin-bottom:4px;"><span style="font-size:20pt;font-weight:900;color:white;letter-spacing:4px;">CARDIQUE</span></div>`;
-        html += `</div>`;
+        if (logoData) html += `<div style="margin-bottom:20px;"><img src="${logoData}" style="height:90px;max-width:260px;object-fit:contain;"></div>`;
+        else html += `<div style="border:2px solid rgba(255,255,255,.4);border-radius:10px;padding:10px 28px;display:inline-block;margin-bottom:16px;"><span style="font-size:20pt;font-weight:900;color:white;letter-spacing:4px;">CARDIQUE</span></div>`;
         html += `<div class="portada-org">CORPORACIÓN AUTÓNOMA REGIONAL DEL CANAL DEL DIQUE</div>`;
         html += `<div class="portada-sub">Área Técnica de Planeación</div>`;
-        html += `<div class="portada-accent"></div>`;
-        html += `</div>`;
-        // — Cuerpo blanco con título y ficha —
+        html += `<div class="portada-accent"></div></div>`;
         html += `<div class="portada-body">`;
         html += `<div class="portada-titulo">INFORME DE INSPECCIÓN<br>AMBIENTAL Y SST</div>`;
         html += `<div class="portada-tipo">Por Frente de Obra</div>`;
         html += `<div class="portada-divider"></div>`;
         html += `<table class="portada-ficha"><tbody>
-            <tr><td>📋 Proyecto:</td><td>${escapeHtml(proyecto)}</td></tr>
+            <tr><td>📋 Proyecto:</td><td>${esc(proyecto)}</td></tr>
             <tr><td>📅 Fecha:</td><td>${fecha}</td></tr>
-            <tr><td>📍 Ubicación:</td><td>${escapeHtml(ubicacion)}</td></tr>
-            <tr><td>👤 Inspector:</td><td>${escapeHtml(inspector)}</td></tr>
+            <tr><td>📍 Ubicación:</td><td>${esc(ubicacion)}</td></tr>
+            <tr><td>👤 Profesional:</td><td>${esc(inspector)}</td></tr>
             <tr><td>🏗️ Frentes evaluados:</td><td>${frentes.length}</td></tr>
         </tbody></table>`;
         html += `</div>`;
@@ -1241,9 +1273,9 @@
             <div class="kpi-card"><div class="kpi-num" style="color:${semColor};">${pctGlobal}%</div><div class="kpi-lbl">Cumplimiento</div></div>
         </div>`;
         html += `<p style="font-weight:700;margin:10px 0 4px;">Barra de cumplimiento global</p>`;
-        html += `<div style="margin-bottom:12px;">${svgProgressBar(pctGlobal, 560, 22, semColor)}</div>`;
+        html += `<div style="margin-bottom:12px;">${svgBar(pctGlobal, 560, 22, semColor)}</div>`;
         html += `<table style="width:100%;border-collapse:collapse;"><tr>`;
-        html += `<td style="width:130px;vertical-align:middle;text-align:center;padding-right:20px;">${svgPieChart(globalCumple, globalNoCumple, globalSinCalificar, 120)}
+        html += `<td style="width:130px;vertical-align:middle;text-align:center;padding-right:20px;">${svgPie(globalCumple,globalNoCumple,globalSinCalificar,120)}
             <div style="font-size:8pt;margin-top:6px;text-align:left;padding-left:4px;line-height:1.8;">
                 <div><svg width="11" height="11"><rect width="11" height="11" rx="2" fill="#2b9348"/></svg> Cumple</div>
                 <div><svg width="11" height="11"><rect width="11" height="11" rx="2" fill="#dc2626"/></svg> No cumple</div>
@@ -1251,21 +1283,22 @@
             </div></td>`;
         html += `<td style="vertical-align:top;"><p style="font-weight:700;margin:0 0 8px;">Cumplimiento por frente de obra</p>`;
         for (let stat of frentesStats) {
-            const bc = parseFloat(stat.pctCumple) >= 80 ? "#16a34a" : parseFloat(stat.pctCumple) >= 50 ? "#d97706" : "#dc2626";
+            const bc = parseFloat(stat.pctCumple)>=80?"#16a34a":parseFloat(stat.pctCumple)>=50?"#d97706":"#dc2626";
             html += `<div style="margin-bottom:9px;">
-                <div style="font-size:9pt;font-weight:600;margin-bottom:3px;">${escapeHtml(stat.nombre)}</div>
-                ${svgProgressBar(stat.pctCumple, 390, 18, bc)}
+                <div style="font-size:9pt;font-weight:600;margin-bottom:3px;">${esc(stat.nombre)}</div>
+                ${svgBar(stat.pctCumple, 390, 18, bc)}
                 <div style="font-size:8pt;color:#6b7280;margin-top:2px;">${stat.cumple} cumple · ${stat.noCumple} no cumple · ${stat.sinCalificar} sin calificar</div>
             </div>`;
         }
         html += `</td></tr></table>`;
         html += `<p style="font-weight:700;margin:16px 0 8px;">Tabla comparativa por frente</p>`;
-        html += `<table class="t-resumen"><thead><tr><th>Frente de Obra</th><th>Total</th><th>Cumple</th><th>No Cumple</th><th>Sin Cal.</th><th>% Cumpl.</th></tr></thead><tbody>`;
+        html += `<table class="t-res"><thead><tr><th>Frente de Obra</th><th>Contratista</th><th>Total</th><th>Cumple</th><th>No Cumple</th><th>Sin Cal.</th><th>% Cumpl.</th></tr></thead><tbody>`;
         for (let stat of frentesStats) {
-            const rbc = parseFloat(stat.pctCumple)>=80 ? "#f0fdf4" : parseFloat(stat.pctCumple)>=50 ? "#fffbeb" : "#fff1f2";
-            const tbc = parseFloat(stat.pctCumple)>=80 ? "#16a34a" : parseFloat(stat.pctCumple)>=50 ? "#d97706" : "#dc2626";
+            const rbc = parseFloat(stat.pctCumple)>=80?"#f0fdf4":parseFloat(stat.pctCumple)>=50?"#fffbeb":"#fff1f2";
+            const tbc = parseFloat(stat.pctCumple)>=80?"#16a34a":parseFloat(stat.pctCumple)>=50?"#d97706":"#dc2626";
             html += `<tr style="background:${rbc};">
-                <td>${escapeHtml(stat.nombre)}</td>
+                <td>${esc(stat.nombre)}</td>
+                <td style="font-size:8.5pt;color:#475569;">${esc(stat.contratista)}</td>
                 <td style="text-align:center;">${stat.total}</td>
                 <td style="text-align:center;color:#166534;font-weight:700;">${stat.cumple}</td>
                 <td style="text-align:center;color:#991b1b;font-weight:700;">${stat.noCumple}</td>
@@ -1278,10 +1311,14 @@
         // ── DETALLE POR FRENTE ──
         for (let i = 0; i < frentes.length; i++) {
             const frente = frentes[i];
-            const stat = frentesStats[i];
-            const bc = parseFloat(stat.pctCumple)>=80 ? "#16a34a" : parseFloat(stat.pctCumple)>=50 ? "#d97706" : "#dc2626";
+            const stat   = frentesStats[i];
+            const bc     = parseFloat(stat.pctCumple)>=80?"#16a34a":parseFloat(stat.pctCumple)>=50?"#d97706":"#dc2626";
+
             html += `<div class="frente-pg">`;
-            html += `<div class="frente-banner"><h2>🏗️ ${escapeHtml(frente.nombre)}</h2><p>Sección ${i+2} de ${frentes.length+1} &nbsp;|&nbsp; Profesional: ${escapeHtml(inspector)} &nbsp;|&nbsp; Contratista: ${escapeHtml(frente.contratista||"No especificado")} &nbsp;|&nbsp; Fecha: ${fecha}</p></div>`;
+            html += `<div class="frente-banner">
+                <h2>🏗️ ${esc(frente.nombre)}</h2>
+                <p>Sección ${i+2} de ${frentes.length+1} &nbsp;|&nbsp; Profesional: ${esc(inspector)} &nbsp;|&nbsp; Contratista: ${esc(frente.contratista||"No especificado")} &nbsp;|&nbsp; Fecha: ${fecha}</p>
+            </div>`;
             html += `<div class="mini-kpi-row">
                 <div class="mini-kpi"><div class="num" style="color:#1e3a2f;">${stat.total}</div><div class="lbl">Total</div></div>
                 <div class="mini-kpi"><div class="num" style="color:#16a34a;">${stat.cumple}</div><div class="lbl">Cumple</div></div>
@@ -1290,46 +1327,61 @@
                 <div class="mini-kpi"><div class="num" style="color:${bc};">${stat.pctCumple}%</div><div class="lbl">Cumplimiento</div></div>
             </div>`;
             html += `<table style="width:100%;border-collapse:collapse;margin:10px 0;"><tr>
-                <td style="width:110px;text-align:center;vertical-align:middle;padding-right:16px;">${svgPieChart(stat.cumple,stat.noCumple,stat.sinCalificar,100)}</td>
+                <td style="width:110px;text-align:center;vertical-align:middle;padding-right:16px;">${svgPie(stat.cumple,stat.noCumple,stat.sinCalificar,100)}</td>
                 <td style="vertical-align:middle;">
                     <div style="font-size:9pt;font-weight:600;margin-bottom:5px;">Barra de cumplimiento</div>
-                    ${svgProgressBar(stat.pctCumple, 380, 20, bc)}
-                    <div style="font-size:8pt;color:#6b7280;margin-top:4px;"><span style="color:#2b9348;font-weight:700;">${stat.cumple}</span> cumple &nbsp; <span style="color:#dc2626;font-weight:700;">${stat.noCumple}</span> no cumple &nbsp; <span style="color:#d97706;font-weight:700;">${stat.sinCalificar}</span> sin calificar</div>
+                    ${svgBar(stat.pctCumple, 380, 20, bc)}
+                    <div style="font-size:8pt;color:#6b7280;margin-top:4px;"><span style="color:#2b9348;font-weight:700;">${stat.cumple}</span> cumple &nbsp;<span style="color:#dc2626;font-weight:700;">${stat.noCumple}</span> no cumple &nbsp;<span style="color:#d97706;font-weight:700;">${stat.sinCalificar}</span> sin calificar</div>
                 </td>
             </tr></table>`;
 
+            // ── Checklist por categoría ──
             html += `<div class="sub-t">Checklist de Inspección</div>`;
             for (let cat of frente.categorias) {
                 if (cat.items.length === 0) continue;
                 let cc = 0, cn = 0;
                 cat.items.forEach(it => { if (it.cumple===true) cc++; else if (it.cumple===false) cn++; });
                 html += `<div class="cat-h">${cat.nombre} <span style="font-weight:400;font-size:8.5pt;color:#4b5563;">(${cc} ✔ / ${cn} ✘ / ${cat.items.length-cc-cn} ◻)</span></div>`;
-                html += `<table class="ck-table"><thead><tr><th>Ítem de Verificación</th><th>Estado</th><th>Observación</th></tr></thead><tbody>`;
+                html += `<table class="ck-table"><thead><tr><th>Ítem de Verificación</th><th>Estado</th><th>Observación / Acción requerida</th></tr></thead><tbody>`;
                 for (let item of cat.items) {
-                    const ec = estadoColor(item.cumple);
-                    html += `<tr><td>${escapeHtml(item.texto)}</td><td><span class="e-badge" style="background:${ec.bg};color:${ec.text};">${svgEstado(item.cumple)} ${ec.label}</span></td><td style="color:#4b5563;">${escapeHtml(item.obs||"—")}</td></tr>`;
+                    const eb = estadoBadge(item.cumple);
+                    // Observación: mostrar exactamente lo que el usuario ingresó en el campo
+                    const obsText = item.obs ? esc(item.obs) : "<em style=\"color:#9ca3af;\">Sin observación</em>";
+                    html += `<tr>
+                        <td style="font-weight:500;">${esc(item.texto)}</td>
+                        <td><span class="e-badge" style="background:${eb.bg};color:${eb.text};">${eb.svg} ${eb.label}</span></td>
+                        <td style="color:#374151;font-size:8.5pt;">${obsText}</td>
+                    </tr>`;
                 }
                 html += `</tbody></table>`;
             }
 
+            // ── Fotos ──
             if (frente.fotos && frente.fotos.length > 0) {
                 html += `<div class="sub-t">📸 Evidencia Fotográfica (${frente.fotos.length} foto${frente.fotos.length>1?"s":""})</div>`;
                 html += `<div class="photo-grid">`;
                 frente.fotos.forEach((foto, j) => {
-                    html += `<figure class="photo-card"><img src="${foto}" alt="Evidencia ${j+1}"><figcaption>Fotografía ${j+1} — ${escapeHtml(frente.nombre)}</figcaption></figure>`;
+                    html += `<figure class="photo-card"><img src="${foto}" alt="Evidencia ${j+1}"><figcaption>Fotografía ${j+1} — ${esc(frente.nombre)}</figcaption></figure>`;
                 });
                 html += `</div>`;
             }
-            if (frente.observaciones) {
-                html += `<div class="sub-t">📝 Observaciones Específicas</div><div class="obs-box">${escapeHtml(frente.observaciones).replace(/\n/g,"<br>")}</div>`;
+
+            // ── Observaciones ──
+            if (frente.observaciones && frente.observaciones.trim()) {
+                html += `<div class="sub-t">📝 Observaciones Específicas del Frente</div>`;
+                html += `<div class="obs-box">${esc(frente.observaciones).replace(/\n/g,"<br>")}</div>`;
             }
-            if (frente.recomendaciones) {
-                html += `<div class="sub-t">⚠️ Recomendaciones Técnicas</div><div class="rec-box">${escapeHtml(frente.recomendaciones).replace(/\n/g,"<br>")}</div>`;
+
+            // ── Recomendaciones ──
+            if (frente.recomendaciones && frente.recomendaciones.trim()) {
+                html += `<div class="sub-t">⚠️ Recomendaciones Técnicas</div>`;
+                html += `<div class="rec-box">${esc(frente.recomendaciones).replace(/\n/g,"<br>")}</div>`;
             }
-            html += `</div>`;
+
+            html += `</div>`; // fin frente-pg
         }
 
-        html += `<div class="footer-pdf">Informe generado automáticamente por Inspector CARDIQUE &nbsp;|&nbsp; Datos no salen del dispositivo<br>Proyecto: ${escapeHtml(proyecto)} &nbsp;|&nbsp; Fecha de emisión: ${ahora}</div>`;
+        html += `<div class="footer-pdf">Informe generado por Inspector CARDIQUE &nbsp;|&nbsp; Proyecto: ${esc(proyecto)} &nbsp;|&nbsp; Emisión: ${ahora}</div>`;
         html += `</body></html>`;
 
         const win = window.open("","_blank");
