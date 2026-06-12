@@ -6,6 +6,9 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>CARDIQUE - Inspección Ambiental y SST por Frente de Obra</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <style>
         /* ========== ESTILOS GENERALES ========== */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -742,17 +745,24 @@
     fechaInput.valueAsDate = new Date();
 
     function showSavedMessage() { saveIndicator.textContent = "✅ Datos guardados"; setTimeout(() => saveIndicator.textContent = "", 2000); }
+    function getFormValues() {
+        return {
+            proyecto:  document.getElementById("proyecto").value,
+            fecha:     document.getElementById("fecha").value,
+            ubicacion: document.getElementById("ubicacion").value,
+            inspector: document.getElementById("inspector").value
+        };
+    }
     function saveToLocal() {
+        const form = getFormValues();
         try {
-            const data = { frentes, proyecto: proyectoInput.value, fecha: fechaInput.value, ubicacion: ubicacionInput.value, inspector: inspectorInput.value };
-            const json = JSON.stringify(data);
-            localStorage.setItem("inspectorFrentesData", json);
+            const data = { frentes, ...form };
+            localStorage.setItem("inspectorFrentesData", JSON.stringify(data));
             showSavedMessage();
             return true;
         } catch(e) {
-            // localStorage full - save without photos
             try {
-                const dataNoFotos = { frentes: frentes.map(f => ({...f, fotos:[]})), proyecto: proyectoInput.value, fecha: fechaInput.value, ubicacion: ubicacionInput.value, inspector: inspectorInput.value };
+                const dataNoFotos = { frentes: frentes.map(f => ({...f, fotos:[]})), ...form };
                 localStorage.setItem("inspectorFrentesData", JSON.stringify(dataNoFotos));
                 showSavedMessage();
             } catch(e2) { console.warn("Storage full"); }
@@ -1105,26 +1115,30 @@
     }
 
     function generarInformeDireccion() {
-        // Leer directamente del DOM (fuente de verdad en pantalla)
-        const proyecto  = document.getElementById("proyecto").value.trim();
-        const fecha     = document.getElementById("fecha").value;
-        const ubicacion = document.getElementById("ubicacion").value.trim();
-        const inspector = document.getElementById("inspector").value.trim() || "No especificado";
-        const logoData  = (logoImg.src && logoImg.src.startsWith("data:")) ? logoImg.src : null;
-        const ahora     = new Date().toLocaleString("es-CO");
+        // 1. Leer del DOM en este instante exacto (iOS Safari safe)
+        const form = getFormValues();
+        const proyecto  = form.proyecto.trim() || "";
+        const fecha     = form.fecha || "";
+        const ubicacion = form.ubicacion.trim() || "Jurisdicción CARDIQUE";
+        const inspector = form.inspector.trim() || "No especificado";
 
-        // Sincronizar campos del formulario al array antes de guardar
-        // (cubre el caso en que el usuario no haya salido del campo)
+        console.log("[PDF] Valores leídos del DOM:", { proyecto, fecha, ubicacion, inspector });
+
+        // 2. Guardar con esos valores (sincroniza localStorage)
         saveToLocal();
 
-        // Recargar frentes desde localStorage para tener los estados más recientes
+        // 3. Recargar frentes desde localStorage (estados Cumple/NoCumple actualizados)
         try {
             const saved = localStorage.getItem("inspectorFrentesData");
             if (saved) {
                 const data = JSON.parse(saved);
                 if (data.frentes && data.frentes.length > 0) frentes = data.frentes;
+                console.log("[PDF] Frentes cargados:", frentes.length);
             }
-        } catch(e) { /* usar frentes en memoria */ }
+        } catch(e) { console.warn("[PDF] localStorage error:", e); }
+
+        const logoData  = (logoImg.src && logoImg.src.startsWith("data:")) ? logoImg.src : null;
+        const ahora     = new Date().toLocaleString("es-CO");
 
         if (frentes.length === 0) { alert("Debe haber al menos un frente de obra para generar el informe."); return; }
 
