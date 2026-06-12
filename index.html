@@ -574,6 +574,16 @@
         .btn-comparar { background: #1e6f3f; margin-top: 8px; width: 100%; }
 
     </style>
+    <link rel="manifest" href="./manifest.json">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="CARDIQUE">
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js');
+        });
+      }
+    </script>
 </head>
 <body>
 <div id="pantalla-inspeccion" class="pantalla activa"><div class="container">
