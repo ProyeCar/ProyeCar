@@ -1206,8 +1206,21 @@
 
         // ─── CSS ───
         const css = `
-        @page { size: A4; margin: 2cm 1.8cm 2.2cm 1.8cm; }
-        @page { @bottom-center { content: "Pag " counter(page) " de " counter(pages); font-family: Calibri,Arial,sans-serif; font-size: 8pt; color: #6b7280; } }
+        @page {
+            size: A4;
+            margin: 2.5cm 2cm 2.5cm 2cm;
+            @bottom-center {
+                content: "Página " counter(page) " de " counter(pages);
+                font-family: Calibri, Arial, sans-serif;
+                font-size: 9pt;
+                color: #4B5563;
+            }
+            @top-left   { content: ""; }
+            @top-center { content: ""; }
+            @top-right  { content: ""; }
+            @bottom-left  { content: ""; }
+            @bottom-right { content: ""; }
+        }
         *{box-sizing:border-box;}
         body{font-family:'Calibri','Segoe UI',Arial,sans-serif;font-size:10pt;line-height:1.5;color:#1f2d3d;background:white;}
         .portada{text-align:center;padding:0;page-break-after:always;}
@@ -1255,15 +1268,26 @@
         .ck-table tbody td:nth-child(2){text-align:center;vertical-align:middle;}
         .e-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:8pt;font-weight:700;white-space:nowrap;}
         .cat-h{font-size:10.5pt;font-weight:700;color:#1e6f3f;margin:14px 0 6px;padding:5px 10px;background:#f0fdf4;border-left:4px solid #2b9348;border-radius:0 6px 6px 0;page-break-after:avoid;}
-        .photo-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0;}
-        .photo-card{page-break-inside:avoid;break-inside:avoid;text-align:center;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;}
-        .photo-card img{width:100%;height:auto;max-height:260px;object-fit:contain;display:block;background:#f8fafc;}
+        .photo-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0;page-break-inside:avoid;break-inside:avoid;}
+        .photo-card{page-break-inside:avoid;break-inside:avoid;display:inline-block;width:100%;text-align:center;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;}
+        .photo-card img{width:100%;height:auto;max-height:220px;object-fit:contain;display:block;background:#f8fafc;page-break-inside:avoid;break-inside:avoid;}
         .photo-card figcaption{font-size:8pt;color:#374151;padding:5px 8px;background:#f1f5f9;border-top:1px solid #e2e8f0;font-weight:600;}
         .obs-box{background:#f9fafb;border:1px solid #e2e8f0;border-left:4px solid #2b9348;border-radius:0 6px 6px 0;padding:10px 14px;font-size:9.5pt;margin:8px 0;page-break-inside:avoid;}
         .rec-box{background:#fffbeb;border:1px solid #fde68a;border-left:4px solid #d97706;border-radius:0 6px 6px 0;padding:10px 14px;font-size:9.5pt;margin:8px 0;page-break-inside:avoid;}
         .sub-t{font-size:10.5pt;font-weight:700;color:#1e3a2f;margin:14px 0 6px;page-break-after:avoid;}
         .footer-pdf{text-align:center;font-size:7.5pt;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:8px;margin-top:28px;}
-        @media print{.frente-pg{page-break-before:always;}.ck-table tbody tr{page-break-inside:avoid;}}`;
+        @media print{
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .frente-pg { page-break-before: always; break-before: page; }
+            .ck-table tbody tr { page-break-inside: avoid; break-inside: avoid; }
+            .photo-grid { page-break-inside: avoid; break-inside: avoid; }
+            .photo-card { page-break-inside: avoid; break-inside: avoid; display: block; }
+            .sub-t { page-break-after: avoid; break-after: avoid; }
+            .cat-h { page-break-after: avoid; break-after: avoid; }
+            .frente-banner { page-break-after: avoid; break-after: avoid; }
+            a[href]:after { content: none !important; }
+            abbr[title]:after { content: none !important; }
+        }`;
 
         let html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Informe Inspección CARDIQUE</title><style>${css}</style></head><body>`;
 
@@ -1408,8 +1432,32 @@
             html += `</div>`; // fin frente-pg
         }
 
-        html += `<div class="footer-pdf">Informe generado por Inspector CARDIQUE &nbsp;|&nbsp; Proyecto: ${esc(proyecto)} &nbsp;|&nbsp; Emisión: ${ahora}</div>`;
+        // footer suprimido — numeración via @page counter(page) / counter(pages)
         html += `</body></html>`;
+
+        // Inject back button into generated HTML before </body>
+        const backBtn = `
+        <div style="position:fixed;top:16px;left:16px;z-index:9999;" class="no-pdf">
+            <button onclick="window.close()" style="
+                background:linear-gradient(135deg,#0d3321,#1a5c35);
+                color:white;
+                border:none;
+                border-radius:40px;
+                padding:10px 20px;
+                font-size:14px;
+                font-weight:700;
+                cursor:pointer;
+                display:flex;
+                align-items:center;
+                gap:8px;
+                box-shadow:0 4px 14px rgba(13,51,33,0.35);
+                font-family:Calibri,Arial,sans-serif;
+            ">&#8592; Volver a la aplicación</button>
+        </div>
+        <style>
+            @media print { .no-pdf { display: none !important; } }
+        </style>`;
+        html = html.replace('</body>', backBtn + '</body>');
 
         const win = window.open("","_blank");
         if (!win) { alert("Por favor, permita las ventanas emergentes para generar el informe."); return; }
