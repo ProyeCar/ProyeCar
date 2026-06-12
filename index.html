@@ -154,8 +154,8 @@
             transition: background 0.2s;
         }
         .frente-header:hover { background: linear-gradient(90deg, #0a2818 0%, #164e2c 100%); }
-        .frente-body { overflow: hidden; transition: max-height 0.38s cubic-bezier(0.4,0,0.2,1); padding: 0 14px; }
-        .frente-body.collapsed { max-height: 0 !important; padding: 0 14px; }
+        .frente-body { overflow: visible; padding: 0 14px; }
+        .frente-body.collapsed { overflow: hidden; max-height: 0 !important; padding: 0 14px; }
         .frente-toggle { font-size:1rem; margin-right:8px; transition: transform 0.3s; display:inline-block; color:#86efac; }
         .frente-toggle.open { transform: rotate(90deg); }
         .frente-summary { font-size:0.76rem; color:#86efac; margin-left:8px; }
@@ -200,8 +200,8 @@
         .cat-titulo:hover { background: #f1f5f9; }
         .cat-toggle { font-size:0.85rem; transition: transform 0.3s; display:inline-block; color: var(--verde-vivo); }
         .cat-toggle.open { transform: rotate(90deg); }
-        .cat-body { overflow: hidden; transition: max-height 0.3s ease; }
-        .cat-body.collapsed { max-height: 0 !important; }
+        .cat-body { overflow: visible; }
+        .cat-body.collapsed { overflow: hidden; max-height: 0 !important; }
 
         /* === ÍTEMS === */
         .items-grid { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px 12px; }
@@ -866,17 +866,14 @@
             // Body wrapper for collapse
             const frenteBody = document.createElement("div");
             frenteBody.className = "frente-body";
-            frenteBody.style.maxHeight = "none";
 
             headerDiv.addEventListener("click", (e) => {
                 if (e.target.tagName === "INPUT" || e.target.tagName === "BUTTON") return;
                 const isOpen = !frenteBody.classList.contains("collapsed");
                 if (isOpen) {
-                    frenteBody.style.maxHeight = frenteBody.scrollHeight + "px";
-                    requestAnimationFrame(() => { frenteBody.style.maxHeight = "0px"; frenteBody.classList.add("collapsed"); });
+                    frenteBody.classList.add("collapsed");
                     toggleArrow.classList.remove("open");
                 } else {
-                    frenteBody.style.maxHeight = "none";
                     frenteBody.classList.remove("collapsed");
                     toggleArrow.classList.add("open");
                 }
@@ -889,11 +886,11 @@
                 const catNombre = document.createElement("span"); catNombre.innerText = cat.nombre;
                 catTitulo.appendChild(catNombre); catTitulo.appendChild(catToggle);
                 catDiv.appendChild(catTitulo);
-                const catBody = document.createElement("div"); catBody.className = "cat-body"; catBody.style.cssText = "padding-top:8px;max-height:none;";
+                const catBody = document.createElement("div"); catBody.className = "cat-body"; catBody.style.cssText = "padding-top:8px;";
                 catTitulo.addEventListener("click", () => {
                     const open = !catBody.classList.contains("collapsed");
-                    if (open) { catBody.style.maxHeight = catBody.scrollHeight + "px"; requestAnimationFrame(() => { catBody.style.maxHeight = "0px"; catBody.classList.add("collapsed"); }); catToggle.classList.remove("open"); }
-                    else { catBody.style.maxHeight = "none"; catBody.classList.remove("collapsed"); catToggle.classList.add("open"); }
+                    if (open) { catBody.classList.add("collapsed"); catToggle.classList.remove("open"); }
+                    else { catBody.classList.remove("collapsed"); catToggle.classList.add("open"); }
                 });
                 const itemsDiv = document.createElement("div"); itemsDiv.className = "items-grid";
                 cat.items.forEach((item, itemIdx) => {
