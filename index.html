@@ -565,8 +565,12 @@
 
     </style>
     <link rel="manifest" href="./manifest.json">
+    <link rel="apple-touch-icon" sizes="180x180" href="./icon-192.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="./icon-192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="CARDIQUE">
+    <meta name="apple-mobile-web-app-title" content="CARDIQUE Inspector">
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -782,17 +786,17 @@
 
     // ── SUGERENCIAS TÉCNICAS EXPERTAS – AMBIENTAL & SST OBRAS CIVILES ──
     const SUGERENCIAS = {
-        "amb1": "Desorden y acumulación de residuos en frente de obra. Se ordena limpieza y segregación en 24 h. Incumple Decreto 1076 de 2015 y PMA aprobado.",
-        "amb2": "Manejo inadecuado de residuos: mezcla y disposición incorrecta. Se ordena separación en fuente (GTC 24) y retiro de peligrosos. Incumple Decreto 1076 de 2015.",
-        "amb3": "Puntos ecológicos deteriorados, sin tapa o mal rotulados. Se ordena reposición y señalización correcta. Incumple Decreto 1076 de 2015.",
-        "amb4": "Sin control de material particulado en operaciones. Se ordena humectación periódica y cubrimiento de volquetas. Incumple Decreto 1076 de 2015.",
-        "sst1": "Personal sin EPP completo o en mal estado. Se ordena suspensión de actividades hasta dotación correcta. Incumple Resolución 0312 de 2019.",
-        "sst2": "Señalización vial deficiente o incompleta. Se ordena reinstalación del esquema PMT aprobado de inmediato. Incumple Manual de Señalización Vial MINTRANSPORTE 2015.",
-        "sst3": "Personal sin inducciones o capacitaciones SST vigentes. Se ordena regularización en 48 h. Incumple Decreto 1072 de 2015 y Resolución 0312 de 2019.",
-        "sst4": "Sin paletero certificado en cruces viales. Se suspenden trabajos en calzada hasta asignación. Incumple PMT aprobado y Código Nacional de Tránsito Art. 101.",
-        "sst5": "Botiquín, kit antiderrame o extintor incompleto o vencido. Se ordena dotación inmediata. Incumple Decreto 1072 de 2015.",
-        "sst6": "Sin registros de inspección preoperacional de maquinaria. Se ordena implementación diaria inmediata. Incumple Resolución 0312 de 2019.",
-        "sst7": "Plan de emergencias no actualizado ni socializado con el personal. Se ordena actualización y simulacro en 72 h. Incumple Decreto 1072 de 2015."
+        "amb1": "Se evidencia desorden y residuos sin clasificar en el frente de obra. Se recomienda realizar limpieza y segregación. Incumple Decreto 1076 de 2015 y PMA aprobado.",
+        "amb2": "Se observa manejo inadecuado de residuos: mezcla sin separación en fuente. Incumple Decreto 1076 de 2015.",
+        "amb3": "Puntos ecológicos deteriorados, sin tapa o sin rotulación correcta (GTC 24). Incumple Decreto 1076 de 2015.",
+        "amb4": "Sin control de material particulado en operaciones de cargue/descargue. Se recomienda humectación y cubrimiento de volquetas. Incumple Decreto 1076 de 2015.",
+        "sst1": "Se evidencia personal sin EPP completo o con dotación en mal estado. Se recomienda corrección inmediata. Incumple Resolución 0312 de 2019.",
+        "sst2": "Señalización vial deficiente o no conforme al esquema PMT aprobado. Incumple Manual de Señalización Vial MINTRANSPORTE 2015.",
+        "sst3": "Inducciones o capacitaciones SST sin vigencia o sin registro. Incumple Decreto 1072 de 2015 y Resolución 0312 de 2019.",
+        "sst4": "Sin paletero certificado en cruce vial. Incumple PMT aprobado y Código Nacional de Tránsito Art. 101.",
+        "sst5": "Botiquín, kit antiderrame o extintor incompleto o con vigencia vencida. Incumple Decreto 1072 de 2015.",
+        "sst6": "Sin registros preoperacionales diligenciados para la maquinaria. Incumple Resolución 0312 de 2019.",
+        "sst7": "Plan de emergencias desactualizado o no socializado con el personal. Incumple Decreto 1072 de 2015."
     };
 
     const SUGERENCIAS_CUMPLE = {
@@ -867,50 +871,6 @@
             autoRec = "Frente conforme en todos los ítems. Continuar buenas prácticas ambientales y SST.";
         }
         aplicarAuto(recEl, 'recomendaciones', autoRec);
-    }
-
-    function autoActualizarArea(frenteIdx, catIdx, obsEl, recEl) {
-        var fr = frentes[frenteIdx];
-        if (!fr) return;
-        var cat = fr.categorias[catIdx];
-        if (!cat || cat.tipo !== "auto") return;
-        var nosCumplen = [], hayCumple = false;
-        cat.items.forEach(function(it) {
-            if (it.cumple === false) nosCumplen.push(it);
-            else if (it.cumple === true) hayCumple = true;
-        });
-        function aplicarAutoArea(el, prop, nuevoAuto) {
-            if (!el || !nuevoAuto) return;
-            var old = el.dataset.autoText || "";
-            var cur = (el.value || "").trim();
-            var user = cur;
-            if (old && cur.endsWith(old)) user = cur.slice(0, cur.length - old.length).trimEnd();
-            var next = user ? user + "\n" + nuevoAuto : nuevoAuto;
-            fr.categorias[catIdx][prop] = next;
-            el.value = next;
-            el.dataset.autoText = nuevoAuto;
-        }
-        var autoObs = "";
-        if (hayCumple && nosCumplen.length === 0) {
-            autoObs = "Área conforme. Mantener condiciones actuales.";
-        } else if (nosCumplen.length > 0) {
-            var nombres = nosCumplen.slice(0, 2).map(function(it){ return it.texto.substring(0, 50); }).join("; ");
-            autoObs = "Hallazgos: " + nombres + (nosCumplen.length > 2 ? "; y otros." : ".");
-        }
-        aplicarAutoArea(obsEl, 'obs', autoObs);
-        var autoRec = "";
-        if (nosCumplen.length > 0) {
-            var isAmb = cat.id === "ambiental";
-            var hasSena = nosCumplen.some(function(it){ return it.id === 'sst2'; });
-            var hasSstOther = nosCumplen.some(function(it){ return it.id && it.id.indexOf('sst') === 0 && it.id !== 'sst2'; });
-            if (isAmb) autoRec = "Corregir incumplimientos ambientales detectados. Incumple Decreto 1076 de 2015.";
-            else if (hasSena) autoRec = "Reinstalar señalización vial según esquema PMT aprobado. Incumple Manual MINTRANSPORTE 2015.";
-            else if (hasSstOther) autoRec = "Subsanar deficiencias SST detectadas. Incumple Resolución 0312 de 2019 y Decreto 1072 de 2015.";
-            else autoRec = "Acción correctiva requerida sobre los ítems no conformes del área.";
-        } else if (hayCumple) {
-            autoRec = "Mantener las buenas prácticas actuales del área.";
-        }
-        aplicarAutoArea(recEl, 'rec', autoRec);
     }
 
     let frentes = [
@@ -1073,8 +1033,6 @@
                 catBtnsDiv.appendChild(btnRenArea); catBtnsDiv.appendChild(btnDelArea); catBtnsDiv.appendChild(catToggle);
                 catTitulo.appendChild(catNombre); catTitulo.appendChild(catBtnsDiv);
                 catDiv.appendChild(catTitulo);
-                // catObsEl y catRecEl se inicializan más adelante en esta misma iteración
-                let catObsEl = null, catRecEl = null;
                 const catBody = document.createElement("div"); catBody.className = "cat-body"; catBody.style.cssText = "padding-top:8px;";
                 catTitulo.addEventListener("click", (ev) => {
                     if (ev.target.tagName === "BUTTON") return;
@@ -1104,7 +1062,6 @@
                             else { item.obs = "Condición verificada y conforme. Cumple normativa vigente."; obsInput.value = item.obs; }
                             obsInput.style.background = '#f0fdf4';
                             setTimeout(() => { obsInput.style.background = ''; }, 2000);
-                            autoActualizarArea(idx, catIdx, catObsEl, catRecEl);
                         }
                         autoActualizarFrente(idx, obsTextarea, recTextarea);
                         saveToLocal();
@@ -1119,7 +1076,6 @@
                             else { item.obs = "No conformidad evidenciada. Requiere corrección inmediata. Incumple normativa vigente."; obsInput.value = item.obs; }
                             obsInput.style.background = '#fefce8';
                             setTimeout(() => { obsInput.style.background = ''; }, 2000);
-                            autoActualizarArea(idx, catIdx, catObsEl, catRecEl);
                         }
                         autoActualizarFrente(idx, obsTextarea, recTextarea);
                         saveToLocal();
@@ -1164,26 +1120,6 @@
                     }
                 }, 10); };
                 catDiv.appendChild(btnAgregarItem);
-                // Panel obs/rec por área
-                const areaOrDiv = document.createElement("div");
-                areaOrDiv.style.cssText = "border-top:1px solid #e2e8f0;padding:10px 14px 12px;background:#f9fafb;";
-                const aObsLbl = document.createElement("div"); aObsLbl.innerText = "📝 Observaciones del área";
-                aObsLbl.style.cssText = "font-size:0.78rem;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;";
-                catObsEl = document.createElement("textarea"); catObsEl.rows = 2;
-                catObsEl.placeholder = cat.tipo === "auto" ? "Se genera automáticamente al evaluar ítems..." : "Ingrese observaciones de esta área...";
-                catObsEl.value = cat.obs || "";
-                catObsEl.style.cssText = "width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.83rem;font-family:inherit;background:white;resize:vertical;transition:border-color 0.2s;margin-bottom:8px;box-sizing:border-box;";
-                catObsEl.addEventListener("input", (e) => { frentes[idx].categorias[catIdx].obs = e.target.value; saveToLocal(); });
-                const aRecLbl = document.createElement("div"); aRecLbl.innerText = "📋 Recomendaciones del área";
-                aRecLbl.style.cssText = "font-size:0.78rem;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;";
-                catRecEl = document.createElement("textarea"); catRecEl.rows = 2;
-                catRecEl.placeholder = cat.tipo === "auto" ? "Se genera automáticamente al evaluar ítems..." : "Ingrese recomendaciones para esta área...";
-                catRecEl.value = cat.rec || "";
-                catRecEl.style.cssText = "width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.83rem;font-family:inherit;background:white;resize:vertical;transition:border-color 0.2s;box-sizing:border-box;";
-                catRecEl.addEventListener("input", (e) => { frentes[idx].categorias[catIdx].rec = e.target.value; saveToLocal(); });
-                areaOrDiv.appendChild(aObsLbl); areaOrDiv.appendChild(catObsEl);
-                areaOrDiv.appendChild(aRecLbl); areaOrDiv.appendChild(catRecEl);
-                catDiv.appendChild(areaOrDiv);
                 frenteBody.appendChild(catDiv);
             });
 
@@ -1202,8 +1138,18 @@
             }, 10); };
             frenteBody.appendChild(btnAgregarArea);
 
+            // ── BLOQUE FINAL DEL FRENTE ──────────────────────────────────────
+            const bloqueFinal = document.createElement("div");
+            bloqueFinal.style.cssText = "margin-top:18px;border:2px solid #2d9e52;border-radius:14px;overflow:hidden;";
+            const bloqueFinalHeader = document.createElement("div");
+            bloqueFinalHeader.style.cssText = "background:linear-gradient(90deg,#1a5c35,#2d9e52);padding:10px 16px;display:flex;align-items:center;gap:8px;";
+            bloqueFinalHeader.innerHTML = '<span style="font-size:1rem;font-weight:800;color:#fff;letter-spacing:0.5px;">📋 Cierre del frente — Resumen general</span>';
+            bloqueFinal.appendChild(bloqueFinalHeader);
+            const bloqueFinalBody = document.createElement("div");
+            bloqueFinalBody.style.cssText = "padding:14px 16px;background:#f8fafc;display:flex;flex-direction:column;gap:14px;";
+
             const fotosDiv = document.createElement("div"); fotosDiv.className = "frente-fotos-area";
-            const fotosTitulo = document.createElement("h4"); fotosTitulo.innerText = "📸 Evidencia fotográfica de este frente";
+            const fotosTitulo = document.createElement("h4"); fotosTitulo.innerText = "📸 Evidencias fotográficas";
             fotosDiv.appendChild(fotosTitulo);
             const fotosGrid = document.createElement("div"); fotosGrid.className = "fotos-grid";
             if (frente.fotos && frente.fotos.length > 0) {
@@ -1280,37 +1226,38 @@
                 input.click();
             };
             fotosDiv.appendChild(btnSubirFotosFrente);
-            frenteBody.appendChild(fotosDiv);
+            bloqueFinalBody.appendChild(fotosDiv);
 
-            // Observaciones específicas
+            // Observaciones generales del frente
             const obsEspecificasDiv = document.createElement("div");
             obsEspecificasDiv.className = "frente-obs-area";
             const obsTitulo = document.createElement("h4");
-            obsTitulo.innerText = "📝 Observaciones específicas de este frente";
+            obsTitulo.innerText = "📝 Observaciones generales del frente";
             obsEspecificasDiv.appendChild(obsTitulo);
             const obsTextarea = document.createElement("textarea");
-            obsTextarea.rows = 2;
-            obsTextarea.placeholder = "Observaciones particulares...";
+            obsTextarea.rows = 3;
+            obsTextarea.placeholder = "Observaciones generales del frente (contexto, condiciones del sitio, etc.)...";
             obsTextarea.value = frente.observaciones || "";
             obsTextarea.addEventListener("input", (e) => { frentes[idx].observaciones = e.target.value; saveToLocal(); });
             obsEspecificasDiv.appendChild(obsTextarea);
+            bloqueFinalBody.appendChild(obsEspecificasDiv);
 
-            frenteBody.appendChild(obsEspecificasDiv);
-
-            // Recomendaciones (sin "editable")
+            // Recomendaciones generales del frente
             const recomendacionesDiv = document.createElement("div");
             recomendacionesDiv.className = "frente-recomendaciones-area";
             const recTitulo = document.createElement("h4");
-            recTitulo.innerText = "📋 Recomendaciones para este frente";
+            recTitulo.innerText = "📋 Recomendaciones generales del frente";
             recomendacionesDiv.appendChild(recTitulo);
             const recTextarea = document.createElement("textarea");
             recTextarea.rows = 3;
-            recTextarea.placeholder = "Recomendaciones específicas...";
+            recTextarea.placeholder = "Recomendaciones generales para el contratista o equipo de obra...";
             recTextarea.value = frente.recomendaciones || "";
             recTextarea.addEventListener("input", (e) => { frentes[idx].recomendaciones = e.target.value; saveToLocal(); });
             recomendacionesDiv.appendChild(recTextarea);
+            bloqueFinalBody.appendChild(recomendacionesDiv);
 
-            frenteBody.appendChild(recomendacionesDiv);
+            bloqueFinal.appendChild(bloqueFinalBody);
+            frenteBody.appendChild(bloqueFinal);
             frenteDiv.appendChild(frenteBody);
             // Body is open by default - no maxHeight restriction needed
             frentesContainer.appendChild(frenteDiv);
@@ -1950,12 +1897,6 @@
                         +'<td style="color:#374151;font-size:8.5pt">'+(it.obs?esc(it.obs):'<em style="color:#9ca3af">Sin observaci&oacute;n</em>')+'</td></tr>';
                 }
                 h += '</tbody></table>';
-                if(cat.obs && cat.obs.trim()){
-                    h += '<div style="margin:6px 0 4px;padding:7px 12px;background:#f0fdf4;border-left:3px solid #22c55e;font-size:8.5pt;color:#14532d"><strong>Obs. ' + esc(cat.nombre) + ':</strong> ' + esc(cat.obs).replace(/\n/g,'<br>') + '</div>';
-                }
-                if(cat.rec && cat.rec.trim()){
-                    h += '<div style="margin:4px 0 10px;padding:7px 12px;background:#fffbeb;border-left:3px solid #f59e0b;font-size:8.5pt;color:#78350f"><strong>Rec. ' + esc(cat.nombre) + ':</strong> ' + esc(cat.rec).replace(/\n/g,'<br>') + '</div>';
-                }
             }
 
             // Fotos
