@@ -1560,30 +1560,32 @@
         // Inyectar botón volver + auto-print dentro del HTML generado
         // injection block handled in new PDF function
 
-        // ── MOSTRAR INFORME (iOS Safari + Android Chrome) ──
-        // Estrategia: Blob URL → location.href de ventana pre-abierta
-        // document.write falla en iOS 16+; location.href con Blob es fiable
-        var pdfBlob = new Blob([html], {type: 'text/html;charset=utf-8'});
-        var pdfUrl  = URL.createObjectURL(pdfBlob);
-
+        // ── MOSTRAR INFORME ──
+        // document.write() sobre ventana pre-abierta: sin URL en pie de página iOS Safari
         if (window._pdfWin && !window._pdfWin.closed) {
-            // Ventana ya abierta sincrónicamente — navegar al blob
-            window._pdfWin.location.href = pdfUrl;
-            window._pdfWin.focus();
+            try {
+                window._pdfWin.document.open('text/html', 'replace');
+                window._pdfWin.document.write(html);
+                window._pdfWin.document.close();
+                window._pdfWin.focus();
+            } catch(e) {
+                var pdfBlob2 = new Blob([html], {type:'text/html;charset=utf-8'});
+                var pdfUrl2  = URL.createObjectURL(pdfBlob2);
+                window._pdfWin.location.href = pdfUrl2;
+                setTimeout(function(){ URL.revokeObjectURL(pdfUrl2); }, 60000);
+            }
         } else {
-            // Fallback: intentar abrir nueva ventana (puede ser bloqueada en iOS si llegamos aquí)
-            var w2 = window.open(pdfUrl, '_blank');
+            var pdfBlob2 = new Blob([html], {type:'text/html;charset=utf-8'});
+            var pdfUrl2  = URL.createObjectURL(pdfBlob2);
+            var w2 = window.open(pdfUrl2, '_blank');
             if (!w2) {
-                // Último recurso: descarga/apertura via <a>
                 var a3 = document.createElement('a');
-                a3.href = pdfUrl; a3.target = '_blank'; a3.rel = 'noopener';
+                a3.href = pdfUrl2; a3.target = '_blank'; a3.rel = 'noopener';
                 document.body.appendChild(a3); a3.click();
                 setTimeout(function(){ document.body.removeChild(a3); }, 500);
             }
+            setTimeout(function(){ URL.revokeObjectURL(pdfUrl2); }, 60000);
         }
-
-        // Revocar blob después de 10 min (suficiente para imprimir)
-        setTimeout(function(){ URL.revokeObjectURL(pdfUrl); }, 600000);
         window._pdfWin = null;
         restoreBtn();
     }
@@ -1818,23 +1820,31 @@
         h += '<\/body><\/html>';
 
         // ── 9. Abrir informe ──
-        // encodeURIComponent evita que Safari muestre "blob:https://..." en el pie al imprimir
-        var dataUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(h);
-
+        // document.write() sobre la ventana pre-abierta: sin URL en pie de página,
+        // sin bloqueo de popup en iOS Safari, datos y fotos visibles
         if (window._pdfWin && !window._pdfWin.closed) {
-            window._pdfWin.location.href = dataUrl;
-            window._pdfWin.focus();
-        } else {
-            var w2 = window.open(dataUrl, '_blank');
-            if (!w2) {
-                // Fallback blob si data: URL bloqueada
+            try {
+                window._pdfWin.document.open('text/html', 'replace');
+                window._pdfWin.document.write(h);
+                window._pdfWin.document.close();
+                window._pdfWin.focus();
+            } catch(e) {
                 var fb  = new Blob([h], {type:'text/html;charset=utf-8'});
                 var fbu = URL.createObjectURL(fb);
+                window._pdfWin.location.href = fbu;
+                setTimeout(function(){ URL.revokeObjectURL(fbu); }, 60000);
+            }
+        } else {
+            var fb  = new Blob([h], {type:'text/html;charset=utf-8'});
+            var fbu = URL.createObjectURL(fb);
+            var w2 = window.open(fbu, '_blank');
+            if (!w2) {
                 var a4  = document.createElement('a');
                 a4.href = fbu; a4.target = '_blank'; a4.rel = 'noopener';
                 document.body.appendChild(a4); a4.click();
-                setTimeout(function(){ document.body.removeChild(a4); URL.revokeObjectURL(fbu); }, 1000);
+                setTimeout(function(){ document.body.removeChild(a4); }, 500);
             }
+            setTimeout(function(){ URL.revokeObjectURL(fbu); }, 60000);
         }
         window._pdfWin = null;
         restoreBtn();
