@@ -1558,25 +1558,7 @@
         html += '<\/body><\/html>';
 
         // Inyectar botón volver + auto-print dentro del HTML generado
-        var injection = ''
-            + '<div id="no-pdf-bar" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#0d3321,#1a5c35);padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 2px 8px rgba(0,0,0,0.3)">';
-            + '<button onclick="window.close()" style="background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.4);border-radius:40px;padding:8px 16px;font-size:14px;font-weight:700;cursor:pointer;font-family:Calibri,Arial,sans-serif;flex-shrink:0">&#8592; Volver</button>';
-            + '<button onclick="window.print()" style="background:#f59e0b;color:white;border:none;border-radius:40px;padding:10px 20px;font-size:15px;font-weight:800;cursor:pointer;font-family:Calibri,Arial,sans-serif;flex-shrink:0;box-shadow:0 3px 10px rgba(245,158,11,0.5)">🖨️ Guardar / Imprimir PDF</button>';
-            + '<span style="color:rgba(255,255,255,0.85);font-size:12px;font-family:Calibri,Arial,sans-serif">En iPhone: toca el bot&oacute;n amarillo o usa &#x1F4E4; Compartir &rarr; Imprimir</span>';
-            + '</div>'
-            + '<div style="height:60px"></div>'
-            + '<style>'
-            +   '@media print{'
-            +     '#no-pdf-bar{display:none!important}'
-            +     'body>div[style*="height:60px"]{display:none!important}'
-            +     'a[href]:after{content:none!important}'
-            +     'abbr[title]:after{content:none!important}'
-            +   '}'
-            + '<\/style>';
-
-        // Auto-print via onload attribute — evita tag <script> dentro del JS principal
-        // que iOS Safari interpreta como cierre del tag y genera Script error
-        html = html.replace('<bo' + 'dy>', '<bo' + 'dy>' + injection);
+        // injection block handled in new PDF function
 
         // ── MOSTRAR INFORME (iOS Safari + Android Chrome) ──
         // Estrategia: Blob URL → location.href de ventana pre-abierta
@@ -1835,24 +1817,25 @@
 
         h += '<\/body><\/html>';
 
-        // ── 9. Abrir en ventana pre-abierta via Blob URL ──
-        var blob   = new Blob([h], {type:'text/html;charset=utf-8'});
-        var blobUrl = URL.createObjectURL(blob);
+        // ── 9. Abrir informe ──
+        // encodeURIComponent evita que Safari muestre "blob:https://..." en el pie al imprimir
+        var dataUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(h);
 
         if (window._pdfWin && !window._pdfWin.closed) {
-            window._pdfWin.location.href = blobUrl;
+            window._pdfWin.location.href = dataUrl;
             window._pdfWin.focus();
         } else {
-            // Fallback: nueva pestaña
-            var w2 = window.open(blobUrl, '_blank');
+            var w2 = window.open(dataUrl, '_blank');
             if (!w2) {
-                var a = document.createElement('a');
-                a.href = blobUrl; a.target = '_blank'; a.rel = 'noopener';
-                document.body.appendChild(a); a.click();
-                setTimeout(function(){ document.body.removeChild(a); }, 500);
+                // Fallback blob si data: URL bloqueada
+                var fb  = new Blob([h], {type:'text/html;charset=utf-8'});
+                var fbu = URL.createObjectURL(fb);
+                var a4  = document.createElement('a');
+                a4.href = fbu; a4.target = '_blank'; a4.rel = 'noopener';
+                document.body.appendChild(a4); a4.click();
+                setTimeout(function(){ document.body.removeChild(a4); URL.revokeObjectURL(fbu); }, 1000);
             }
         }
-        setTimeout(function(){ URL.revokeObjectURL(blobUrl); }, 600000);
         window._pdfWin = null;
         restoreBtn();
     }
