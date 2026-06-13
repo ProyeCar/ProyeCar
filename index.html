@@ -1796,11 +1796,20 @@
             if(fr.fotos && fr.fotos.length){
                 var fotosOk=fr.fotos.filter(function(id){return !!fotoMap[id];});
                 if(fotosOk.length){
-                    h += '<div class="sub-t">&#128247; Evidencia Fotogr&aacute;fica ('+fotosOk.length+')</div><div class="photo-grid">';
-                    for(var pi=0;pi<fotosOk.length;pi++){
-                        h += '<figure class="photo-card"><img src="'+fotoMap[fotosOk[pi]]+'" alt="Foto '+(pi+1)+'"><figcaption>Fotograf&iacute;a '+(pi+1)+' &mdash; '+esc(fr.nombre)+'</figcaption></figure>';
+                    h += '<div style="font-size:10.5pt;font-weight:700;color:#1e3a2f;margin:14px 0 6px;page-break-after:avoid;break-after:avoid">&#128247; Evidencia Fotogr&aacute;fica ('+fotosOk.length+')</div>';
+                    var fotoHtml = '<table style="width:100%;border-collapse:collapse;margin:14px 0">';
+                    for(var pi=0;pi<fotosOk.length;pi+=2){
+                        fotoHtml += '<tr style="page-break-inside:avoid;break-inside:avoid">';
+                        fotoHtml += '<td style="width:50%;padding:7px;vertical-align:top"><figure style="border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;text-align:center;page-break-inside:avoid;break-inside:avoid"><img src="'+fotoMap[fotosOk[pi]]+'" style="width:100%;height:auto;max-height:220px;object-fit:contain;display:block"><figcaption style="font-size:8pt;color:#374151;padding:5px 8px;background:#f1f5f9;border-top:1px solid #e2e8f0;font-weight:600">Fotograf&iacute;a '+(pi+1)+' &mdash; '+esc(fr.nombre)+'</figcaption></figure></td>';
+                        if(fotosOk[pi+1]){
+                            fotoHtml += '<td style="width:50%;padding:7px;vertical-align:top"><figure style="border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;text-align:center;page-break-inside:avoid;break-inside:avoid"><img src="'+fotoMap[fotosOk[pi+1]]+'" style="width:100%;height:auto;max-height:220px;object-fit:contain;display:block"><figcaption style="font-size:8pt;color:#374151;padding:5px 8px;background:#f1f5f9;border-top:1px solid #e2e8f0;font-weight:600">Fotograf&iacute;a '+(pi+2)+' &mdash; '+esc(fr.nombre)+'</figcaption></figure></td>';
+                        } else {
+                            fotoHtml += '<td style="width:50%;padding:7px"></td>';
+                        }
+                        fotoHtml += '</tr>';
                     }
-                    h += '</div>';
+                    fotoHtml += '</table>';
+                    h += fotoHtml;
                 }
             }
 
