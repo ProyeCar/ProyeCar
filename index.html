@@ -744,21 +744,39 @@
 
     // ======================== MODELO DE DATOS ========================
     const CATEGORIAS_BASE = [
-        { id: "ambiental", nombre: "🌱 Ambiental", items: [
+        { id: "ambiental", nombre: "🌱 Ambiental", tipo: "auto", obs: "", rec: "", items: [
             { id: "amb1", texto: "Buen orden y aseo en el frente de obra.", cumple: null, obs: "" },
             { id: "amb2", texto: "Manejo adecuado de residuos sólidos.", cumple: null, obs: "" },
-            { id: "amb3", texto: "Puntos ecologicos en buen estado.", cumple: null, obs: "" },
+            { id: "amb3", texto: "Puntos ecológicos en buen estado.", cumple: null, obs: "" },
             { id: "amb4", texto: "Control de material particulado (Carque y descargue de material por volquetas)", cumple: null, obs: "" }
-        ] },
-        { id: "sst", nombre: "⛑️ Seguridad y Salud (SST)", items: [
-            { id: "sst1", texto: "Uso de EPP por cada trabajador, segun su actividad.", cumple: null, obs: "" },
+        ]},
+        { id: "sst", nombre: "⛑️ Seguridad y Salud (SST)", tipo: "auto", obs: "", rec: "", items: [
+            { id: "sst1", texto: "Uso de EPP por cada trabajador, según su actividad.", cumple: null, obs: "" },
             { id: "sst2", texto: "Señalización y aislamiento.", cumple: null, obs: "" },
-            { id: "sst3", texto: "Capacitaciones e inducciones de seguridad al dia.", cumple: null, obs: "" },
+            { id: "sst3", texto: "Capacitaciones e inducciones de seguridad al día.", cumple: null, obs: "" },
             { id: "sst4", texto: "Paletero en cruces viales.", cumple: null, obs: "" },
             { id: "sst5", texto: "Botiquín, kit antiderrame y extintor disponible.", cumple: null, obs: "" },
             { id: "sst6", texto: "Inspecciones diarias preoperacionales.", cumple: null, obs: "" },
-            { id: "sst7", texto: "Plan de contingencia Actualizado e implementado.", cumple: null, obs: "" }
-        ] }
+            { id: "sst7", texto: "Plan de contingencia actualizado e implementado.", cumple: null, obs: "" }
+        ]},
+        { id: "juridica", nombre: "⚖️ Jurídica", tipo: "manual", obs: "", rec: "", items: [
+            { id: "jur1", texto: "Vigencia del contrato y actas al día.", cumple: null, obs: "" },
+            { id: "jur2", texto: "Pólizas de seguros actualizadas y vigentes.", cumple: null, obs: "" },
+            { id: "jur3", texto: "Licencias y permisos ambientales vigentes.", cumple: null, obs: "" },
+            { id: "jur4", texto: "Registro de modificaciones contractuales.", cumple: null, obs: "" }
+        ]},
+        { id: "tecnica", nombre: "🔧 Técnica", tipo: "manual", obs: "", rec: "", items: [
+            { id: "tec1", texto: "Cumplimiento del cronograma de obra.", cumple: null, obs: "" },
+            { id: "tec2", texto: "Calidad de materiales según especificaciones.", cumple: null, obs: "" },
+            { id: "tec3", texto: "Registros de laboratorio y ensayos al día.", cumple: null, obs: "" },
+            { id: "tec4", texto: "Bitácora de obra diligenciada.", cumple: null, obs: "" }
+        ]},
+        { id: "social", nombre: "👥 Social", tipo: "manual", obs: "", rec: "", items: [
+            { id: "soc1", texto: "Socialización e información a comunidades aledañas.", cumple: null, obs: "" },
+            { id: "soc2", texto: "Contratación de mano de obra local (mín. 10%).", cumple: null, obs: "" },
+            { id: "soc3", texto: "Mecanismo de atención de quejas y reclamos activo.", cumple: null, obs: "" },
+            { id: "soc4", texto: "Señalización peatonal alterna implementada.", cumple: null, obs: "" }
+        ]}
     ];
 
 
@@ -851,6 +869,50 @@
         aplicarAuto(recEl, 'recomendaciones', autoRec);
     }
 
+    function autoActualizarArea(frenteIdx, catIdx, obsEl, recEl) {
+        var fr = frentes[frenteIdx];
+        if (!fr) return;
+        var cat = fr.categorias[catIdx];
+        if (!cat || cat.tipo !== "auto") return;
+        var nosCumplen = [], hayCumple = false;
+        cat.items.forEach(function(it) {
+            if (it.cumple === false) nosCumplen.push(it);
+            else if (it.cumple === true) hayCumple = true;
+        });
+        function aplicarAutoArea(el, prop, nuevoAuto) {
+            if (!el || !nuevoAuto) return;
+            var old = el.dataset.autoText || "";
+            var cur = (el.value || "").trim();
+            var user = cur;
+            if (old && cur.endsWith(old)) user = cur.slice(0, cur.length - old.length).trimEnd();
+            var next = user ? user + "\n" + nuevoAuto : nuevoAuto;
+            fr.categorias[catIdx][prop] = next;
+            el.value = next;
+            el.dataset.autoText = nuevoAuto;
+        }
+        var autoObs = "";
+        if (hayCumple && nosCumplen.length === 0) {
+            autoObs = "Área conforme. Mantener condiciones actuales.";
+        } else if (nosCumplen.length > 0) {
+            var nombres = nosCumplen.slice(0, 2).map(function(it){ return it.texto.substring(0, 50); }).join("; ");
+            autoObs = "Hallazgos: " + nombres + (nosCumplen.length > 2 ? "; y otros." : ".");
+        }
+        aplicarAutoArea(obsEl, 'obs', autoObs);
+        var autoRec = "";
+        if (nosCumplen.length > 0) {
+            var isAmb = cat.id === "ambiental";
+            var hasSena = nosCumplen.some(function(it){ return it.id === 'sst2'; });
+            var hasSstOther = nosCumplen.some(function(it){ return it.id && it.id.indexOf('sst') === 0 && it.id !== 'sst2'; });
+            if (isAmb) autoRec = "Corregir incumplimientos ambientales detectados. Incumple Decreto 1076 de 2015.";
+            else if (hasSena) autoRec = "Reinstalar señalización vial según esquema PMT aprobado. Incumple Manual MINTRANSPORTE 2015.";
+            else if (hasSstOther) autoRec = "Subsanar deficiencias SST detectadas. Incumple Resolución 0312 de 2019 y Decreto 1072 de 2015.";
+            else autoRec = "Acción correctiva requerida sobre los ítems no conformes del área.";
+        } else if (hayCumple) {
+            autoRec = "Mantener las buenas prácticas actuales del área.";
+        }
+        aplicarAutoArea(recEl, 'rec', autoRec);
+    }
+
     let frentes = [
         { nombre: "Frente 1 - Arroyo Ají Molido", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" },
         { nombre: "Frente 2 - Box Matagente", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" }
@@ -910,7 +972,17 @@
         if (saved) {
             try {
                 const data = JSON.parse(saved);
-                if (data.frentes) frentes = data.frentes;
+                if (data.frentes) {
+                    frentes = data.frentes;
+                    // Migrar categorías antiguas al nuevo formato de áreas
+                    frentes.forEach(function(fr) {
+                        (fr.categorias || []).forEach(function(cat) {
+                            if (!cat.tipo) cat.tipo = (cat.id === 'ambiental' || cat.id === 'sst') ? "auto" : "manual";
+                            if (cat.obs === undefined) cat.obs = "";
+                            if (cat.rec === undefined) cat.rec = "";
+                        });
+                    });
+                }
                 proyectoInput.value = data.proyecto || "";
                 fechaInput.value = data.fecha || "";
                 ubicacionInput.value = data.ubicacion || "";
@@ -988,13 +1060,24 @@
             frente.categorias.forEach((cat, catIdx) => {
                 const catDiv = document.createElement("div"); catDiv.className = "categoria";
                 const catTitulo = document.createElement("div"); catTitulo.className = "cat-titulo";
+                catTitulo.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;";
                 const catToggle = document.createElement("span"); catToggle.className = "cat-toggle open"; catToggle.innerText = "▶";
-                const catNombre = document.createElement("span"); catNombre.innerText = cat.nombre;
-                catTitulo.appendChild(catNombre); catTitulo.appendChild(catToggle);
+                const catNombre = document.createElement("span"); catNombre.innerText = cat.nombre; catNombre.style.flex = "1";
+                const catBtnsDiv = document.createElement("div"); catBtnsDiv.style.cssText = "display:flex;gap:4px;align-items:center;flex-shrink:0;";
+                const btnRenArea = document.createElement("button"); btnRenArea.innerText = "✏️"; btnRenArea.title = "Renombrar área";
+                btnRenArea.style.cssText = "background:#f0fdf4;color:#166534;border:1px solid #86efac;padding:3px 7px;border-radius:14px;font-size:0.72rem;cursor:pointer;box-shadow:none;";
+                btnRenArea.onclick = (e) => { e.stopPropagation(); setTimeout(() => { const n = prompt("Renombrar área:", cat.nombre); if (n && n.trim()) { frentes[idx].categorias[catIdx].nombre = n.trim(); saveToLocal(); renderFrentes(); } }, 10); };
+                const btnDelArea = document.createElement("button"); btnDelArea.innerText = "🗑️"; btnDelArea.title = "Eliminar esta área";
+                btnDelArea.style.cssText = "background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;padding:3px 7px;border-radius:14px;font-size:0.72rem;cursor:pointer;box-shadow:none;";
+                btnDelArea.onclick = (e) => { e.stopPropagation(); setTimeout(() => { if (confirm("¿Eliminar el área \"" + cat.nombre + "\"?\nSe perderán todos sus ítems.")) { frentes[idx].categorias.splice(catIdx, 1); saveToLocal(); renderFrentes(); } }, 10); };
+                catBtnsDiv.appendChild(btnRenArea); catBtnsDiv.appendChild(btnDelArea); catBtnsDiv.appendChild(catToggle);
+                catTitulo.appendChild(catNombre); catTitulo.appendChild(catBtnsDiv);
                 catDiv.appendChild(catTitulo);
+                // catObsEl y catRecEl se inicializan más adelante en esta misma iteración
+                let catObsEl = null, catRecEl = null;
                 const catBody = document.createElement("div"); catBody.className = "cat-body"; catBody.style.cssText = "padding-top:8px;";
-                catTitulo.addEventListener("click", () => {
-                    const open = !catBody.classList.contains("collapsed");
+                catTitulo.addEventListener("click", (ev) => {
+                    if (ev.target.tagName === "BUTTON") return;
                     catBody.classList.toggle("collapsed"); catToggle.classList.toggle("open");
                 });
                 const itemsDiv = document.createElement("div"); itemsDiv.className = "items-grid";
@@ -1015,11 +1098,14 @@
                         e.preventDefault(); e.stopPropagation();
                         item.cumple = true;
                         btnSi.classList.add('activo'); btnNo.classList.remove('activo');
-                        const sugC = getSugerenciaCumple(item.id);
-                        if (sugC) { item.obs = sugC; obsInput.value = sugC; }
-                        else { item.obs = "Condición verificada y conforme. Cumple normativa vigente."; obsInput.value = item.obs; }
-                        obsInput.style.background = '#f0fdf4';
-                        setTimeout(() => { obsInput.style.background = ''; }, 2000);
+                        if (cat.tipo === "auto") {
+                            const sugC = getSugerenciaCumple(item.id);
+                            if (sugC) { item.obs = sugC; obsInput.value = sugC; }
+                            else { item.obs = "Condición verificada y conforme. Cumple normativa vigente."; obsInput.value = item.obs; }
+                            obsInput.style.background = '#f0fdf4';
+                            setTimeout(() => { obsInput.style.background = ''; }, 2000);
+                            autoActualizarArea(idx, catIdx, catObsEl, catRecEl);
+                        }
                         autoActualizarFrente(idx, obsTextarea, recTextarea);
                         saveToLocal();
                     };
@@ -1027,11 +1113,14 @@
                         e.preventDefault(); e.stopPropagation();
                         item.cumple = false;
                         btnNo.classList.add('activo'); btnSi.classList.remove('activo');
-                        const sugN = getSugerencia(item.id);
-                        if (sugN) { item.obs = sugN; obsInput.value = sugN; }
-                        else { item.obs = "No conformidad evidenciada. Requiere corrección inmediata. Incumple normativa vigente."; obsInput.value = item.obs; }
-                        obsInput.style.background = '#fefce8';
-                        setTimeout(() => { obsInput.style.background = ''; }, 2000);
+                        if (cat.tipo === "auto") {
+                            const sugN = getSugerencia(item.id);
+                            if (sugN) { item.obs = sugN; obsInput.value = sugN; }
+                            else { item.obs = "No conformidad evidenciada. Requiere corrección inmediata. Incumple normativa vigente."; obsInput.value = item.obs; }
+                            obsInput.style.background = '#fefce8';
+                            setTimeout(() => { obsInput.style.background = ''; }, 2000);
+                            autoActualizarArea(idx, catIdx, catObsEl, catRecEl);
+                        }
                         autoActualizarFrente(idx, obsTextarea, recTextarea);
                         saveToLocal();
                     };
@@ -1094,8 +1183,43 @@
                     }
                 }, 10); };
                 catDiv.appendChild(btnAgregarItem);
+                // Panel obs/rec por área
+                const areaOrDiv = document.createElement("div");
+                areaOrDiv.style.cssText = "border-top:1px solid #e2e8f0;padding:10px 14px 12px;background:#f9fafb;";
+                const aObsLbl = document.createElement("div"); aObsLbl.innerText = "📝 Observaciones del área";
+                aObsLbl.style.cssText = "font-size:0.78rem;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;";
+                catObsEl = document.createElement("textarea"); catObsEl.rows = 2;
+                catObsEl.placeholder = cat.tipo === "auto" ? "Se genera automáticamente al evaluar ítems..." : "Ingrese observaciones de esta área...";
+                catObsEl.value = cat.obs || "";
+                catObsEl.style.cssText = "width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.83rem;font-family:inherit;background:white;resize:vertical;transition:border-color 0.2s;margin-bottom:8px;box-sizing:border-box;";
+                catObsEl.addEventListener("input", (e) => { frentes[idx].categorias[catIdx].obs = e.target.value; saveToLocal(); });
+                const aRecLbl = document.createElement("div"); aRecLbl.innerText = "📋 Recomendaciones del área";
+                aRecLbl.style.cssText = "font-size:0.78rem;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;";
+                catRecEl = document.createElement("textarea"); catRecEl.rows = 2;
+                catRecEl.placeholder = cat.tipo === "auto" ? "Se genera automáticamente al evaluar ítems..." : "Ingrese recomendaciones para esta área...";
+                catRecEl.value = cat.rec || "";
+                catRecEl.style.cssText = "width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.83rem;font-family:inherit;background:white;resize:vertical;transition:border-color 0.2s;box-sizing:border-box;";
+                catRecEl.addEventListener("input", (e) => { frentes[idx].categorias[catIdx].rec = e.target.value; saveToLocal(); });
+                areaOrDiv.appendChild(aObsLbl); areaOrDiv.appendChild(catObsEl);
+                areaOrDiv.appendChild(aRecLbl); areaOrDiv.appendChild(catRecEl);
+                catDiv.appendChild(areaOrDiv);
                 frenteBody.appendChild(catDiv);
             });
+
+            // Botón agregar nueva área al frente
+            const btnAgregarArea = document.createElement("button");
+            btnAgregarArea.innerHTML = "➕ Agregar nueva área a este frente";
+            btnAgregarArea.style.cssText = "background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1.5px dashed #3b82f6;color:#1d4ed8;padding:7px 18px;border-radius:30px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:0.82rem;font-weight:700;margin:6px 0 12px;box-shadow:none;transition:background 0.2s;";
+            btnAgregarArea.onmouseover = () => { btnAgregarArea.style.background = "#dbeafe"; };
+            btnAgregarArea.onmouseout  = () => { btnAgregarArea.style.background = "linear-gradient(135deg,#eff6ff,#dbeafe)"; };
+            btnAgregarArea.onclick = () => { setTimeout(() => {
+                const nombre = prompt("Nombre de la nueva área:", "Nueva área");
+                if (nombre && nombre.trim()) {
+                    frentes[idx].categorias.push({ id: "area_" + Date.now(), nombre: nombre.trim(), tipo: "manual", obs: "", rec: "", items: [] });
+                    saveToLocal(); renderFrentes();
+                }
+            }, 10); };
+            frenteBody.appendChild(btnAgregarArea);
 
             const fotosDiv = document.createElement("div"); fotosDiv.className = "frente-fotos-area";
             const fotosTitulo = document.createElement("h4"); fotosTitulo.innerText = "📸 Evidencia fotográfica de este frente";
@@ -1845,6 +1969,12 @@
                         +'<td style="color:#374151;font-size:8.5pt">'+(it.obs?esc(it.obs):'<em style="color:#9ca3af">Sin observaci&oacute;n</em>')+'</td></tr>';
                 }
                 h += '</tbody></table>';
+                if(cat.obs && cat.obs.trim()){
+                    h += '<div style="margin:6px 0 4px;padding:7px 12px;background:#f0fdf4;border-left:3px solid #22c55e;font-size:8.5pt;color:#14532d"><strong>Obs. ' + esc(cat.nombre) + ':</strong> ' + esc(cat.obs).replace(/\n/g,'<br>') + '</div>';
+                }
+                if(cat.rec && cat.rec.trim()){
+                    h += '<div style="margin:4px 0 10px;padding:7px 12px;background:#fffbeb;border-left:3px solid #f59e0b;font-size:8.5pt;color:#78350f"><strong>Rec. ' + esc(cat.nombre) + ':</strong> ' + esc(cat.rec).replace(/\n/g,'<br>') + '</div>';
+                }
             }
 
             // Fotos
