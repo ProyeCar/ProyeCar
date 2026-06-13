@@ -1,10 +1,10 @@
 {
-  "name": "CARDIQUE Inspector",
-  "short_name": "CARDIQUE",
+  "name": "Proyecar - Inspección Ambiental y SST",
+  "short_name": "Proyecar",
   "description": "Inspección Ambiental, SST y Seguimiento de Obra por Frente",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#0a2e1a",
+  "background_color": "#ffffff",
   "theme_color": "#1a5c32",
   "orientation": "portrait",
   "icons": [
