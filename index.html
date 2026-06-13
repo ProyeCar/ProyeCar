@@ -1158,28 +1158,9 @@
                 btnAgregarItem.onclick = () => { setTimeout(() => {
                     const texto = prompt("Nombre del nuevo ítem:");
                     if (texto && texto.trim()) {
-                        const newItem = { id: Date.now() + "_" + Math.random(), texto: texto.trim(), cumple: null, obs: "" };
-                        cat.items.push(newItem);
+                        cat.items.push({ id: "item_" + Date.now(), texto: texto.trim(), cumple: null, obs: "" });
                         saveToLocal();
-                        // Append new item card directly to itemsDiv
-                        const newCard = document.createElement("div"); newCard.className = "item-card";
-                        const newRow = document.createElement("div"); newRow.className = "item-row";
-                        const newDesc = document.createElement("div"); newDesc.className = "item-desc"; newDesc.innerText = newItem.texto;
-                        const newAcciones = document.createElement("div"); newAcciones.className = "item-actions";
-                        const newEstado = document.createElement("div"); newEstado.className = "estado-btns";
-                        const newBtnSi = document.createElement("button"); newBtnSi.innerText = "✅ Cumple"; newBtnSi.className = "btn-cumple";
-                        const newBtnNo = document.createElement("button"); newBtnNo.innerText = "❌ No cumple"; newBtnNo.className = "btn-nocumple";
-                        const newObsDiv = document.createElement("div"); newObsDiv.className = "item-obs";
-                        const newObsInput = document.createElement("textarea"); newObsInput.placeholder = "Observación del inspector..."; newObsInput.value = ""; newObsInput.rows = 2;
-                        newObsInput.oninput = (e) => { newItem.obs = e.target.value; saveToLocal(); };
-                        newBtnSi.onclick = (e) => { e.preventDefault(); e.stopPropagation(); newItem.cumple = true; newBtnSi.classList.add('activo'); newBtnNo.classList.remove('activo'); newItem.obs = "Condición verificada y conforme. Cumple normativa vigente."; newObsInput.value = newItem.obs; saveToLocal(); };
-                        newBtnNo.onclick = (e) => { e.preventDefault(); e.stopPropagation(); newItem.cumple = false; newBtnNo.classList.add('activo'); newBtnSi.classList.remove('activo'); newItem.obs = "No conformidad evidenciada. Requiere corrección inmediata."; newObsInput.value = newItem.obs; saveToLocal(); };
-                        newEstado.appendChild(newBtnSi); newEstado.appendChild(newBtnNo);
-                        newAcciones.appendChild(newEstado);
-                        newRow.appendChild(newDesc); newRow.appendChild(newAcciones);
-                        newObsDiv.appendChild(newObsInput);
-                        newCard.appendChild(newRow); newCard.appendChild(newObsDiv);
-                        itemsDiv.appendChild(newCard);
+                        renderFrentes();
                     }
                 }, 10); };
                 catDiv.appendChild(btnAgregarItem);
