@@ -979,6 +979,41 @@
                 const catToggle = document.createElement("span"); catToggle.className = "cat-toggle open"; catToggle.innerText = "▶";
                 const catNombre = document.createElement("span"); catNombre.innerText = cat.nombre;
                 catTitulo.appendChild(catNombre); catTitulo.appendChild(catToggle);
+
+                const btnEditarCat = document.createElement("button");
+                btnEditarCat.innerHTML = "✏️";
+                btnEditarCat.className = "btn-editar";
+                btnEditarCat.title = "Editar nombre del área";
+                btnEditarCat.onclick = (e) => {
+                    e.stopPropagation();
+                    setTimeout(() => {
+                        const nuevo = prompt("Editar nombre del área:", cat.nombre);
+                        if (nuevo && nuevo.trim()) {
+                            cat.nombre = nuevo.trim();
+                            saveToLocal();
+                            renderFrentes();
+                        }
+                    }, 10);
+                };
+
+                const btnEliminarCat = document.createElement("button");
+                btnEliminarCat.innerHTML = "🗑️";
+                btnEliminarCat.className = "btn-eliminar";
+                btnEliminarCat.title = "Eliminar área";
+                btnEliminarCat.onclick = (e) => {
+                    e.stopPropagation();
+                    setTimeout(() => {
+                        if (confirm("¿Eliminar el área \"" + cat.nombre + "\" y todos sus ítems?")) {
+                            frentes[idx].categorias.splice(catIdx, 1);
+                            saveToLocal();
+                            renderFrentes();
+                        }
+                    }, 10);
+                };
+
+                catTitulo.appendChild(btnEditarCat);
+                catTitulo.appendChild(btnEliminarCat);
+
                 catDiv.appendChild(catTitulo);
                 const catBody = document.createElement("div"); catBody.className = "cat-body"; catBody.style.cssText = "padding-top:8px;";
                 catTitulo.addEventListener("click", () => {
