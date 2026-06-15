@@ -1538,21 +1538,13 @@
         // cargar scripts CDN externos. data: URL tiene origen nulo y los bloquea.
         var _blob = new Blob([h], {type: 'text/html;charset=utf-8'});
         var fbu = URL.createObjectURL(_blob);
-        if (window._pdfWin && !window._pdfWin.closed) {
-            var esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-            if (esIOS) {
-                try {
-                    window._pdfWin.document.open('text/html', 'replace');
-                    window._pdfWin.document.write(h);
-                    window._pdfWin.document.close();
-                    window._pdfWin.focus();
-                } catch(e) {
-                    window._pdfWin.location.href = fbu;
-                }
-            } else {
-                window._pdfWin.location.href = fbu;
-                window._pdfWin.focus();
-            }
+        var esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        if (esIOS) {
+            if (window._pdfWin && !window._pdfWin.closed) window._pdfWin.close();
+            window.location.href = fbu;
+        } else if (window._pdfWin && !window._pdfWin.closed) {
+            window._pdfWin.location.href = fbu;
+            window._pdfWin.focus();
         } else {
             var w2 = window.open(fbu, '_blank');
             if (!w2) {
