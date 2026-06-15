@@ -841,7 +841,10 @@
                 const dataNoFotos = { frentes: frentes.map(f => ({...f, fotos:[]})), ...form };
                 localStorage.setItem("inspectorFrentesData", JSON.stringify(dataNoFotos));
                 showSavedMessage();
-            } catch(e2) { console.warn("Storage full"); }
+            } catch(e2) {
+                console.warn("Storage full — datos guardados sin fotos");
+                // frentes en memoria siguen intactos, el PDF los usará directamente
+            }
             return true;
         }
     }
@@ -1243,15 +1246,11 @@
         var ubicacion = (document.getElementById("ubicacion").value || "Jurisdicción CARDIQUE").trim();
         var inspector = (document.getElementById("inspector").value || "").trim() || "No especificado";
 
-        // PASO 3: guardar y recargar frentes
+        // PASO 3: guardar estado actual sin sobreescribir frentes en memoria
+        document.querySelectorAll('.frente-body input').forEach(function(inp) {
+            inp.dispatchEvent(new Event('input', { bubbles: true }));
+        });
         saveToLocal();
-        try {
-            var _saved = localStorage.getItem("inspectorFrentesData");
-            if (_saved) {
-                var _data = JSON.parse(_saved);
-                if (_data.frentes && _data.frentes.length > 0) frentes = _data.frentes;
-            }
-        } catch(e) {}
 
         // Indicador de carga
         var btnPdf = document.getElementById('generar-pdf');
@@ -1621,15 +1620,11 @@
         var ubicacion = (document.getElementById('ubicacion').value || 'Jurisdiccion CARDIQUE').trim();
         var inspector = (document.getElementById('inspector').value || '').trim() || 'No especificado';
 
-        // ── 4. Guardar y recargar frentes ──
+        // ── 4. Guardar estado actual sin sobreescribir frentes en memoria ──
+        document.querySelectorAll('.frente-body input').forEach(function(inp) {
+            inp.dispatchEvent(new Event('input', { bubbles: true }));
+        });
         saveToLocal();
-        try {
-            var _s = localStorage.getItem('inspectorFrentesData');
-            if (_s) {
-                var _d = JSON.parse(_s);
-                if (_d.frentes && _d.frentes.length) frentes = _d.frentes;
-            }
-        } catch(e) {}
 
         if (!frentes.length) { restoreBtn(); alert('Sin frentes de obra.'); return; }
 
