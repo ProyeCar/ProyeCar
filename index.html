@@ -863,6 +863,17 @@
             try {
                 const data = JSON.parse(saved);
                 if (data.frentes) frentes = data.frentes;
+                frentes = frentes.map(f => {
+                    const idsExistentes = f.categorias.map(c => c.id);
+                    const categoriasFaltantes = CATEGORIAS_BASE.filter(cb => !idsExistentes.includes(cb.id));
+                    if (categoriasFaltantes.length > 0) {
+                        f.categorias = [
+                            ...f.categorias,
+                            ...JSON.parse(JSON.stringify(categoriasFaltantes))
+                        ];
+                    }
+                    return f;
+                });
                 proyectoInput.value = data.proyecto || "";
                 fechaInput.value = data.fecha || "";
                 ubicacionInput.value = data.ubicacion || "";
