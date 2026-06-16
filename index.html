@@ -1394,7 +1394,7 @@
             var tot=c+n+s;
             if(tot===0) return '<svg width="'+size+'" height="'+size+'"><circle cx="'+size/2+'" cy="'+size/2+'" r="'+(size/2-4)+'" fill="#e2e8f0"/></svg>';
             var cx=size/2,cy=size/2,r=size/2-6;
-            var colors=["#2b9348","#dc2626","#f59e0b"],vals=[c,n,s],paths="",startA=-90;
+            var colors=["#2b9348","#dc2626","#6b7280"],vals=[c,n,s],paths="",startA=-90;
             for(var i=0;i<3;i++){
                 if(!vals[i]) continue;
                 var slice=(vals[i]/tot)*360,endA=startA+slice,rad=Math.PI/180;
@@ -1744,7 +1744,7 @@
         function esc(v) { return (v||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
         function pie(c,n,s,sz) {
             var tot=c+n+s; if(!tot) return '<svg width="'+sz+'" height="'+sz+'"><circle cx="'+sz/2+'" cy="'+sz/2+'" r="'+(sz/2-4)+'" fill="#e2e8f0"/></svg>';
-            var cx=sz/2,cy=sz/2,r=sz/2-6,cols=['#2b9348','#dc2626','#f59e0b'],vs=[c,n,s],p='',a=-90;
+            var cx=sz/2,cy=sz/2,r=sz/2-6,cols=['#2b9348','#dc2626','#6b7280'],vs=[c,n,s],p='',a=-90;
             for(var i=0;i<3;i++){if(!vs[i])continue;var sl=vs[i]/tot*360,ea=a+sl,rd=Math.PI/180;
                 var x1=cx+r*Math.cos(a*rd),y1=cy+r*Math.sin(a*rd),x2=cx+r*Math.cos(ea*rd),y2=cy+r*Math.sin(ea*rd),la=sl>180?1:0;
                 if(vs[i]===tot)p+='<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="'+cols[i]+'"/>';
