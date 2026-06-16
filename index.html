@@ -69,7 +69,7 @@
             border-radius: 50%;
         }
         .logo-area { display: flex; align-items: center; gap: 12px; position: relative; z-index: 1; }
-        .logo-img { height: 64px; max-width: 190px; object-fit: contain; }
+        .logo-img { height: 64px; max-width: 190px; object-fit: contain; border-radius: 12px; }
         .btn-cargar-logo { background: rgba(255,255,255,0.15); font-size: 0.75rem; padding: 6px 12px; border-radius: 30px; cursor: pointer; border: 1px solid rgba(255,255,255,0.3); color: white; backdrop-filter: blur(4px); }
 
         /* === CARDS === */
@@ -1511,7 +1511,7 @@
         // ── PORTADA ──
         html += '<div class="portada">';
         html += '<div class="portada-header">';
-        if (logoData) html += '<div style="margin-bottom:20px"><img src="'+logoData+'" style="height:90px;max-width:260px;object-fit:contain"></div>';
+        if (logoData) html += '<div style="margin-bottom:20px"><img src="'+logoData+'" style="height:90px;max-width:260px;object-fit:contain;border-radius:12px"></div>';
         else html += '<div style="border:2px solid rgba(255,255,255,.4);border-radius:10px;padding:10px 28px;display:inline-block;margin-bottom:16px"><span style="font-size:20pt;font-weight:900;color:white;letter-spacing:4px">CARDIQUE</span></div>';
         html += '<div class="portada-org">CORPORACIÓN AUTÓNOMA REGIONAL DEL CANAL DEL DIQUE</div>';
         html += '<div class="portada-sub">Área Técnica de Planeación</div>';
@@ -1797,7 +1797,7 @@
         // Portada
         h += '<div class="portada">';
         h += '<div class="portada-header">';
-        if(logoData) h += '<div style="margin-bottom:20px"><img src="'+logoData+'" style="height:90px;max-width:260px;object-fit:contain"></div>';
+        if(logoData) h += '<div style="margin-bottom:20px"><img src="'+logoData+'" style="height:90px;max-width:260px;object-fit:contain;border-radius:12px"></div>';
         h += '<div class="portada-org">CORPORACI&Oacute;N AUT&Oacute;NOMA REGIONAL DEL CANAL DEL DIQUE</div>';
         h += '<div class="portada-sub">&Aacute;rea T&eacute;cnica de Planeaci&oacute;n</div>';
         h += '<div class="portada-accent"></div></div>';
