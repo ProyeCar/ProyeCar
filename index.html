@@ -1750,7 +1750,10 @@
                 if(vs[i]===tot)p+='<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="'+cols[i]+'"/>';
                 else p+='<path d="M'+cx+','+cy+' L'+x1.toFixed(1)+','+y1.toFixed(1)+' A'+r+','+r+' 0 '+la+',1 '+x2.toFixed(1)+','+y2.toFixed(1)+' Z" fill="'+cols[i]+'"/>';
                 a=ea;}
-            return '<svg width="'+sz+'" height="'+sz+'">'+p+'<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="white" stroke-width="1.5"/></svg>';
+            var pctNum=c/tot*100,pctTxt=pctNum.toFixed(1),ncTxt=(100-pctNum).toFixed(1);
+            var lbl='<text x="'+cx+'" y="'+(cy-4)+'" text-anchor="middle" dominant-baseline="middle" font-family="Calibri, Arial, sans-serif" font-weight="bold" font-size="'+(sz*0.15).toFixed(1)+'" fill="#1a5c32">'+pctTxt+'%</text>'
+                +'<text x="'+cx+'" y="'+(cy+12)+'" text-anchor="middle" dominant-baseline="middle" font-family="Calibri, Arial, sans-serif" font-size="'+(sz*0.092).toFixed(1)+'" fill="#dc2626">'+ncTxt+'% NC</text>';
+            return '<svg width="'+sz+'" height="'+sz+'">'+p+'<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="white" stroke-width="1.5"/>'+lbl+'</svg>';
         }
         function bar(pct,w,h,col) {
             var p=Math.max(0,Math.min(100,parseFloat(pct)||0)),f=(p/100*w).toFixed(1);
