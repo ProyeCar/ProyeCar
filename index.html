@@ -1757,24 +1757,24 @@
 
             // Etiqueta Cumple (lado derecho)
             var angC = (pctNum/100)*Math.PI; // punto medio del arco cumple
-            var x1C = cx + (r+8)*Math.cos(-Math.PI/2 + angC/2);
-            var y1C = cy + (r+8)*Math.sin(-Math.PI/2 + angC/2);
-            var x2C = cx + (r+22)*Math.cos(-Math.PI/2 + angC/2);
-            var y2C = cy + (r+22)*Math.sin(-Math.PI/2 + angC/2);
+            var x1C = cx + (r+12)*Math.cos(-Math.PI/2 + angC/2);
+            var y1C = cy + (r+12)*Math.sin(-Math.PI/2 + angC/2);
+            var x2C = cx + (r+32)*Math.cos(-Math.PI/2 + angC/2);
+            var y2C = cy + (r+32)*Math.sin(-Math.PI/2 + angC/2);
 
             // Etiqueta No Cumple (lado izquierdo)
             var angNC = (ncNum/100)*Math.PI;
-            var x1N = cx + (r+8)*Math.cos(-Math.PI/2 + Math.PI + angNC/2);
-            var y1N = cy + (r+8)*Math.sin(-Math.PI/2 + Math.PI + angNC/2);
-            var x2N = cx + (r+22)*Math.cos(-Math.PI/2 + Math.PI + angNC/2);
-            var y2N = cy + (r+22)*Math.sin(-Math.PI/2 + Math.PI + angNC/2);
+            var x1N = cx + (r+12)*Math.cos(-Math.PI/2 + Math.PI + angNC/2);
+            var y1N = cy + (r+12)*Math.sin(-Math.PI/2 + Math.PI + angNC/2);
+            var x2N = cx + (r+32)*Math.cos(-Math.PI/2 + Math.PI + angNC/2);
+            var y2N = cy + (r+32)*Math.sin(-Math.PI/2 + Math.PI + angNC/2);
 
             lbl += '<line x1="'+x1C+'" y1="'+y1C+'" x2="'+x2C+'" y2="'+y2C+'" stroke="#1a5c32" stroke-width="1"/>';
-            lbl += '<text x="'+x2C+'" y="'+(y2C+4)+'" text-anchor="middle" font-size="9" font-family="Calibri,Arial" fill="#1a5c32" font-weight="bold">'+pctNum+'%</text>';
+            lbl += '<text x="'+x2C+'" y="'+(y2C+4)+'" text-anchor="middle" font-size="11" font-family="Calibri,Arial" fill="#1a5c32" font-weight="bold">'+pctNum+'%</text>';
 
             if(ncNum > 0) {
               lbl += '<line x1="'+x1N+'" y1="'+y1N+'" x2="'+x2N+'" y2="'+y2N+'" stroke="#dc2626" stroke-width="1"/>';
-              lbl += '<text x="'+x2N+'" y="'+(y2N+4)+'" text-anchor="middle" font-size="9" font-family="Calibri,Arial" fill="#dc2626" font-weight="bold">'+ncNum+'%</text>';
+              lbl += '<text x="'+x2N+'" y="'+(y2N+4)+'" text-anchor="middle" font-size="11" font-family="Calibri,Arial" fill="#dc2626" font-weight="bold">'+ncNum+'%</text>';
             }
             return '<svg width="'+sz+'" height="'+sz+'">'+p+'<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="white" stroke-width="1.5"/>'+lbl+'</svg>';
         }
