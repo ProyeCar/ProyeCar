@@ -1118,6 +1118,25 @@
                 frenteBody.appendChild(catDiv);
             });
 
+            const btnAgregarCat = document.createElement("button");
+            btnAgregarCat.innerText = "➕ Agregar área nueva";
+            btnAgregarCat.className = "btn-agregar-frente";
+            btnAgregarCat.style.cssText = "margin:8px 0 4px;font-size:0.82rem;padding:8px 16px;width:100%;";
+            btnAgregarCat.onclick = () => {
+                setTimeout(() => {
+                    const nombre = prompt("Nombre del área nueva:");
+                    if (!nombre || !nombre.trim()) return;
+                    frentes[idx].categorias.push({
+                        id: "custom_" + Date.now(),
+                        nombre: "📋 " + nombre.trim(),
+                        items: []
+                    });
+                    saveToLocal();
+                    renderFrentes();
+                }, 10);
+            };
+            frenteBody.appendChild(btnAgregarCat);
+
             const fotosDiv = document.createElement("div"); fotosDiv.className = "frente-fotos-area";
             const fotosTitulo = document.createElement("h4"); fotosTitulo.innerText = "📸 Evidencia fotográfica de este frente";
             fotosDiv.appendChild(fotosTitulo);
