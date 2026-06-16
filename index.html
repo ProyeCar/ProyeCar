@@ -1523,7 +1523,7 @@
             + '<div class="kpi-card"><div class="kpi-num" style="color:#16a34a">'+globalCumple+'</div><div class="kpi-lbl">✔ Cumplen</div></div>'
             + '<div class="kpi-card"><div class="kpi-num" style="color:#dc2626">'+globalNoCumple+'</div><div class="kpi-lbl">✘ No cumplen</div></div>'
             + '<div class="kpi-card"><div class="kpi-num" style="color:#6b7280">'+globalSinCalificar+'</div><div class="kpi-lbl">◻ Sin calificar</div></div>'
-            + '<div class="kpi-card"><div class="kpi-num" style="color:#1d4ed8">'+pctGlobal+'%</div><div class="kpi-lbl">Cumplimiento</div></div>'
+            + '<div class="kpi-card"><div class="kpi-num" style="color:#f59e0b">'+pctGlobal+'%</div><div class="kpi-lbl">Cumplimiento</div></div>'
             + '</div>';
         html += '<p style="font-weight:700;margin:10px 0 4px">Barra de cumplimiento global</p>';
         html += '<div style="margin-bottom:12px">'+svgBar(pctGlobal,560,22,semColor)+'</div>';
@@ -1578,7 +1578,7 @@
                 + '<div class="mini-kpi"><div class="num" style="color:#16a34a">'+st.cumple+'</div><div class="lbl">Cumple</div></div>'
                 + '<div class="mini-kpi"><div class="num" style="color:#dc2626">'+st.noCumple+'</div><div class="lbl">No Cumple</div></div>'
                 + '<div class="mini-kpi"><div class="num" style="color:#6b7280">'+st.sinCalificar+'</div><div class="lbl">Sin Cal.</div></div>'
-                + '<div class="mini-kpi"><div class="num" style="color:#1d4ed8">'+st.pctCumple+'%</div><div class="lbl">Cumplimiento</div></div>'
+                + '<div class="mini-kpi"><div class="num" style="color:#f59e0b">'+st.pctCumple+'%</div><div class="lbl">Cumplimiento</div></div>'
                 + '</div>';
             html += '<table style="width:100%;border-collapse:collapse;margin:10px 0"><tr>'
                 + '<td style="width:110px;text-align:center;vertical-align:middle;padding-right:16px">'+svgPie(st.cumple,st.noCumple,st.sinCalificar,100)+'</td>'
@@ -1829,7 +1829,7 @@
             + '<div class="kpi-card"><div class="kpi-num" style="color:#16a34a">'+gC+'</div><div class="kpi-lbl">&#10004; Cumplen</div></div>'
             + '<div class="kpi-card"><div class="kpi-num" style="color:#dc2626">'+gN+'</div><div class="kpi-lbl">&#10008; No cumplen</div></div>'
             + '<div class="kpi-card"><div class="kpi-num" style="color:#6b7280">'+gS+'</div><div class="kpi-lbl">Sin calificar</div></div>'
-            + '<div class="kpi-card"><div class="kpi-num" style="color:#1d4ed8">'+gPct+'%</div><div class="kpi-lbl">Cumplimiento</div></div>'
+            + '<div class="kpi-card"><div class="kpi-num" style="color:#f59e0b">'+gPct+'%</div><div class="kpi-lbl">Cumplimiento</div></div>'
             + '</div>';
         h += '<p style="font-weight:700;margin:10px 0 4px">Barra global</p>';
         h += bar(gPct,560,22,sCol);
@@ -1872,7 +1872,7 @@
                 +'<div class="mini-kpi"><div class="num" style="color:#16a34a">'+st.c+'</div><div class="lbl">Cumple</div></div>'
                 +'<div class="mini-kpi"><div class="num" style="color:#dc2626">'+st.n+'</div><div class="lbl">No Cumple</div></div>'
                 +'<div class="mini-kpi"><div class="num" style="color:#6b7280">'+st.s+'</div><div class="lbl">Sin Cal.</div></div>'
-                +'<div class="mini-kpi"><div class="num" style="color:#1d4ed8">'+st.pct+'%</div><div class="lbl">Cumplimiento</div></div></div>';
+                +'<div class="mini-kpi"><div class="num" style="color:#f59e0b">'+st.pct+'%</div><div class="lbl">Cumplimiento</div></div></div>';
             h += '<table style="width:100%;border-collapse:collapse;margin:10px 0"><tr>'
                 +'<td style="width:110px;text-align:center;vertical-align:middle;padding-right:16px">'+pie(st.c,st.n,st.s,100)+'</td>'
                 +'<td style="vertical-align:middle">'+bar(st.pct,380,20,bc)+'</td></tr></table>';
