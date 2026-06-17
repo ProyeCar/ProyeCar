@@ -1207,11 +1207,29 @@
                                     canvas.width = w; canvas.height = h;
                                     canvas.getContext('2d').drawImage(img, 0, 0, w, h);
                                     const dataUrl = canvas.toDataURL('image/jpeg', 0.65);
+                                    // PASO 1: Selector de ítem al subir foto
+                                    var itemListStr = "";
+                                    var allItemsFlat = [];
+                                    frentes[idx].categorias.forEach(function(cat) {
+                                        cat.items.forEach(function(item) {
+                                            itemListStr += item.id.toUpperCase() + " — " + item.texto + "\n";
+                                            allItemsFlat.push(item);
+                                        });
+                                    });
+                                    var itemSel = prompt("Vincular foto a ítem (deja vacío para omitir):\n\n" + itemListStr + "\nEscribe el ID del ítem:", "");
+                                    var itemId = null;
+                                    if (itemSel && itemSel.trim()) {
+                                        var found = allItemsFlat.find(function(i){ return i.id.toLowerCase() === itemSel.trim().toLowerCase(); });
+                                        itemId = found ? found.id : null;
+                                    }
                                     // Guardar en IndexedDB, solo el ID en frentes[]
                                     const id = fotoId(idx, Date.now() + Math.random());
                                     try { await idbGuardarFoto(id, dataUrl); } catch(err) { console.warn('IDB error:', err); }
                                     if (!frentes[idx].fotos) frentes[idx].fotos = [];
                                     frentes[idx].fotos.push(id);
+                                    // PASO 2: Guardar itemId junto a la foto
+                                    if (!frentes[idx].fotoItems) frentes[idx].fotoItems = {};
+                                    if (itemId) frentes[idx].fotoItems[id] = itemId;
                                     // También guardar en caché en memoria para render inmediato
                                     if (!window._fotoCache) window._fotoCache = {};
                                     window._fotoCache[id] = dataUrl;
@@ -1648,10 +1666,14 @@
                     for(var pi=0;pi<fotosConData.length;pi+=2){
                         html+='<div class="photo-row">';
                         var fid1=fotosConData[pi];
-                        html+='<figure class="photo-card"><img src="'+(fotoMap[fid1]||'')+'" alt="Evidencia '+(pi+1)+'"><figcaption>Fotografía '+(pi+1)+' — '+esc(frente.nombre)+'</figcaption></figure>';
+                        var cap1='Fotografía '+(pi+1)+' — '+esc(frente.nombre);
+                        if(frente.fotoItems&&frente.fotoItems[fid1]){var iid1=frente.fotoItems[fid1];var iobj1=null;frente.categorias.forEach(function(c){c.items.forEach(function(it){if(it.id===iid1)iobj1=it;});});if(iobj1)cap1='Evidencia '+iid1.toUpperCase()+' — '+esc(iobj1.texto)+' — '+(iobj1.cumple===true?'CUMPLE':iobj1.cumple===false?'NO CUMPLE':'SIN CALIFICAR');}
+                        html+='<figure class="photo-card"><img src="'+(fotoMap[fid1]||'')+'" alt="Evidencia '+(pi+1)+'"><figcaption>'+cap1+'</figcaption></figure>';
                         if(fotosConData[pi+1]){
                             var fid2=fotosConData[pi+1];
-                            html+='<figure class="photo-card"><img src="'+(fotoMap[fid2]||'')+'" alt="Evidencia '+(pi+2)+'"><figcaption>Fotografía '+(pi+2)+' — '+esc(frente.nombre)+'</figcaption></figure>';
+                            var cap2='Fotografía '+(pi+2)+' — '+esc(frente.nombre);
+                            if(frente.fotoItems&&frente.fotoItems[fid2]){var iid2=frente.fotoItems[fid2];var iobj2=null;frente.categorias.forEach(function(c){c.items.forEach(function(it){if(it.id===iid2)iobj2=it;});});if(iobj2)cap2='Evidencia '+iid2.toUpperCase()+' — '+esc(iobj2.texto)+' — '+(iobj2.cumple===true?'CUMPLE':iobj2.cumple===false?'NO CUMPLE':'SIN CALIFICAR');}
+                            html+='<figure class="photo-card"><img src="'+(fotoMap[fid2]||'')+'" alt="Evidencia '+(pi+2)+'"><figcaption>'+cap2+'</figcaption></figure>';
                         }
                         html+='</div>';
                     }
@@ -1938,10 +1960,14 @@
                     for(var pi=0;pi<fotosOk.length;pi+=2){
                         h+='<div class="photo-row">';
                         var fid1=fotosOk[pi];
-                        h+='<figure class="photo-card"><img src="'+(fotoMap[fid1]||'')+'" alt="Evidencia '+(pi+1)+'"><figcaption>Fotografía '+(pi+1)+' — '+esc(fr.nombre)+'</figcaption></figure>';
+                        var cap1='Fotografía '+(pi+1)+' — '+esc(fr.nombre);
+                        if(fr.fotoItems&&fr.fotoItems[fid1]){var iid1=fr.fotoItems[fid1];var iobj1=null;fr.categorias.forEach(function(c){c.items.forEach(function(it){if(it.id===iid1)iobj1=it;});});if(iobj1)cap1='Evidencia '+iid1.toUpperCase()+' — '+esc(iobj1.texto)+' — '+(iobj1.cumple===true?'CUMPLE':iobj1.cumple===false?'NO CUMPLE':'SIN CALIFICAR');}
+                        h+='<figure class="photo-card"><img src="'+(fotoMap[fid1]||'')+'" alt="Evidencia '+(pi+1)+'"><figcaption>'+cap1+'</figcaption></figure>';
                         if(fotosOk[pi+1]){
                             var fid2=fotosOk[pi+1];
-                            h+='<figure class="photo-card"><img src="'+(fotoMap[fid2]||'')+'" alt="Evidencia '+(pi+2)+'"><figcaption>Fotografía '+(pi+2)+' — '+esc(fr.nombre)+'</figcaption></figure>';
+                            var cap2='Fotografía '+(pi+2)+' — '+esc(fr.nombre);
+                            if(fr.fotoItems&&fr.fotoItems[fid2]){var iid2=fr.fotoItems[fid2];var iobj2=null;fr.categorias.forEach(function(c){c.items.forEach(function(it){if(it.id===iid2)iobj2=it;});});if(iobj2)cap2='Evidencia '+iid2.toUpperCase()+' — '+esc(iobj2.texto)+' — '+(iobj2.cumple===true?'CUMPLE':iobj2.cumple===false?'NO CUMPLE':'SIN CALIFICAR');}
+                            h+='<figure class="photo-card"><img src="'+(fotoMap[fid2]||'')+'" alt="Evidencia '+(pi+2)+'"><figcaption>'+cap2+'</figcaption></figure>';
                         }
                         h+='</div>';
                     }
