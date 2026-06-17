@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cardique-v1';
+const CACHE_NAME = 'cardique-v2';
 const ASSETS = ['./', './index.html'];
 
 self.addEventListener('install', e => {
@@ -16,7 +16,16 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request).catch(() => caches.match('./index.html')))
-  );
+  if (e.request.mode === 'navigate' || e.request.url.includes('index.html')) {
+    e.respondWith(
+      fetch(e.request).then(res => {
+        caches.open(CACHE_NAME).then(cache => cache.put(e.request, res.clone()));
+        return res;
+      }).catch(() => caches.match(e.request))
+    );
+  } else {
+    e.respondWith(
+      caches.match(e.request).then(cached => cached || fetch(e.request))
+    );
+  }
 });
