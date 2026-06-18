@@ -1233,7 +1233,7 @@
                                             var btn = document.createElement('button');
                                             btn.style.cssText = 'display:block;width:100%;text-align:left;padding:10px 12px;margin-bottom:6px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;cursor:pointer;font-size:0.85rem;color:#1e293b;';
                                             btn.innerText = item.id.toUpperCase() + ' — ' + item.texto;
-                                            btn.onclick = function() { document.body.removeChild(overlay); resolveModal(item.id); };
+                                            btn.onclick = function() { btn.style.background='#16a34a'; btn.style.color='#fff'; setTimeout(function(){ document.body.removeChild(overlay); resolveModal(item.id); }, 200); };
                                             modal.appendChild(btn);
                                         });
                                         overlay.appendChild(modal);
