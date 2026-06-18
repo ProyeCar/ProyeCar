@@ -1133,7 +1133,21 @@
                         var tipoSel = prompt("Tipo de verificación:\n1 = Foto (condición física visible)\n2 = Documento (se sube foto del documento)\n3 = Verbal (gestión externa, sin foto)", "1");
                         var tipoMap = {"1":"foto","2":"documento","3":"verbal"};
                         var tipoFinal = tipoMap[tipoSel] || "foto";
-                        cat.items.push({ id: "item_" + Date.now(), texto: nuevoTexto, cumple: null, obs: "", tipoVerificacion: tipoFinal });
+                        var prefijoMap = {"ambiental":"AMB","sst":"SST","juridica":"JUR","social":"SOC","tecnica":"TEC"};
+                        var prefijo;
+                        if (prefijoMap[cat.id]) {
+                            prefijo = prefijoMap[cat.id];
+                        } else {
+                            var nombreSinEmoji = cat.nombre.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ]/g, '');
+                            prefijo = nombreSinEmoji.substring(0, 3).toUpperCase() || cat.id.substring(0, 3).toUpperCase();
+                        }
+                        var numsExistentes = cat.items
+                            .map(function(it){ return it.id.match(new RegExp("^" + prefijo.toLowerCase() + "(\\d+)$")); })
+                            .filter(function(m){ return m; })
+                            .map(function(m){ return parseInt(m[1]); });
+                        var siguienteNum = numsExistentes.length ? Math.max(...numsExistentes) + 1 : 1;
+                        var nuevoId = prefijo.toLowerCase() + siguienteNum;
+                        cat.items.push({ id: nuevoId, texto: nuevoTexto, cumple: null, obs: "", tipoVerificacion: tipoFinal });
                         saveToLocal();
                         renderFrentes();
                     }
@@ -1685,7 +1699,7 @@
                     var obsText = item.obs ? esc(item.obs) : '<em style="color:#9ca3af">Sin observación</em>';
                     if (item.tipoVerificacion === "verbal" && item.verificacionVerbal) { obsText += '<br><span style="color:#6b7280;font-style:italic">Verificación: '+esc(item.verificacionVerbal)+'</span>'; }
                     html += '<tr>'
-                        + '<td style="font-weight:500">'+esc(item.texto)+'</td>'
+                        + '<td style="font-weight:500"><strong>'+item.id.toUpperCase()+'</strong> — '+esc(item.texto)+'</td>'
                         + '<td><span class="e-badge" style="background:'+eb.bg+';color:'+eb.text+'">'+eb.label+'</span></td>'
                         + '<td style="color:#374151;font-size:8.5pt">'+obsText+'</td>'
                         + '</tr>';
@@ -1993,7 +2007,7 @@
                     var it=cat.items[ii],bd=badge(it.cumple);
                     var itObsText=it.obs?esc(it.obs):'<em style="color:#9ca3af">Sin observaci&oacute;n</em>';
                     if(it.tipoVerificacion==="verbal"&&it.verificacionVerbal){itObsText+='<br><span style="color:#6b7280;font-style:italic">Verificación: '+esc(it.verificacionVerbal)+'</span>';}
-                    h += '<tr><td style="font-weight:500">'+esc(it.texto)+'</td>'
+                    h += '<tr><td style="font-weight:500"><strong>'+it.id.toUpperCase()+'</strong> — '+esc(it.texto)+'</td>'
                         +'<td><span class="e-badge" style="background:'+bd.bg+';color:'+bd.col+'">'+bd.lbl+'</span></td>'
                         +'<td style="color:#374151;font-size:8.5pt">'+itObsText+'</td></tr>';
                 }
