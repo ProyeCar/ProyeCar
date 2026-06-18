@@ -1207,21 +1207,35 @@
                                     canvas.width = w; canvas.height = h;
                                     canvas.getContext('2d').drawImage(img, 0, 0, w, h);
                                     const dataUrl = canvas.toDataURL('image/jpeg', 0.65);
-                                    // PASO 1: Selector de ítem al subir foto
-                                    var itemListStr = "";
+                                    // PASO 1: Selector visual de ítem al subir foto
                                     var allItemsFlat = [];
                                     frentes[idx].categorias.forEach(function(cat) {
-                                        cat.items.forEach(function(item) {
-                                            itemListStr += item.id.toUpperCase() + " — " + item.texto + "\n";
-                                            allItemsFlat.push(item);
-                                        });
+                                        cat.items.forEach(function(item) { allItemsFlat.push(item); });
                                     });
-                                    var itemSel = prompt("Vincular foto a ítem (deja vacío para omitir):\n\n" + itemListStr + "\nEscribe el ID del ítem:", "");
-                                    var itemId = null;
-                                    if (itemSel && itemSel.trim()) {
-                                        var found = allItemsFlat.find(function(i){ return i.id.toLowerCase() === itemSel.trim().toLowerCase(); });
-                                        itemId = found ? found.id : null;
-                                    }
+                                    var itemId = await new Promise(function(resolveModal) {
+                                        var overlay = document.createElement('div');
+                                        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
+                                        var modal = document.createElement('div');
+                                        modal.style.cssText = 'background:#fff;border-radius:12px;padding:16px;max-width:480px;width:92%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.3);';
+                                        var title = document.createElement('p');
+                                        title.style.cssText = 'font-weight:600;font-size:1rem;margin:0 0 12px;color:#1e293b;';
+                                        title.innerText = '📎 Vincular foto a ítem';
+                                        modal.appendChild(title);
+                                        var btnNone = document.createElement('button');
+                                        btnNone.style.cssText = 'display:block;width:100%;text-align:left;padding:10px 12px;margin-bottom:8px;border:1px dashed #cbd5e1;border-radius:8px;background:#f8fafc;cursor:pointer;font-size:0.85rem;color:#6b7280;';
+                                        btnNone.innerText = 'Sin vincular a ningún ítem';
+                                        btnNone.onclick = function() { document.body.removeChild(overlay); resolveModal(null); };
+                                        modal.appendChild(btnNone);
+                                        allItemsFlat.forEach(function(item) {
+                                            var btn = document.createElement('button');
+                                            btn.style.cssText = 'display:block;width:100%;text-align:left;padding:10px 12px;margin-bottom:6px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;cursor:pointer;font-size:0.85rem;color:#1e293b;';
+                                            btn.innerText = item.id.toUpperCase() + ' — ' + item.texto;
+                                            btn.onclick = function() { document.body.removeChild(overlay); resolveModal(item.id); };
+                                            modal.appendChild(btn);
+                                        });
+                                        overlay.appendChild(modal);
+                                        document.body.appendChild(overlay);
+                                    });
                                     // Guardar en IndexedDB, solo el ID en frentes[]
                                     const id = fotoId(idx, Date.now() + Math.random());
                                     try { await idbGuardarFoto(id, dataUrl); } catch(err) { console.warn('IDB error:', err); }
