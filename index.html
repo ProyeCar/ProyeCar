@@ -1044,8 +1044,16 @@
                     const row = document.createElement("div"); row.className = "item-row";
                     const desc = document.createElement("div"); desc.className = "item-desc";
                     if (item.tipoVerificacion === "verbal") { desc.innerText = "🗣️ " + item.texto; }
-                    else if (item.tipoVerificacion === "documento") { desc.innerText = "📄 " + item.texto; }
-                    else { desc.innerText = "📷 " + item.texto; }
+                    else {
+                        var fotoItems = frentes[idx].fotoItems || {};
+                        var tieneVinculo = Object.values(fotoItems).some(function(v){ return v === item.id; });
+                        var icono = item.tipoVerificacion === "documento" ? "📄" : "📷";
+                        var iconSpan = document.createElement('span');
+                        iconSpan.innerText = icono;
+                        if (tieneVinculo) { iconSpan.style.cssText = 'background:#16a34a;color:#fff;border-radius:50%;padding:2px;'; }
+                        desc.appendChild(iconSpan);
+                        desc.appendChild(document.createTextNode(' ' + item.texto));
+                    }
                     const acciones = document.createElement("div"); acciones.className = "item-actions";
                     const estadoDiv = document.createElement("div"); estadoDiv.className = "estado-btns";
                     const btnSi = document.createElement("button"); btnSi.innerText = "✅ Cumple"; btnSi.className = `btn-cumple ${item.cumple === true ? "activo" : ""}`;
