@@ -1696,23 +1696,36 @@
             if (frente.fotos && frente.fotos.length > 0) {
                 var fotosConData = frente.fotos.filter(function(id){ return !!fotoMap[id]; });
                 if (fotosConData.length > 0) {
-                    html += '<div class="sub-t">📸 Evidencia Fotográfica ('+fotosConData.length+' foto'+(fotosConData.length>1?'s':'')+')</div>';
-                    html += '<div class="photo-grid">';
-                    for(var pi=0;pi<fotosConData.length;pi+=2){
-                        html+='<div class="photo-row">';
-                        var fid1=fotosConData[pi];
-                        var cap1='Fotografía '+(pi+1)+' — '+esc(frente.nombre);
-                        if(frente.fotoItems&&frente.fotoItems[fid1]){var iid1=frente.fotoItems[fid1];var iobj1=null;frente.categorias.forEach(function(c){c.items.forEach(function(it){if(it.id===iid1)iobj1=it;});});if(iobj1)cap1='Evidencia '+iid1.toUpperCase()+' — '+esc(iobj1.texto)+' — '+(iobj1.cumple===true?'CUMPLE':iobj1.cumple===false?'NO CUMPLE':'SIN CALIFICAR');}
-                        html+='<figure class="photo-card"><img src="'+(fotoMap[fid1]||'')+'" alt="Evidencia '+(pi+1)+'"><figcaption>'+cap1+'</figcaption></figure>';
-                        if(fotosConData[pi+1]){
-                            var fid2=fotosConData[pi+1];
-                            var cap2='Fotografía '+(pi+2)+' — '+esc(frente.nombre);
-                            if(frente.fotoItems&&frente.fotoItems[fid2]){var iid2=frente.fotoItems[fid2];var iobj2=null;frente.categorias.forEach(function(c){c.items.forEach(function(it){if(it.id===iid2)iobj2=it;});});if(iobj2)cap2='Evidencia '+iid2.toUpperCase()+' — '+esc(iobj2.texto)+' — '+(iobj2.cumple===true?'CUMPLE':iobj2.cumple===false?'NO CUMPLE':'SIN CALIFICAR');}
-                            html+='<figure class="photo-card"><img src="'+(fotoMap[fid2]||'')+'" alt="Evidencia '+(pi+2)+'"><figcaption>'+cap2+'</figcaption></figure>';
+                    var fotoItemsMap=frente.fotoItems||{};
+                    var catNombresMap={}; frente.categorias.forEach(function(c){ catNombresMap[c.id]=c.nombre; });
+                    var ordenCatIds=frente.categorias.map(function(c){ return c.id; });
+                    var grupos={};
+                    fotosConData.forEach(function(fid){
+                        var iid=fotoItemsMap[fid]||null; var catId='__general__';
+                        if(iid){ frente.categorias.forEach(function(c){ c.items.forEach(function(it){ if(it.id===iid) catId=c.id; }); }); }
+                        if(!grupos[catId]) grupos[catId]=[];
+                        grupos[catId].push(fid);
+                    });
+                    var ordenGrupos=ordenCatIds.filter(function(cid){ return grupos[cid]; });
+                    if(grupos['__general__']) ordenGrupos.push('__general__');
+                    var gNum=0;
+                    ordenGrupos.forEach(function(catId){
+                        var grupo=grupos[catId];
+                        var nombreGrupo=catId==='__general__'?'General':esc(catNombresMap[catId]);
+                        html+='<div class="sub-t">📸 Evidencia Fotográfica — '+nombreGrupo+'</div><div class="photo-grid">';
+                        for(var pi=0;pi<grupo.length;pi+=2){
+                            html+='<div class="photo-row">';
+                            var fid1=grupo[pi]; gNum++;
+                            var cap1; var iid1=fotoItemsMap[fid1];
+                            if(iid1){var iobj1=null;frente.categorias.forEach(function(c){c.items.forEach(function(it){if(it.id===iid1)iobj1=it;});});cap1=iobj1?iid1.toUpperCase()+' — '+(iobj1.cumple===true?'CUMPLE':iobj1.cumple===false?'NO CUMPLE':'SIN CALIFICAR'):'Fotografía '+gNum+' — '+esc(frente.nombre);}else{cap1='Fotografía '+gNum+' — '+esc(frente.nombre);}
+                            html+='<figure class="photo-card"><img src="'+(fotoMap[fid1]||'')+'" alt="Evidencia '+gNum+'"><figcaption>'+cap1+'</figcaption></figure>';
+                            if(grupo[pi+1]){var fid2=grupo[pi+1]; gNum++; var cap2; var iid2=fotoItemsMap[fid2];
+                                if(iid2){var iobj2=null;frente.categorias.forEach(function(c){c.items.forEach(function(it){if(it.id===iid2)iobj2=it;});});cap2=iobj2?iid2.toUpperCase()+' — '+(iobj2.cumple===true?'CUMPLE':iobj2.cumple===false?'NO CUMPLE':'SIN CALIFICAR'):'Fotografía '+gNum+' — '+esc(frente.nombre);}else{cap2='Fotografía '+gNum+' — '+esc(frente.nombre);}
+                                html+='<figure class="photo-card"><img src="'+(fotoMap[fid2]||'')+'" alt="Evidencia '+gNum+'"><figcaption>'+cap2+'</figcaption></figure>';}
+                            html+='</div>';
                         }
                         html+='</div>';
-                    }
-                    html += '</div>';
+                    });
                 }
             }
 
@@ -1991,22 +2004,36 @@
             if(fr.fotos && fr.fotos.length){
                 var fotosOk=fr.fotos.filter(function(id){return !!fotoMap[id];});
                 if(fotosOk.length){
-                    h += '<div class="sub-t">&#128247; Evidencia Fotogr&aacute;fica ('+fotosOk.length+')</div><div class="photo-grid">';
-                    for(var pi=0;pi<fotosOk.length;pi+=2){
-                        h+='<div class="photo-row">';
-                        var fid1=fotosOk[pi];
-                        var cap1='Fotografía '+(pi+1)+' — '+esc(fr.nombre);
-                        if(fr.fotoItems&&fr.fotoItems[fid1]){var iid1=fr.fotoItems[fid1];var iobj1=null;fr.categorias.forEach(function(c){c.items.forEach(function(it){if(it.id===iid1)iobj1=it;});});if(iobj1)cap1='Evidencia '+iid1.toUpperCase()+' — '+esc(iobj1.texto)+' — '+(iobj1.cumple===true?'CUMPLE':iobj1.cumple===false?'NO CUMPLE':'SIN CALIFICAR');}
-                        h+='<figure class="photo-card"><img src="'+(fotoMap[fid1]||'')+'" alt="Evidencia '+(pi+1)+'"><figcaption>'+cap1+'</figcaption></figure>';
-                        if(fotosOk[pi+1]){
-                            var fid2=fotosOk[pi+1];
-                            var cap2='Fotografía '+(pi+2)+' — '+esc(fr.nombre);
-                            if(fr.fotoItems&&fr.fotoItems[fid2]){var iid2=fr.fotoItems[fid2];var iobj2=null;fr.categorias.forEach(function(c){c.items.forEach(function(it){if(it.id===iid2)iobj2=it;});});if(iobj2)cap2='Evidencia '+iid2.toUpperCase()+' — '+esc(iobj2.texto)+' — '+(iobj2.cumple===true?'CUMPLE':iobj2.cumple===false?'NO CUMPLE':'SIN CALIFICAR');}
-                            h+='<figure class="photo-card"><img src="'+(fotoMap[fid2]||'')+'" alt="Evidencia '+(pi+2)+'"><figcaption>'+cap2+'</figcaption></figure>';
+                    var fotoItemsMap=fr.fotoItems||{};
+                    var catNombresMap={}; fr.categorias.forEach(function(c){ catNombresMap[c.id]=c.nombre; });
+                    var ordenCatIds=fr.categorias.map(function(c){ return c.id; });
+                    var grupos={};
+                    fotosOk.forEach(function(fid){
+                        var iid=fotoItemsMap[fid]||null; var catId='__general__';
+                        if(iid){ fr.categorias.forEach(function(c){ c.items.forEach(function(it){ if(it.id===iid) catId=c.id; }); }); }
+                        if(!grupos[catId]) grupos[catId]=[];
+                        grupos[catId].push(fid);
+                    });
+                    var ordenGrupos=ordenCatIds.filter(function(cid){ return grupos[cid]; });
+                    if(grupos['__general__']) ordenGrupos.push('__general__');
+                    var gNum=0;
+                    ordenGrupos.forEach(function(catId){
+                        var grupo=grupos[catId];
+                        var nombreGrupo=catId==='__general__'?'General':esc(catNombresMap[catId]);
+                        h+='<div class="sub-t">&#128247; Evidencia Fotogr&aacute;fica &mdash; '+nombreGrupo+'</div><div class="photo-grid">';
+                        for(var pi=0;pi<grupo.length;pi+=2){
+                            h+='<div class="photo-row">';
+                            var fid1=grupo[pi]; gNum++;
+                            var cap1; var iid1=fotoItemsMap[fid1];
+                            if(iid1){var iobj1=null;fr.categorias.forEach(function(c){c.items.forEach(function(it){if(it.id===iid1)iobj1=it;});});cap1=iobj1?iid1.toUpperCase()+' — '+(iobj1.cumple===true?'CUMPLE':iobj1.cumple===false?'NO CUMPLE':'SIN CALIFICAR'):'Fotografía '+gNum+' — '+esc(fr.nombre);}else{cap1='Fotografía '+gNum+' — '+esc(fr.nombre);}
+                            h+='<figure class="photo-card"><img src="'+(fotoMap[fid1]||'')+'" alt="Evidencia '+gNum+'"><figcaption>'+cap1+'</figcaption></figure>';
+                            if(grupo[pi+1]){var fid2=grupo[pi+1]; gNum++; var cap2; var iid2=fotoItemsMap[fid2];
+                                if(iid2){var iobj2=null;fr.categorias.forEach(function(c){c.items.forEach(function(it){if(it.id===iid2)iobj2=it;});});cap2=iobj2?iid2.toUpperCase()+' — '+(iobj2.cumple===true?'CUMPLE':iobj2.cumple===false?'NO CUMPLE':'SIN CALIFICAR'):'Fotografía '+gNum+' — '+esc(fr.nombre);}else{cap2='Fotografía '+gNum+' — '+esc(fr.nombre);}
+                                h+='<figure class="photo-card"><img src="'+(fotoMap[fid2]||'')+'" alt="Evidencia '+gNum+'"><figcaption>'+cap2+'</figcaption></figure>';}
+                            h+='</div>';
                         }
                         h+='</div>';
-                    }
-                    h += '</div>';
+                    });
                 }
             }
 
