@@ -621,6 +621,8 @@
                 <span style="color:#374151;font-weight:600;">Herramienta desarrollada por <strong style="color:#0d3321;">Dairo Narváez</strong> — Área Técnica de Planeación, CARDIQUE, 2026</span>
             </span>
         </div>
+        <button id="exportar-items-custom" class="btn-sec" style="background:linear-gradient(135deg,#1a5c35,#2d9e52);">🔗 Compartir ítems personalizados</button>
+        <button id="importar-items-custom" class="btn-sec" style="background:linear-gradient(135deg,#0ea5e9,#0284c7);">📥 Importar ítems compartidos</button>
         <button id="exportar-json" class="btn-sec">📥 Exportar respaldo JSON</button>
         <button id="generar-pdf" class="btn-pdf">📄 Generar Informe para Dirección</button>
         <button id="reset-global" class="btn-peligro">🔄 Reiniciar todo</button>
@@ -1355,6 +1357,67 @@
         });
     }
 
+    document.getElementById('exportar-items-custom').onclick = function() {
+        try {
+            var saved = localStorage.getItem("proyecar_items_custom");
+            if (!saved || JSON.stringify(JSON.parse(saved)) === '{}') {
+                alert("No hay ítems personalizados para compartir.");
+                return;
+            }
+            var codigo = "PC-ITEMS:" + btoa(unescape(encodeURIComponent(saved)));
+            navigator.clipboard.writeText(codigo).then(function() {
+                alert("✅ Código copiado al portapapeles. Pégalo en WhatsApp para compartirlo.");
+            }).catch(function() {
+                prompt("Copia este código y envíalo por WhatsApp:", codigo);
+            });
+        } catch(e) {
+            alert("Error al generar el código.");
+        }
+    };
+    document.getElementById('importar-items-custom').onclick = function() {
+        setTimeout(function() {
+            var codigo = prompt("Pega aquí el código recibido por WhatsApp:");
+            if (!codigo || !codigo.trim().startsWith("PC-ITEMS:")) {
+                if (codigo !== null) alert("Código inválido. Debe empezar con PC-ITEMS:");
+                return;
+            }
+            try {
+                var datos = JSON.parse(decodeURIComponent(escape(atob(codigo.trim().replace("PC-ITEMS:", "")))));
+                var existentes = {};
+                try { existentes = JSON.parse(localStorage.getItem("proyecar_items_custom") || "{}"); } catch(e) {}
+                var agregados = 0;
+                Object.keys(datos).forEach(function(catId) {
+                    if (!existentes[catId]) existentes[catId] = [];
+                    datos[catId].forEach(function(item) {
+                        if (!existentes[catId].find(function(x) { return x.id === item.id; })) {
+                            existentes[catId].push(item);
+                            agregados++;
+                        }
+                    });
+                });
+                localStorage.setItem("proyecar_items_custom", JSON.stringify(existentes));
+                // Reinyectar en frentes actuales
+                frentes.forEach(function(fr) {
+                    fr.categorias.forEach(function(cat) {
+                        var customItems = existentes[cat.id];
+                        if (customItems && customItems.length > 0) {
+                            var idsExistentes = cat.items.map(function(i) { return i.id; });
+                            customItems.forEach(function(ci) {
+                                if (!idsExistentes.includes(ci.id)) {
+                                    cat.items.push({ id: ci.id, texto: ci.texto, cumple: null, obs: "", tipoVerificacion: ci.tipoVerificacion || "foto" });
+                                }
+                            });
+                        }
+                    });
+                });
+                saveToLocal();
+                renderFrentes();
+                alert("✅ Se importaron " + agregados + " ítem(s) personalizado(s) correctamente.");
+            } catch(e) {
+                alert("Error al importar el código. Verifica que esté completo y sin espacios.");
+            }
+        }, 10);
+    };
     btnExportarJson.onclick = () => {
         const data = { proyecto: proyectoInput.value, fecha: fechaInput.value, ubicacion: ubicacionInput.value, inspector: inspectorInput.value, frentes };
         const blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json"});
