@@ -1554,12 +1554,14 @@
                     }
                     var historial = [];
                     try { historial = JSON.parse(localStorage.getItem("cardique_historial") || "[]"); } catch(e2) {}
+                    var entradaPct = (typeof data.pct === 'number') ? data.pct : (typeof calcularPct === 'function' ? calcularPct(data.frentes).pct : 0);
                     var entrada = {
                         id: Date.now(),
                         fecha: data.fecha || new Date().toISOString().split('T')[0],
                         proyecto: data.proyecto || "Sin nombre",
                         ubicacion: data.ubicacion || "",
                         inspector: data.inspector || "No especificado",
+                        pct: entradaPct,
                         frentes: data.frentes,
                         importado: true
                     };
