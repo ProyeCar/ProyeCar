@@ -1420,48 +1420,45 @@
             }
         }, 10);
     };
-    document.getElementById('compartir-inspeccion').onclick = async function() {
+    document.getElementById('compartir-inspeccion').onclick = function() {
         try {
             var data = {
                 proyecto: document.getElementById('proyectoInput') ? document.getElementById('proyectoInput').value : '',
                 fecha: document.getElementById('fechaInput') ? document.getElementById('fechaInput').value : '',
                 ubicacion: document.getElementById('ubicacionInput') ? document.getElementById('ubicacionInput').value : '',
                 inspector: document.getElementById('inspectorInput') ? document.getElementById('inspectorInput').value : '',
-                frentes: frentes
+                frentes: frentes.map(function(fr) {
+                    return {
+                        nombre: fr.nombre,
+                        contratista: fr.contratista,
+                        obsGlobal: fr.obsGlobal,
+                        recomendaciones: fr.recomendaciones,
+                        categorias: fr.categorias.map(function(cat) {
+                            return {
+                                id: cat.id,
+                                nombre: cat.nombre,
+                                items: cat.items.map(function(it) {
+                                    return { id: it.id, texto: it.texto, cumple: it.cumple, obs: it.obs, tipoVerificacion: it.tipoVerificacion };
+                                })
+                            };
+                        })
+                    };
+                })
             };
-            // Intentar incluir fotos de IndexedDB
-            try {
-                var fotoIds = [];
-                frentes.forEach(function(fr) { if (fr.fotos) fotoIds = fotoIds.concat(fr.fotos); });
-                if (fotoIds.length > 0 && typeof idbObtenerFoto === 'function') {
-                    var fotoMap = {};
-                    await Promise.all(fotoIds.map(async function(id) {
-                        try { fotoMap[id] = await idbObtenerFoto(id); } catch(e) {}
-                    }));
-                    data.fotoMap = fotoMap;
-                }
-            } catch(e) {}
-            var json = JSON.stringify(data);
-            var blob = new Blob([json], { type: 'application/json' });
-            var archivo = new File([blob], 'ProyeCar_Inspeccion_' + (data.fecha || Date.now()) + '.json', { type: 'application/json' });
-            if (navigator.share && navigator.canShare && navigator.canShare({ files: [archivo] })) {
-                await navigator.share({
-                    title: 'Inspección ProyeCar',
-                    text: 'Inspección ' + (data.proyecto || '') + ' – ' + (data.fecha || ''),
-                    files: [archivo]
-                });
+            var encoded = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+            var url = 'https://proyecar.github.io/ProyeCar/?import=' + encoded;
+            var texto = '🔗 Inspección ProyeCar – ' + (data.proyecto || 'Sin nombre') + ' – ' + (data.fecha || '') + '\n\nAbre este enlace para importarla:\n' + url + '\n\n📸 Las fotos van adjuntas en este chat.';
+            if (navigator.share) {
+                navigator.share({ title: 'Inspección ProyeCar', text: texto });
             } else {
-                // Fallback: descarga directa
-                var url = URL.createObjectURL(blob);
-                var a = document.createElement('a');
-                a.href = url;
-                a.download = 'ProyeCar_Inspeccion_' + (data.fecha || Date.now()) + '.json';
-                a.click();
-                URL.revokeObjectURL(url);
-                alert("Archivo descargado. Compártelo manualmente por WhatsApp.");
+                navigator.clipboard.writeText(texto).then(function() {
+                    alert('✅ Enlace copiado. Pégalo en WhatsApp.');
+                }).catch(function() {
+                    prompt('Copia este mensaje y envíalo por WhatsApp:', texto);
+                });
             }
         } catch(e) {
-            if (e.name !== 'AbortError') alert("Error al compartir: " + e.message);
+            alert('Error al generar el enlace: ' + e.message);
         }
     };
     document.getElementById('importar-inspeccion').onclick = function() {
@@ -2404,7 +2401,7 @@
                     <div>
                         <div class="hist-proyecto">${r.proyecto || 'Sin nombre'}</div>
                         <div class="hist-fecha">📅 ${r.fecha || ''} &nbsp;|&nbsp; Archivado: ${r.archivedAt}</div>
-                        <div class="hist-inspector">👤 ${r.inspector || 'No especificado'}</div>
+                        <div class="hist-inspector">👤 ${r.inspector || 'No especificado'}${r.importado ? '<span style="font-size:0.7rem;background:#7c3aed;color:#fff;padding:2px 8px;border-radius:10px;margin-left:6px;">Importada</span>' : ''}</div>
                     </div>
                     <div class="hist-pct" style="color:${color}">${r.pct}%</div>
                 </div>
@@ -2497,6 +2494,45 @@
             }).join('')}
         `;
     };
+
+    (function() {
+        try {
+            var params = new URLSearchParams(window.location.search);
+            var importData = params.get('import');
+            if (!importData) return;
+            var urlLimpia = window.location.pathname;
+            window.history.replaceState({}, document.title, urlLimpia);
+            var data = JSON.parse(decodeURIComponent(escape(atob(importData))));
+            if (!data.frentes || !Array.isArray(data.frentes)) return;
+            setTimeout(function() {
+                var confirmar = confirm(
+                    '📋 Se recibió una inspección de ' + (data.inspector || 'un compañero') + '.\n' +
+                    'Proyecto: ' + (data.proyecto || 'Sin nombre') + '\n' +
+                    'Fecha: ' + (data.fecha || '') + '\n\n' +
+                    '¿Guardar en historial?'
+                );
+                if (!confirmar) return;
+                var historial = [];
+                try { historial = JSON.parse(localStorage.getItem('cardique_historial') || '[]'); } catch(e) {}
+                historial.unshift({
+                    id: Date.now(),
+                    fecha: data.fecha || new Date().toISOString().split('T')[0],
+                    proyecto: data.proyecto || 'Sin nombre',
+                    ubicacion: data.ubicacion || '',
+                    inspector: data.inspector || 'No especificado',
+                    frentes: data.frentes,
+                    importado: true
+                });
+                try {
+                    localStorage.setItem('cardique_historial', JSON.stringify(historial));
+                    alert('✅ Inspección guardada en el historial correctamente.');
+                    if (typeof renderHistorial === 'function') renderHistorial();
+                } catch(e) {
+                    alert('Error al guardar en historial.');
+                }
+            }, 800);
+        } catch(e) {}
+    })();
 
     loadFromLocal();
 </script>
