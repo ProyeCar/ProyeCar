@@ -679,6 +679,17 @@
 <script>
     const APP_VERSION = "1.0";
 
+    (function() {
+        try {
+            var params = new URLSearchParams(window.location.search);
+            var importData = params.get('import');
+            if (importData) {
+                sessionStorage.setItem('proyecar_import_pending', importData);
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        } catch(e) {}
+    })();
+
     // ============================================================
     // INDEXEDDB — almacenamiento de fotos (sin límite de localStorage)
     // ============================================================
@@ -1357,6 +1368,42 @@
             // Body is open by default - no maxHeight restriction needed
             frentesContainer.appendChild(frenteDiv);
         });
+        // Procesar importación pendiente si existe
+        var pendingImport = sessionStorage.getItem('proyecar_import_pending');
+        if (pendingImport) {
+            sessionStorage.removeItem('proyecar_import_pending');
+            try {
+                var data = JSON.parse(decodeURIComponent(escape(atob(pendingImport))));
+                if (data.frentes && Array.isArray(data.frentes)) {
+                    var confirmar = confirm(
+                        '📋 Se recibió una inspección de ' + (data.inspector || 'un compañero') + '.\n' +
+                        'Proyecto: ' + (data.proyecto || 'Sin nombre') + '\n' +
+                        'Fecha: ' + (data.fecha || '') + '\n\n' +
+                        '¿Guardar en historial?'
+                    );
+                    if (confirmar) {
+                        var historial = [];
+                        try { historial = JSON.parse(localStorage.getItem('cardique_historial') || '[]'); } catch(e2) {}
+                        historial.unshift({
+                            id: Date.now(),
+                            fecha: data.fecha || new Date().toISOString().split('T')[0],
+                            proyecto: data.proyecto || 'Sin nombre',
+                            ubicacion: data.ubicacion || '',
+                            inspector: data.inspector || 'No especificado',
+                            frentes: data.frentes,
+                            importado: true
+                        });
+                        try {
+                            localStorage.setItem('cardique_historial', JSON.stringify(historial));
+                            alert('✅ Inspección guardada en el historial correctamente.');
+                            if (typeof renderHistorial === 'function') renderHistorial();
+                        } catch(e3) {
+                            alert('Error al guardar en historial.');
+                        }
+                    }
+                }
+            } catch(e) {}
+        }
     }
 
     document.getElementById('exportar-items-custom').onclick = function() {
@@ -2494,55 +2541,6 @@
             }).join('')}
         `;
     };
-
-    (function() {
-        try {
-            var params = new URLSearchParams(window.location.search);
-            var importData = params.get('import');
-            if (!importData) return;
-            var urlLimpia = window.location.pathname;
-            window.history.replaceState({}, document.title, urlLimpia);
-            var data = JSON.parse(decodeURIComponent(escape(atob(importData))));
-            if (!data.frentes || !Array.isArray(data.frentes)) return;
-            setTimeout(function() {
-                function intentarImportar(intentos) {
-                    intentos = intentos || 0;
-                    if (intentos > 10) return;
-                    var histDiv = document.getElementById('pantalla-inspeccion') || document.getElementById('pantalla-historial');
-                    if (!histDiv) {
-                        setTimeout(function() { intentarImportar(intentos + 1); }, 300);
-                        return;
-                    }
-                    var confirmar = confirm(
-                        '📋 Se recibió una inspección de ' + (data.inspector || 'un compañero') + '.\n' +
-                        'Proyecto: ' + (data.proyecto || 'Sin nombre') + '\n' +
-                        'Fecha: ' + (data.fecha || '') + '\n\n' +
-                        '¿Guardar en historial?'
-                    );
-                    if (!confirmar) return;
-                    var historial = [];
-                    try { historial = JSON.parse(localStorage.getItem('cardique_historial') || '[]'); } catch(e) {}
-                    historial.unshift({
-                        id: Date.now(),
-                        fecha: data.fecha || new Date().toISOString().split('T')[0],
-                        proyecto: data.proyecto || 'Sin nombre',
-                        ubicacion: data.ubicacion || '',
-                        inspector: data.inspector || 'No especificado',
-                        frentes: data.frentes,
-                        importado: true
-                    });
-                    try {
-                        localStorage.setItem('cardique_historial', JSON.stringify(historial));
-                        alert('✅ Inspección guardada en el historial correctamente.');
-                        if (typeof renderHistorial === 'function') renderHistorial();
-                    } catch(e) {
-                        alert('Error al guardar en historial.');
-                    }
-                }
-                intentarImportar();
-            }, 2000);
-        } catch(e) {}
-    })();
 
     loadFromLocal();
 </script>
