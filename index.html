@@ -1508,26 +1508,31 @@
                     };
                 })
             };
-            var encoded = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
-            var url = 'https://proyecar.github.io/ProyeCar/?import=' + encoded;
-            var texto = '🔗 Inspección ProyeCar – ' + (data.proyecto || 'Sin nombre') + ' – ' + (data.fecha || '') + '\n\nAbre este enlace para importarla:\n' + url + '\n\n📸 Las fotos van adjuntas en este chat.';
-            if (navigator.share) {
-                navigator.share({ title: 'Inspección ProyeCar', text: texto });
-            } else {
-                navigator.clipboard.writeText(texto).then(function() {
-                    alert('✅ Enlace copiado. Pégalo en WhatsApp.');
-                }).catch(function() {
-                    prompt('Copia este mensaje y envíalo por WhatsApp:', texto);
+            var blob = new Blob([JSON.stringify(data)], { type: 'application/proyecar' });
+            var archivo = new File([blob], 'ProyeCar_Inspeccion_' + (data.fecha || Date.now()) + '.proyecar', { type: 'application/proyecar' });
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [archivo] })) {
+                navigator.share({
+                    title: 'Inspección ProyeCar',
+                    text: 'Inspección ' + (data.proyecto || '') + ' – ' + (data.fecha || ''),
+                    files: [archivo]
                 });
+            } else {
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = 'ProyeCar_Inspeccion_' + (data.fecha || Date.now()) + '.proyecar';
+                a.click();
+                URL.revokeObjectURL(url);
+                alert('Archivo descargado. Compártelo manualmente por WhatsApp.');
             }
         } catch(e) {
-            alert('Error al generar el enlace: ' + e.message);
+            alert('Error al compartir: ' + e.message);
         }
     };
     document.getElementById('importar-inspeccion').onclick = function() {
         var input = document.createElement('input');
         input.type = 'file';
-        input.accept = '.json,application/json';
+        input.accept = '.proyecar,.json,application/proyecar,application/json';
         input.onchange = function(e) {
             var file = e.target.files[0];
             if (!file) return;
