@@ -1400,12 +1400,14 @@
                         document.body.removeChild(impOverlay);
                         var historial = [];
                         try { historial = JSON.parse(localStorage.getItem('cardique_historial') || '[]'); } catch(e2) {}
+                        var impPct = (typeof impData.pct === 'number') ? impData.pct : (typeof calcularPct === 'function' ? calcularPct(impData.frentes).pct : 0);
                         historial.unshift({
                             id: Date.now(),
                             fecha: impData.fecha || new Date().toISOString().split('T')[0],
                             proyecto: impData.proyecto || 'Sin nombre',
                             ubicacion: impData.ubicacion || '',
                             inspector: impData.inspector || 'No especificado',
+                            pct: impPct,
                             frentes: impData.frentes,
                             importado: true
                         });
@@ -2466,16 +2468,23 @@
             return;
         }
         lista.innerHTML = hist.map((r, i) => {
-            const color = r.pct >= 80 ? '#16a34a' : r.pct >= 50 ? '#d97706' : '#dc2626';
+            let hc = 0, hn = 0;
+            (r.frentes || []).forEach(f => (f.categorias || []).forEach(cat => (cat.items || []).forEach(item => {
+                if (item.cumple === true) hc++;
+                else if (item.cumple === false) hn++;
+            })));
+            const hTotal = hc + hn;
+            const pctCalc = hTotal > 0 ? parseFloat((hc / hTotal * 100).toFixed(1)) : (r.pct || 0);
+            const color = pctCalc >= 80 ? '#16a34a' : pctCalc >= 50 ? '#d97706' : '#dc2626';
             const tags = r.frentes.map(f => `<span class="hist-tag">${f.nombre}</span>`).join('');
             return `<div class="hist-item">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;">
                     <div>
                         <div class="hist-proyecto">${r.proyecto || 'Sin nombre'}</div>
-                        <div class="hist-fecha">📅 ${r.fecha || ''} &nbsp;|&nbsp; Archivado: ${r.archivedAt}</div>
+                        <div class="hist-fecha">📅 ${r.fecha || ''} &nbsp;|&nbsp; Archivado: ${r.archivedAt || ''}</div>
                         <div class="hist-inspector">👤 ${r.inspector || 'No especificado'}${r.importado ? '<span style="font-size:0.7rem;background:#7c3aed;color:#fff;padding:2px 8px;border-radius:10px;margin-left:6px;">Importada</span>' : ''}</div>
                     </div>
-                    <div class="hist-pct" style="color:${color}">${r.pct}%</div>
+                    <div class="hist-pct" style="color:${color}">${pctCalc}%</div>
                 </div>
                 <div class="hist-frentes">${tags}</div>
                 <div style="margin-top:10px;display:flex;gap:8px;">
