@@ -624,6 +624,7 @@
         <button id="exportar-items-custom" class="btn-sec" style="background:linear-gradient(135deg,#1a5c35,#2d9e52);">🔗 Compartir ítems personalizados</button>
         <button id="importar-items-custom" class="btn-sec" style="background:linear-gradient(135deg,#0ea5e9,#0284c7);">📥 Importar ítems compartidos</button>
         <button id="exportar-json" class="btn-sec">📥 Exportar respaldo JSON</button>
+        <button id="compartir-inspeccion" class="btn-sec" style="background:linear-gradient(135deg,#7c3aed,#a855f7);margin-bottom:8px;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;">🤝 Compartir inspección</button>
         <button id="generar-pdf" class="btn-pdf">📄 Generar Informe para Dirección</button>
         <button id="reset-global" class="btn-peligro">🔄 Reiniciar todo</button>
         <button id="guardar-manual" style="background:#2c5e3f;">💾 Guardar manualmente</button>
@@ -641,6 +642,7 @@
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;">
             <button id="btn-archivar" style="background:#2c5e3f;">📥 Archivar inspección actual</button>
             <button id="btn-limpiar-hist" class="btn-peligro" style="font-size:.8rem;padding:8px 14px;">🗑️ Limpiar historial</button>
+            <button id="importar-inspeccion" class="btn-sec" style="background:linear-gradient(135deg,#7c3aed,#a855f7);margin-bottom:8px;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;">📥 Importar inspección recibida</button>
         </div>
     </div>
 </div>
@@ -1417,6 +1419,98 @@
                 alert("Error al importar el código. Verifica que esté completo y sin espacios.");
             }
         }, 10);
+    };
+    document.getElementById('compartir-inspeccion').onclick = async function() {
+        try {
+            var data = {
+                proyecto: document.getElementById('proyectoInput') ? document.getElementById('proyectoInput').value : '',
+                fecha: document.getElementById('fechaInput') ? document.getElementById('fechaInput').value : '',
+                ubicacion: document.getElementById('ubicacionInput') ? document.getElementById('ubicacionInput').value : '',
+                inspector: document.getElementById('inspectorInput') ? document.getElementById('inspectorInput').value : '',
+                frentes: frentes
+            };
+            // Intentar incluir fotos de IndexedDB
+            try {
+                var fotoIds = [];
+                frentes.forEach(function(fr) { if (fr.fotos) fotoIds = fotoIds.concat(fr.fotos); });
+                if (fotoIds.length > 0 && typeof idbObtenerFoto === 'function') {
+                    var fotoMap = {};
+                    await Promise.all(fotoIds.map(async function(id) {
+                        try { fotoMap[id] = await idbObtenerFoto(id); } catch(e) {}
+                    }));
+                    data.fotoMap = fotoMap;
+                }
+            } catch(e) {}
+            var json = JSON.stringify(data);
+            var blob = new Blob([json], { type: 'application/json' });
+            var archivo = new File([blob], 'ProyeCar_Inspeccion_' + (data.fecha || Date.now()) + '.json', { type: 'application/json' });
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [archivo] })) {
+                await navigator.share({
+                    title: 'Inspección ProyeCar',
+                    text: 'Inspección ' + (data.proyecto || '') + ' – ' + (data.fecha || ''),
+                    files: [archivo]
+                });
+            } else {
+                // Fallback: descarga directa
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = 'ProyeCar_Inspeccion_' + (data.fecha || Date.now()) + '.json';
+                a.click();
+                URL.revokeObjectURL(url);
+                alert("Archivo descargado. Compártelo manualmente por WhatsApp.");
+            }
+        } catch(e) {
+            if (e.name !== 'AbortError') alert("Error al compartir: " + e.message);
+        }
+    };
+    document.getElementById('importar-inspeccion').onclick = function() {
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json,application/json';
+        input.onchange = function(e) {
+            var file = e.target.files[0];
+            if (!file) return;
+            var reader = new FileReader();
+            reader.onload = function(ev) {
+                try {
+                    var data = JSON.parse(ev.target.result);
+                    if (!data.frentes || !Array.isArray(data.frentes)) {
+                        alert("Archivo inválido. No es un respaldo de ProyeCar.");
+                        return;
+                    }
+                    // Guardar fotos en IndexedDB si vienen en el archivo
+                    if (data.fotoMap && typeof idbGuardarFoto === 'function') {
+                        Object.keys(data.fotoMap).forEach(function(id) {
+                            try { idbGuardarFoto(id, data.fotoMap[id]); } catch(e) {}
+                        });
+                    }
+                    var historial = [];
+                    try { historial = JSON.parse(localStorage.getItem("cardique_historial") || "[]"); } catch(e2) {}
+                    var entrada = {
+                        id: Date.now(),
+                        fecha: data.fecha || new Date().toISOString().split('T')[0],
+                        proyecto: data.proyecto || "Sin nombre",
+                        ubicacion: data.ubicacion || "",
+                        inspector: data.inspector || "No especificado",
+                        frentes: data.frentes,
+                        importado: true
+                    };
+                    historial.unshift(entrada);
+                    try {
+                        localStorage.setItem("cardique_historial", JSON.stringify(historial));
+                        alert("✅ Inspección importada correctamente al historial.");
+                        if (typeof renderHistorial === 'function') renderHistorial();
+                    } catch(e3) {
+                        alert("Error al guardar. El archivo puede ser muy grande por las fotos.");
+                    }
+                } catch(e) {
+                    alert("Error al leer el archivo. Verifica que sea un JSON válido de ProyeCar.");
+                }
+            };
+            reader.readAsText(file);
+        };
+        input.click();
     };
     btnExportarJson.onclick = () => {
         const data = { proyecto: proyectoInput.value, fecha: fechaInput.value, ubicacion: ubicacionInput.value, inspector: inspectorInput.value, frentes };
