@@ -593,7 +593,7 @@
       <div style="background:linear-gradient(135deg,#0d3321,#2d9e52);color:#fff;font-size:0.82rem;font-weight:800;letter-spacing:3px;padding:8px 24px;border-radius:30px;box-shadow:0 4px 16px rgba(13,51,33,0.35);display:flex;align-items:center;gap:8px;border:2px solid rgba(255,255,255,0.25);">
         <span style="font-size:1rem;">🌿</span>
         <span>ProyeCar</span>
-        <span style="font-size:0.65rem;font-weight:600;letter-spacing:1px;opacity:0.85;background:rgba(255,255,255,0.15);padding:2px 7px;border-radius:10px;">v1.2.1</span>
+        <span style="font-size:0.65rem;font-weight:600;letter-spacing:1px;opacity:0.85;background:rgba(255,255,255,0.15);padding:2px 7px;border-radius:10px;">v1.2.2</span>
       </div>
     </div>
     <div class="security-banner no-print" style="display:none;">🔒 MODO SEGURO: Datos no salen de su dispositivo</div>
@@ -677,7 +677,7 @@
 </nav>
 
 <script>
-    const APP_VERSION = "1.2.1";
+    const APP_VERSION = "1.2.2";
 
     (function() {
         try {
@@ -1432,11 +1432,15 @@
                 return;
             }
             var codigo = "PC-ITEMS:" + btoa(unescape(encodeURIComponent(saved)));
-            navigator.clipboard.writeText(codigo).then(function() {
-                alert("✅ Código copiado al portapapeles. Pégalo en WhatsApp para compartirlo.");
-            }).catch(function() {
-                prompt("Copia este código y envíalo por WhatsApp:", codigo);
-            });
+            var whatsappUrl = 'https://wa.me/?text=' + encodeURIComponent('🔗 Ítems personalizados ProyeCar\n\n' + codigo + '\n\nCopia este código y pégalo en ProyeCar → "Importar ítems compartidos"');
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Ítems ProyeCar',
+                    text: '🔗 Ítems personalizados ProyeCar\n\n' + codigo + '\n\nCopia este código y pégalo en ProyeCar → "Importar ítems compartidos"'
+                });
+            } else {
+                window.open(whatsappUrl, '_blank');
+            }
         } catch(e) {
             alert("Error al generar el código.");
         }
