@@ -593,7 +593,7 @@
       <div style="background:linear-gradient(135deg,#0d3321,#2d9e52);color:#fff;font-size:0.82rem;font-weight:800;letter-spacing:3px;padding:8px 24px;border-radius:30px;box-shadow:0 4px 16px rgba(13,51,33,0.35);display:flex;align-items:center;gap:8px;border:2px solid rgba(255,255,255,0.25);">
         <span style="font-size:1rem;">🌿</span>
         <span>ProyeCar</span>
-        <span style="font-size:0.65rem;font-weight:600;letter-spacing:1px;opacity:0.85;background:rgba(255,255,255,0.15);padding:2px 7px;border-radius:10px;">v1.2.2</span>
+        <span style="font-size:0.65rem;font-weight:600;letter-spacing:1px;opacity:0.85;background:rgba(255,255,255,0.15);padding:2px 7px;border-radius:10px;">v1.2.3</span>
       </div>
     </div>
     <div class="security-banner no-print" style="display:none;">🔒 MODO SEGURO: Datos no salen de su dispositivo</div>
@@ -677,7 +677,7 @@
 </nav>
 
 <script>
-    const APP_VERSION = "1.2.2";
+    const APP_VERSION = "1.2.3";
 
     (function() {
         try {
@@ -1448,10 +1448,13 @@
     document.getElementById('importar-items-custom').onclick = function() {
         setTimeout(function() {
             var codigo = prompt("Pega aquí el código recibido por WhatsApp:");
-            if (!codigo || !codigo.trim().startsWith("PC-ITEMS:")) {
-                if (codigo !== null) alert("Código inválido. Debe empezar con PC-ITEMS:");
+            if (!codigo) { return; }
+            var match = codigo.match(/PC-ITEMS:[A-Za-z0-9+/=]+/);
+            if (!match) {
+                alert("No se encontró un código válido. Asegúrate de copiar el mensaje completo.");
                 return;
             }
+            codigo = match[0];
             try {
                 var datos = JSON.parse(decodeURIComponent(escape(atob(codigo.trim().replace("PC-ITEMS:", "")))));
                 var existentes = {};
