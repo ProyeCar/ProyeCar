@@ -593,7 +593,7 @@
       <div style="background:linear-gradient(135deg,#0d3321,#2d9e52);color:#fff;font-size:0.82rem;font-weight:800;letter-spacing:3px;padding:8px 24px;border-radius:30px;box-shadow:0 4px 16px rgba(13,51,33,0.35);display:flex;align-items:center;gap:8px;border:2px solid rgba(255,255,255,0.25);">
         <span style="font-size:1rem;">🌿</span>
         <span>ProyeCar</span>
-        <span style="font-size:0.65rem;font-weight:600;letter-spacing:1px;opacity:0.85;background:rgba(255,255,255,0.15);padding:2px 7px;border-radius:10px;">v1.2</span>
+        <span style="font-size:0.65rem;font-weight:600;letter-spacing:1px;opacity:0.85;background:rgba(255,255,255,0.15);padding:2px 7px;border-radius:10px;">v1.2.1</span>
       </div>
     </div>
     <div class="security-banner no-print" style="display:none;">🔒 MODO SEGURO: Datos no salen de su dispositivo</div>
@@ -677,7 +677,7 @@
 </nav>
 
 <script>
-    const APP_VERSION = "1.2";
+    const APP_VERSION = "1.2.1";
 
     (function() {
         try {
@@ -1512,8 +1512,8 @@
                     };
                 })
             };
-            var blob = new Blob([JSON.stringify(data)], { type: 'application/proyecar' });
-            var archivo = new File([blob], 'ProyeCar_Inspeccion_' + (data.fecha || Date.now()) + '.proyecar', { type: 'application/proyecar' });
+            var blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+            var archivo = new File([blob], 'ProyeCar_Inspeccion_' + (data.fecha || Date.now()) + '.json', { type: 'application/json' });
             if (navigator.share && navigator.canShare && navigator.canShare({ files: [archivo] })) {
                 navigator.share({
                     title: 'Inspección ProyeCar',
@@ -1524,7 +1524,7 @@
                 var url = URL.createObjectURL(blob);
                 var a = document.createElement('a');
                 a.href = url;
-                a.download = 'ProyeCar_Inspeccion_' + (data.fecha || Date.now()) + '.proyecar';
+                a.download = 'ProyeCar_Inspeccion_' + (data.fecha || Date.now()) + '.json';
                 a.click();
                 URL.revokeObjectURL(url);
                 alert('Archivo descargado. Compártelo manualmente por WhatsApp.');
@@ -1536,7 +1536,7 @@
     document.getElementById('importar-inspeccion').onclick = function() {
         var input = document.createElement('input');
         input.type = 'file';
-        input.accept = '.proyecar,.json,application/proyecar,application/json';
+        input.accept = '.json,application/json';
         input.onchange = function(e) {
             var file = e.target.files[0];
             if (!file) return;
