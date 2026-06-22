@@ -1485,11 +1485,13 @@
     };
     document.getElementById('compartir-inspeccion').onclick = function() {
         try {
+            var pctCalc = calcularPct(frentes);
             var data = {
-                proyecto: document.getElementById('proyectoInput') ? document.getElementById('proyectoInput').value : '',
-                fecha: document.getElementById('fechaInput') ? document.getElementById('fechaInput').value : '',
-                ubicacion: document.getElementById('ubicacionInput') ? document.getElementById('ubicacionInput').value : '',
-                inspector: document.getElementById('inspectorInput') ? document.getElementById('inspectorInput').value : '',
+                proyecto: proyectoInput.value,
+                fecha: fechaInput.value,
+                ubicacion: ubicacionInput.value,
+                inspector: inspectorInput.value,
+                pct: pctCalc.pct,
                 frentes: frentes.map(function(fr) {
                     return {
                         nombre: fr.nombre,
