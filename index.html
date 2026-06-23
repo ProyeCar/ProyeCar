@@ -2593,182 +2593,241 @@
     }
 
     document.getElementById('btn-comparar').onclick = function() {
-        const hist = getHistorial();
-        const idxA = document.getElementById('comp-sel-a').value;
-        const idxB = document.getElementById('comp-sel-b').value;
+        var hist = getHistorial();
+        var idxA = document.getElementById('comp-sel-a').value;
+        var idxB = document.getElementById('comp-sel-b').value;
         if (idxA === '' || idxB === '') { alert('Selecciona dos inspecciones.'); return; }
         if (idxA === idxB) { alert('Selecciona dos inspecciones diferentes.'); return; }
 
-        const inspA = hist[idxA], inspB = hist[idxB];
+        var inspA = hist[idxA], inspB = hist[idxB];
         // PASO 1: determinar cuál es más reciente
-        const fechaA = new Date(inspA.fecha || 0), fechaB = new Date(inspB.fecha || 0);
-        const reciente = fechaA >= fechaB ? inspA : inspB;
-        const anterior  = fechaA >= fechaB ? inspB : inspA;
+        var fechaA = new Date(inspA.fecha || 0), fechaB = new Date(inspB.fecha || 0);
+        var reciente = fechaA >= fechaB ? inspA : inspB;
+        var anterior  = fechaA >= fechaB ? inspB : inspA;
 
-        const ORDEN_CAT = ['Ambiental', 'SST', 'Jurídica', 'Social', 'Técnica'];
+        var ORDEN_CAT = ['Ambiental', 'SST', 'Jurídica', 'Social', 'Técnica'];
+
         function pctItems(items) {
             var c = 0, t = 0;
             (items || []).forEach(function(it) {
                 if (it.cumple === true)  { c++; t++; }
                 else if (it.cumple === false) { t++; }
             });
-            return t > 0 ? { pct: Math.round(c / t * 100), cumple: c, noCumple: t - c } : null;
+            return t > 0 ? { pct: Math.round(c / t * 100) } : null;
         }
 
-        var html = '';
-        var chartQueue = [];
-
-        // Encabezado de inspecciones
-        html += '<div style="display:flex;gap:10px;margin-bottom:16px;">'
-            + '<div style="flex:1;background:#f0fdf4;border:2px solid #16a34a;border-radius:12px;padding:12px;">'
-            +   '<div style="font-size:0.65rem;font-weight:700;color:#16a34a;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px;">MÁS RECIENTE</div>'
-            +   '<div style="font-weight:700;font-size:0.9rem;color:#1e3a2f;">' + (reciente.proyecto || 'Sin nombre') + '</div>'
-            +   '<div style="font-size:0.78rem;color:#6b7280;">📅 ' + (reciente.fecha || '') + '</div>'
-            + '</div>'
-            + '<div style="flex:1;background:#fff7ed;border:2px solid #f59e0b;border-radius:12px;padding:12px;">'
-            +   '<div style="font-size:0.65rem;font-weight:700;color:#b45309;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px;">ANTERIOR</div>'
-            +   '<div style="font-weight:700;font-size:0.9rem;color:#1e3a2f;">' + (anterior.proyecto || 'Sin nombre') + '</div>'
-            +   '<div style="font-size:0.78rem;color:#6b7280;">📅 ' + (anterior.fecha || '') + '</div>'
-            + '</div>'
-            + '</div>';
-
-        // PASO 2: recorrer frentes de la inspección reciente
-        (reciente.frentes || []).forEach(function(fR, fi) {
-            var fA = (anterior.frentes || []).find(function(f) { return f.nombre === fR.nombre; });
-            html += '<div style="font-size:1rem;font-weight:700;color:#1e3a2f;margin:16px 0 8px;padding-bottom:6px;border-bottom:2px solid #e2e8f0;">🏗️ ' + (fR.nombre || '') + '</div>';
-            if (!fA) {
-                html += '<div style="background:#f8fafc;border-radius:12px;padding:12px;color:#6b7280;font-size:0.85rem;margin-bottom:10px;">Solo en inspección reciente — sin datos anteriores para comparar</div>';
-                return;
-            }
-            var catsR = fR.categorias || [], catsA = fA.categorias || [];
-            var seenNames = [];
-            [].concat(catsR, catsA).forEach(function(cat) { if (seenNames.indexOf(cat.nombre) === -1) seenNames.push(cat.nombre); });
-            var ordPred   = ORDEN_CAT.filter(function(n) { return seenNames.indexOf(n) !== -1; });
-            var ordCustom = seenNames.filter(function(n) { return ORDEN_CAT.indexOf(n) === -1; });
-
-            // PASO 3: por cada categoría
-            [].concat(ordPred, ordCustom).forEach(function(catNombre, ci) {
-                var catR = catsR.find(function(c) { return c.nombre === catNombre; });
-                var catA = catsA.find(function(c) { return c.nombre === catNombre; });
-                var sR = catR ? pctItems(catR.items) : null;
-                var sA = catA ? pctItems(catA.items) : null;
-                var chartId = 'chart_f' + fi + '_c' + ci;
-
-                var varLabel = '';
-                if (sR && sA) {
-                    var diff = sR.pct - sA.pct;
-                    if (diff > 0)      varLabel = '<span style="background:#dcfce7;color:#15803d;font-size:0.7rem;font-weight:700;padding:2px 8px;border-radius:20px;">↑ Subió ' + diff + ' pts</span>';
-                    else if (diff < 0) varLabel = '<span style="background:#fee2e2;color:#b91c1c;font-size:0.7rem;font-weight:700;padding:2px 8px;border-radius:20px;">↓ Bajó ' + Math.abs(diff) + ' pts</span>';
-                    else               varLabel = '<span style="background:#f3f4f6;color:#6b7280;font-size:0.7rem;font-weight:700;padding:2px 8px;border-radius:20px;">= Sin cambio</span>';
-                }
-
-                var colR = sR
-                    ? '<div style="font-size:28px;font-weight:700;color:#16a34a;">' + sR.pct + '%</div>'
-                    + '<div style="font-size:0.7rem;color:#6b7280;margin-top:2px;">✓ ' + sR.pct + '% cumple / ✗ ' + (100 - sR.pct) + '% no cumple</div>'
-                    + '<div style="font-size:0.7rem;color:#16a34a;font-weight:600;margin-top:2px;">Reciente</div>'
-                    : '<div style="font-size:0.8rem;color:#94a3b8;margin-top:8px;">Sin datos para comparar</div>'
-                    + '<div style="font-size:0.7rem;color:#16a34a;font-weight:600;margin-top:2px;">Reciente</div>';
-
-                var colA = sA
-                    ? '<div style="font-size:28px;font-weight:700;color:#b45309;">' + sA.pct + '%</div>'
-                    + '<div style="font-size:0.7rem;color:#6b7280;margin-top:2px;">✓ ' + sA.pct + '% cumple / ✗ ' + (100 - sA.pct) + '% no cumple</div>'
-                    + '<div style="font-size:0.7rem;color:#b45309;font-weight:600;margin-top:2px;">Anterior</div>'
-                    : '<div style="font-size:0.8rem;color:#94a3b8;margin-top:8px;">Sin datos para comparar</div>'
-                    + '<div style="font-size:0.7rem;color:#b45309;font-weight:600;margin-top:2px;">Anterior</div>';
-
-                // PASO 4: HTML de tarjeta por categoría
-                html += '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;margin-bottom:10px;">'
-                    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'
-                    +   '<span style="font-weight:700;font-size:0.85rem;color:#1e3a2f;">' + catNombre + '</span>'
-                    +   varLabel
-                    + '</div>'
-                    + '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;">'
-                    +   '<div style="text-align:center;flex:1;">' + colR + '</div>'
-                    +   '<div style="font-size:1.1rem;color:#94a3b8;padding:0 8px;align-self:center;">vs</div>'
-                    +   '<div style="text-align:center;flex:1;">' + colA + '</div>'
-                    + '</div>'
-                    + ((sR || sA)
-                        ? '<div style="position:relative;height:120px;"><canvas id="' + chartId + '"></canvas></div>'
-                        : '<div style="color:#94a3b8;font-size:0.8rem;text-align:center;padding:10px 0;">Sin datos para comparar</div>'
-                      )
-                    + '</div>';
-
-                if (sR || sA) chartQueue.push({ id: chartId, sR: sR, sA: sA });
-            });
-        });
-
-        // PASO 5: guía de colores
-        html += '<div style="background:#f8fafc;border-radius:12px;padding:12px;margin-top:8px;">'
-            + '<div style="font-size:0.75rem;font-weight:700;color:#374151;margin-bottom:6px;">Guía de colores</div>'
-            + '<div style="display:flex;flex-direction:column;gap:4px;">'
-            +   '<div style="display:flex;align-items:center;gap:6px;font-size:0.75rem;"><div style="width:14px;height:14px;border-radius:3px;background:#16a34a;flex-shrink:0;"></div>Cumple en inspección reciente</div>'
-            +   '<div style="display:flex;align-items:center;gap:6px;font-size:0.75rem;"><div style="width:14px;height:14px;border-radius:3px;background:#dc2626;flex-shrink:0;"></div>No cumple (ambas inspecciones)</div>'
-            +   '<div style="display:flex;align-items:center;gap:6px;font-size:0.75rem;"><div style="width:14px;height:14px;border-radius:3px;background:#f59e0b;flex-shrink:0;"></div>Cumplía en inspección anterior</div>'
-            + '</div></div>';
-
-        document.getElementById('comp-resultado').innerHTML = html;
-
-        // Renderizar gráficas Chart.js
-        setTimeout(function() {
-            if (typeof Chart === 'undefined') return;
-            var percentLabelsPlugin = {
-                id: 'percentLabels',
-                afterDraw: function(chart) {
-                    var ctx = chart.ctx;
-                    chart.data.datasets.forEach(function(dataset, di) {
-                        var meta = chart.getDatasetMeta(di);
-                        meta.data.forEach(function(bar, bi) {
-                            var value = dataset.data[bi];
-                            if (!value || value < 8) return;
-                            ctx.save();
-                            ctx.fillStyle = '#fff';
-                            ctx.font = 'bold 11px sans-serif';
-                            ctx.textAlign = 'center';
-                            ctx.textBaseline = 'middle';
-                            ctx.fillText(value + '%', bar.x, (bar.y + bar.base) / 2);
-                            ctx.restore();
-                        });
-                    });
-                }
-            };
-            chartQueue.forEach(function(item) {
-                var canvas = document.getElementById(item.id);
-                if (!canvas) return;
-                var existing = Chart.getChart ? Chart.getChart(canvas) : null;
-                if (existing) existing.destroy();
-                new Chart(canvas, {
-                    type: 'bar',
-                    data: {
-                        labels: ['Reciente', 'Anterior'],
-                        datasets: [
-                            {
-                                label: 'Cumple',
-                                data: [item.sR ? item.sR.pct : null, item.sA ? item.sA.pct : null],
-                                backgroundColor: ['#16a34a', '#f59e0b']
-                            },
-                            {
-                                label: 'No cumple',
-                                data: [item.sR ? (100 - item.sR.pct) : null, item.sA ? (100 - item.sA.pct) : null],
-                                backgroundColor: ['#dc2626', '#dc2626']
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        scales: {
-                            x: { stacked: true, grid: { display: false }, ticks: { font: { size: 11 } } },
-                            y: {
-                                stacked: true, min: 0, max: 100,
-                                ticks: { callback: function(v) { return v + '%'; }, font: { size: 10 } }
-                            }
-                        }
-                    },
-                    plugins: [percentLabelsPlugin]
+        // PASO 2: recopilar todas las categorías únicas de ambas inspecciones
+        var allCatsMap = {}, allCatsOrder = [];
+        [reciente, anterior].forEach(function(insp) {
+            (insp.frentes || []).forEach(function(f) {
+                (f.categorias || []).forEach(function(cat) {
+                    var key = cat.id || cat.nombre;
+                    if (key && !allCatsMap[key]) {
+                        allCatsMap[key] = { id: key, nombre: cat.nombre };
+                        allCatsOrder.push(key);
+                    }
                 });
             });
-        }, 0);
+        });
+        var predList = ORDEN_CAT.map(function(n) {
+            var k = allCatsOrder.find(function(k) { return allCatsMap[k].nombre === n; });
+            return k ? allCatsMap[k] : null;
+        }).filter(Boolean);
+        var customList = allCatsOrder.filter(function(k) {
+            return ORDEN_CAT.indexOf(allCatsMap[k].nombre) === -1;
+        }).map(function(k) { return allCatsMap[k]; });
+        var orderedCatList = [].concat(predList, customList);
+
+        // Selector de área
+        var selectorOpts = orderedCatList.map(function(c) {
+            return '<option value="' + c.id + '">' + c.nombre + '</option>';
+        }).join('');
+        document.getElementById('comp-resultado').innerHTML =
+            '<div id="selector-area-comparar" style="margin-bottom:16px;">'
+            + '<label style="font-size:11px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Filtrar por área</label>'
+            + '<select id="filtro-area" style="width:100%;padding:8px 12px;border-radius:8px;border:0.5px solid var(--color-border-tertiary);font-size:13px;background:var(--color-background-primary);color:var(--color-text-primary);">'
+            + '<option value="todas">Todas las áreas</option>'
+            + selectorOpts
+            + '</select></div>'
+            + '<div id="comp-resultados-body"></div>';
+
+        function renderResultados(filtroArea) {
+            var html = '', chartQueue = [];
+
+            // Encabezado inspecciones
+            html += '<div style="display:flex;gap:10px;margin-bottom:16px;">'
+                + '<div style="flex:1;background:#f0fdf4;border:2px solid #16a34a;border-radius:12px;padding:12px;">'
+                +   '<div style="font-size:0.65rem;font-weight:700;color:#16a34a;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px;">MÁS RECIENTE</div>'
+                +   '<div style="font-weight:700;font-size:0.9rem;color:#1e3a2f;">' + (reciente.proyecto || 'Sin nombre') + '</div>'
+                +   '<div style="font-size:0.78rem;color:#6b7280;">📅 ' + (reciente.fecha || '') + '</div>'
+                + '</div>'
+                + '<div style="flex:1;background:#fff7ed;border:2px solid #f59e0b;border-radius:12px;padding:12px;">'
+                +   '<div style="font-size:0.65rem;font-weight:700;color:#b45309;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px;">ANTERIOR</div>'
+                +   '<div style="font-weight:700;font-size:0.9rem;color:#1e3a2f;">' + (anterior.proyecto || 'Sin nombre') + '</div>'
+                +   '<div style="font-size:0.78rem;color:#6b7280;">📅 ' + (anterior.fecha || '') + '</div>'
+                + '</div></div>';
+
+            // PASO 3: frentes de la inspección reciente
+            (reciente.frentes || []).forEach(function(fR, fi) {
+                var fA = (anterior.frentes || []).find(function(f) { return f.nombre === fR.nombre; });
+                var catsR = fR.categorias || [], catsA = fA ? (fA.categorias || []) : [];
+                var seenNames = [];
+                [].concat(catsR, catsA).forEach(function(cat) {
+                    if (seenNames.indexOf(cat.nombre) === -1) seenNames.push(cat.nombre);
+                });
+                var ordPred   = ORDEN_CAT.filter(function(n) { return seenNames.indexOf(n) !== -1; });
+                var ordCustom = seenNames.filter(function(n) { return ORDEN_CAT.indexOf(n) === -1; });
+                var allCatsFrente = [].concat(ordPred, ordCustom);
+
+                // Aplicar filtro de área
+                var filteredCats = filtroArea === 'todas' ? allCatsFrente : allCatsFrente.filter(function(catNombre) {
+                    var cR = catsR.find(function(c) { return c.nombre === catNombre; });
+                    var cA = catsA.find(function(c) { return c.nombre === catNombre; });
+                    var catId = (cR && cR.id) || (cA && cA.id) || catNombre;
+                    return catId === filtroArea;
+                });
+
+                if (filteredCats.length === 0) return;
+
+                html += '<div style="font-size:1rem;font-weight:700;color:#1e3a2f;margin:16px 0 8px;padding-bottom:6px;border-bottom:2px solid #e2e8f0;">🏗️ ' + (fR.nombre || '') + '</div>';
+
+                if (!fA) {
+                    html += '<div style="background:#f8fafc;border-radius:12px;padding:12px;color:#6b7280;font-size:0.85rem;margin-bottom:10px;">Solo en inspección reciente — sin datos anteriores para comparar</div>';
+                    return;
+                }
+
+                // PASO 4: por cada categoría filtrada
+                filteredCats.forEach(function(catNombre, ci) {
+                    var catR = catsR.find(function(c) { return c.nombre === catNombre; });
+                    var catA = catsA.find(function(c) { return c.nombre === catNombre; });
+                    var sR = catR ? pctItems(catR.items) : null;
+                    var sA = catA ? pctItems(catA.items) : null;
+                    var chartId = 'chart_f' + fi + '_c' + ci;
+
+                    var varLabel = '';
+                    if (sR && sA) {
+                        var diff = sR.pct - sA.pct;
+                        if (diff > 0)      varLabel = '<span style="background:#dcfce7;color:#15803d;font-size:0.7rem;font-weight:700;padding:2px 8px;border-radius:20px;">↑ Subió ' + diff + ' pp</span>';
+                        else if (diff < 0) varLabel = '<span style="background:#fee2e2;color:#b91c1c;font-size:0.7rem;font-weight:700;padding:2px 8px;border-radius:20px;">↓ Bajó ' + Math.abs(diff) + ' pp</span>';
+                        else               varLabel = '<span style="background:#f3f4f6;color:#6b7280;font-size:0.7rem;font-weight:700;padding:2px 8px;border-radius:20px;">= Sin cambio</span>';
+                    }
+
+                    var colR = sR
+                        ? '<div style="font-size:28px;font-weight:700;color:#16a34a;">' + sR.pct + '%</div>'
+                        + '<div style="font-size:0.7rem;color:#6b7280;margin-top:2px;">✓ ' + sR.pct + '% cumple / ✗ ' + (100 - sR.pct) + '% no cumple</div>'
+                        + '<div style="font-size:0.7rem;color:#16a34a;font-weight:600;margin-top:2px;">Reciente</div>'
+                        : '<div style="font-size:0.8rem;color:#94a3b8;margin-top:8px;">Sin datos para comparar</div>'
+                        + '<div style="font-size:0.7rem;color:#16a34a;font-weight:600;margin-top:2px;">Reciente</div>';
+
+                    var colA = sA
+                        ? '<div style="font-size:28px;font-weight:700;color:#b45309;">' + sA.pct + '%</div>'
+                        + '<div style="font-size:0.7rem;color:#6b7280;margin-top:2px;">✓ ' + sA.pct + '% cumple / ✗ ' + (100 - sA.pct) + '% no cumple</div>'
+                        + '<div style="font-size:0.7rem;color:#b45309;font-weight:600;margin-top:2px;">Anterior</div>'
+                        : '<div style="font-size:0.8rem;color:#94a3b8;margin-top:8px;">Sin datos para comparar</div>'
+                        + '<div style="font-size:0.7rem;color:#b45309;font-weight:600;margin-top:2px;">Anterior</div>';
+
+                    // PASO 5: HTML tarjeta por categoría
+                    html += '<div style="background:#fff;border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:12px 14px;margin-bottom:10px;">'
+                        + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'
+                        +   '<span style="font-weight:700;font-size:0.85rem;color:#1e3a2f;">' + catNombre + '</span>'
+                        +   varLabel
+                        + '</div>'
+                        + '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;">'
+                        +   '<div style="text-align:center;flex:1;">' + colR + '</div>'
+                        +   '<div style="font-size:1.1rem;color:#94a3b8;padding:0 8px;align-self:center;">vs</div>'
+                        +   '<div style="text-align:center;flex:1;">' + colA + '</div>'
+                        + '</div>'
+                        + ((sR || sA)
+                            ? '<div style="position:relative;height:120px;"><canvas id="' + chartId + '"></canvas></div>'
+                            : '<div style="color:#94a3b8;font-size:0.8rem;text-align:center;padding:10px 0;">Sin datos para comparar</div>'
+                          )
+                        + '</div>';
+
+                    if (sR || sA) chartQueue.push({ id: chartId, sR: sR, sA: sA });
+                });
+            });
+
+            // PASO 6: guía de colores
+            html += '<div style="background:#f8fafc;border-radius:12px;padding:12px;margin-top:8px;">'
+                + '<div style="font-size:0.75rem;font-weight:700;color:#374151;margin-bottom:6px;">Guía de colores</div>'
+                + '<div style="display:flex;flex-direction:column;gap:4px;">'
+                +   '<div style="display:flex;align-items:center;gap:6px;font-size:0.75rem;"><div style="width:14px;height:14px;border-radius:3px;background:#16a34a;flex-shrink:0;"></div>Cumple en inspección reciente</div>'
+                +   '<div style="display:flex;align-items:center;gap:6px;font-size:0.75rem;"><div style="width:14px;height:14px;border-radius:3px;background:#dc2626;flex-shrink:0;"></div>No cumple (ambas inspecciones)</div>'
+                +   '<div style="display:flex;align-items:center;gap:6px;font-size:0.75rem;"><div style="width:14px;height:14px;border-radius:3px;background:#f59e0b;flex-shrink:0;"></div>Cumplía en inspección anterior</div>'
+                + '</div></div>';
+
+            document.getElementById('comp-resultados-body').innerHTML = html;
+
+            // Renderizar gráficas Chart.js
+            setTimeout(function() {
+                if (typeof Chart === 'undefined') return;
+                var percentLabelsPlugin = {
+                    id: 'percentLabels',
+                    afterDraw: function(chart) {
+                        var ctx = chart.ctx;
+                        chart.data.datasets.forEach(function(dataset, di) {
+                            var meta = chart.getDatasetMeta(di);
+                            meta.data.forEach(function(bar, bi) {
+                                var value = dataset.data[bi];
+                                if (!value || value < 8) return;
+                                ctx.save();
+                                ctx.fillStyle = '#fff';
+                                ctx.font = 'bold 11px sans-serif';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+                                ctx.fillText(value + '%', bar.x, (bar.y + bar.base) / 2);
+                                ctx.restore();
+                            });
+                        });
+                    }
+                };
+                chartQueue.forEach(function(item) {
+                    var canvas = document.getElementById(item.id);
+                    if (!canvas) return;
+                    var existing = Chart.getChart ? Chart.getChart(canvas) : null;
+                    if (existing) existing.destroy();
+                    new Chart(canvas, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Reciente', 'Anterior'],
+                            datasets: [
+                                {
+                                    label: 'Cumple',
+                                    data: [item.sR ? item.sR.pct : null, item.sA ? item.sA.pct : null],
+                                    backgroundColor: ['#16a34a', '#f59e0b']
+                                },
+                                {
+                                    label: 'No cumple',
+                                    data: [item.sR ? (100 - item.sR.pct) : null, item.sA ? (100 - item.sA.pct) : null],
+                                    backgroundColor: ['#dc2626', '#dc2626']
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                x: { stacked: true, grid: { display: false }, ticks: { font: { size: 11 } } },
+                                y: {
+                                    stacked: true, min: 0, max: 100,
+                                    ticks: { callback: function(v) { return v + '%'; }, font: { size: 10 } }
+                                }
+                            }
+                        },
+                        plugins: [percentLabelsPlugin]
+                    });
+                });
+            }, 0);
+        }
+
+        // Evento cambio de filtro — re-renderizar solo resultados
+        document.getElementById('filtro-area').addEventListener('change', function() {
+            renderResultados(this.value);
+        });
+
+        // Render inicial con todas las áreas
+        renderResultados('todas');
     };
 
     loadFromLocal();
