@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cardique-v3';
+const CACHE_NAME = 'cardique-v5';
 const ASSETS = ['./', './index.html'];
 
 self.addEventListener('install', e => {
