@@ -575,6 +575,7 @@
         });
       }
     </script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
 </head>
 <body>
 <div id="pantalla-inspeccion" class="pantalla activa"><div class="container">
@@ -678,7 +679,7 @@
 </nav>
 
 <script>
-    const APP_VERSION = "1.3.2";
+    const APP_VERSION = "1.4";
 
     (function() {
         try {
@@ -2591,51 +2592,183 @@
         if (valB) selB.value = valB;
     }
 
-    document.getElementById('btn-comparar').onclick = () => {
+    document.getElementById('btn-comparar').onclick = function() {
         const hist = getHistorial();
         const idxA = document.getElementById('comp-sel-a').value;
         const idxB = document.getElementById('comp-sel-b').value;
         if (idxA === '' || idxB === '') { alert('Selecciona dos inspecciones.'); return; }
         if (idxA === idxB) { alert('Selecciona dos inspecciones diferentes.'); return; }
-        const a = hist[idxA], b = hist[idxB];
-        const delta = (b.pct - a.pct).toFixed(1);
-        const deltaClass = delta > 0 ? 'delta-pos' : delta < 0 ? 'delta-neg' : 'delta-neu';
-        const deltaIcon = delta > 0 ? '▲' : delta < 0 ? '▼' : '=';
-        document.getElementById('comp-resultado').innerHTML = `
-            <div class="comp-card">
-                <div class="comp-titulo">📊 Comparación de Cumplimiento Global</div>
-                <div class="comp-row">
-                    <div class="comp-col">
-                        <div class="comp-col-title">A — ${a.proyecto || 'Sin nombre'}</div>
-                        <div class="comp-pct" style="color:${a.pct>=80?'#16a34a':a.pct>=50?'#d97706':'#dc2626'}">${a.pct}%</div>
-                        <div class="comp-detail">📅 ${a.fecha || ''}<br>👤 ${a.inspector || ''}<br>✔ ${a.cumple} / ✘ ${a.noCumple} / ◻ ${a.sinCalif}</div>
-                    </div>
-                    <div style="display:flex;align-items:center;padding:0 8px;">
-                        <div class="comp-delta ${deltaClass}">${deltaIcon} ${Math.abs(delta)}%</div>
-                    </div>
-                    <div class="comp-col">
-                        <div class="comp-col-title">B — ${b.proyecto || 'Sin nombre'}</div>
-                        <div class="comp-pct" style="color:${b.pct>=80?'#16a34a':b.pct>=50?'#d97706':'#dc2626'}">${b.pct}%</div>
-                        <div class="comp-detail">📅 ${b.fecha || ''}<br>👤 ${b.inspector || ''}<br>✔ ${b.cumple} / ✘ ${b.noCumple} / ◻ ${b.sinCalif}</div>
-                    </div>
-                </div>
-            </div>
-            ${a.frentes.map((fa, fi) => {
-                const fb = b.frentes[fi];
-                if (!fb) return '';
-                const statsA = calcularPct([fa]), statsB = calcularPct([fb]);
-                const d = (statsB.pct - statsA.pct).toFixed(1);
-                const dc = d > 0 ? 'delta-pos' : d < 0 ? 'delta-neg' : 'delta-neu';
-                return `<div class="comp-card">
-                    <div class="comp-titulo">🏗️ ${fa.nombre}</div>
-                    <div class="comp-row">
-                        <div class="comp-col"><div class="comp-pct" style="color:${statsA.pct>=80?'#16a34a':statsA.pct>=50?'#d97706':'#dc2626'}">${statsA.pct}%</div><div class="comp-detail">✔ ${statsA.cumple} / ✘ ${statsA.noCumple}</div></div>
-                        <div style="display:flex;align-items:center;padding:0 8px;"><div class="comp-delta ${dc}">${d>0?'▲':d<0?'▼':'='} ${Math.abs(d)}%</div></div>
-                        <div class="comp-col"><div class="comp-pct" style="color:${statsB.pct>=80?'#16a34a':statsB.pct>=50?'#d97706':'#dc2626'}">${statsB.pct}%</div><div class="comp-detail">✔ ${statsB.cumple} / ✘ ${statsB.noCumple}</div></div>
-                    </div>
-                </div>`;
-            }).join('')}
-        `;
+
+        const inspA = hist[idxA], inspB = hist[idxB];
+        // PASO 1: determinar cuál es más reciente
+        const fechaA = new Date(inspA.fecha || 0), fechaB = new Date(inspB.fecha || 0);
+        const reciente = fechaA >= fechaB ? inspA : inspB;
+        const anterior  = fechaA >= fechaB ? inspB : inspA;
+
+        const ORDEN_CAT = ['Ambiental', 'SST', 'Jurídica', 'Social', 'Técnica'];
+        function pctItems(items) {
+            var c = 0, t = 0;
+            (items || []).forEach(function(it) {
+                if (it.cumple === true)  { c++; t++; }
+                else if (it.cumple === false) { t++; }
+            });
+            return t > 0 ? { pct: Math.round(c / t * 100), cumple: c, noCumple: t - c } : null;
+        }
+
+        var html = '';
+        var chartQueue = [];
+
+        // Encabezado de inspecciones
+        html += '<div style="display:flex;gap:10px;margin-bottom:16px;">'
+            + '<div style="flex:1;background:#f0fdf4;border:2px solid #16a34a;border-radius:12px;padding:12px;">'
+            +   '<div style="font-size:0.65rem;font-weight:700;color:#16a34a;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px;">MÁS RECIENTE</div>'
+            +   '<div style="font-weight:700;font-size:0.9rem;color:#1e3a2f;">' + (reciente.proyecto || 'Sin nombre') + '</div>'
+            +   '<div style="font-size:0.78rem;color:#6b7280;">📅 ' + (reciente.fecha || '') + '</div>'
+            + '</div>'
+            + '<div style="flex:1;background:#fff7ed;border:2px solid #f59e0b;border-radius:12px;padding:12px;">'
+            +   '<div style="font-size:0.65rem;font-weight:700;color:#b45309;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px;">ANTERIOR</div>'
+            +   '<div style="font-weight:700;font-size:0.9rem;color:#1e3a2f;">' + (anterior.proyecto || 'Sin nombre') + '</div>'
+            +   '<div style="font-size:0.78rem;color:#6b7280;">📅 ' + (anterior.fecha || '') + '</div>'
+            + '</div>'
+            + '</div>';
+
+        // PASO 2: recorrer frentes de la inspección reciente
+        (reciente.frentes || []).forEach(function(fR, fi) {
+            var fA = (anterior.frentes || []).find(function(f) { return f.nombre === fR.nombre; });
+            html += '<div style="font-size:1rem;font-weight:700;color:#1e3a2f;margin:16px 0 8px;padding-bottom:6px;border-bottom:2px solid #e2e8f0;">🏗️ ' + (fR.nombre || '') + '</div>';
+            if (!fA) {
+                html += '<div style="background:#f8fafc;border-radius:12px;padding:12px;color:#6b7280;font-size:0.85rem;margin-bottom:10px;">Solo en inspección reciente — sin datos anteriores para comparar</div>';
+                return;
+            }
+            var catsR = fR.categorias || [], catsA = fA.categorias || [];
+            var seenNames = [];
+            [].concat(catsR, catsA).forEach(function(cat) { if (seenNames.indexOf(cat.nombre) === -1) seenNames.push(cat.nombre); });
+            var ordPred   = ORDEN_CAT.filter(function(n) { return seenNames.indexOf(n) !== -1; });
+            var ordCustom = seenNames.filter(function(n) { return ORDEN_CAT.indexOf(n) === -1; });
+
+            // PASO 3: por cada categoría
+            [].concat(ordPred, ordCustom).forEach(function(catNombre, ci) {
+                var catR = catsR.find(function(c) { return c.nombre === catNombre; });
+                var catA = catsA.find(function(c) { return c.nombre === catNombre; });
+                var sR = catR ? pctItems(catR.items) : null;
+                var sA = catA ? pctItems(catA.items) : null;
+                var chartId = 'chart_f' + fi + '_c' + ci;
+
+                var varLabel = '';
+                if (sR && sA) {
+                    var diff = sR.pct - sA.pct;
+                    if (diff > 0)      varLabel = '<span style="background:#dcfce7;color:#15803d;font-size:0.7rem;font-weight:700;padding:2px 8px;border-radius:20px;">↑ Subió ' + diff + ' pts</span>';
+                    else if (diff < 0) varLabel = '<span style="background:#fee2e2;color:#b91c1c;font-size:0.7rem;font-weight:700;padding:2px 8px;border-radius:20px;">↓ Bajó ' + Math.abs(diff) + ' pts</span>';
+                    else               varLabel = '<span style="background:#f3f4f6;color:#6b7280;font-size:0.7rem;font-weight:700;padding:2px 8px;border-radius:20px;">= Sin cambio</span>';
+                }
+
+                var colR = sR
+                    ? '<div style="font-size:28px;font-weight:700;color:#16a34a;">' + sR.pct + '%</div>'
+                    + '<div style="font-size:0.7rem;color:#6b7280;margin-top:2px;">✓ ' + sR.pct + '% cumple / ✗ ' + (100 - sR.pct) + '% no cumple</div>'
+                    + '<div style="font-size:0.7rem;color:#16a34a;font-weight:600;margin-top:2px;">Reciente</div>'
+                    : '<div style="font-size:0.8rem;color:#94a3b8;margin-top:8px;">Sin datos para comparar</div>'
+                    + '<div style="font-size:0.7rem;color:#16a34a;font-weight:600;margin-top:2px;">Reciente</div>';
+
+                var colA = sA
+                    ? '<div style="font-size:28px;font-weight:700;color:#b45309;">' + sA.pct + '%</div>'
+                    + '<div style="font-size:0.7rem;color:#6b7280;margin-top:2px;">✓ ' + sA.pct + '% cumple / ✗ ' + (100 - sA.pct) + '% no cumple</div>'
+                    + '<div style="font-size:0.7rem;color:#b45309;font-weight:600;margin-top:2px;">Anterior</div>'
+                    : '<div style="font-size:0.8rem;color:#94a3b8;margin-top:8px;">Sin datos para comparar</div>'
+                    + '<div style="font-size:0.7rem;color:#b45309;font-weight:600;margin-top:2px;">Anterior</div>';
+
+                // PASO 4: HTML de tarjeta por categoría
+                html += '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;margin-bottom:10px;">'
+                    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'
+                    +   '<span style="font-weight:700;font-size:0.85rem;color:#1e3a2f;">' + catNombre + '</span>'
+                    +   varLabel
+                    + '</div>'
+                    + '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;">'
+                    +   '<div style="text-align:center;flex:1;">' + colR + '</div>'
+                    +   '<div style="font-size:1.1rem;color:#94a3b8;padding:0 8px;align-self:center;">vs</div>'
+                    +   '<div style="text-align:center;flex:1;">' + colA + '</div>'
+                    + '</div>'
+                    + ((sR || sA)
+                        ? '<div style="position:relative;height:120px;"><canvas id="' + chartId + '"></canvas></div>'
+                        : '<div style="color:#94a3b8;font-size:0.8rem;text-align:center;padding:10px 0;">Sin datos para comparar</div>'
+                      )
+                    + '</div>';
+
+                if (sR || sA) chartQueue.push({ id: chartId, sR: sR, sA: sA });
+            });
+        });
+
+        // PASO 5: guía de colores
+        html += '<div style="background:#f8fafc;border-radius:12px;padding:12px;margin-top:8px;">'
+            + '<div style="font-size:0.75rem;font-weight:700;color:#374151;margin-bottom:6px;">Guía de colores</div>'
+            + '<div style="display:flex;flex-direction:column;gap:4px;">'
+            +   '<div style="display:flex;align-items:center;gap:6px;font-size:0.75rem;"><div style="width:14px;height:14px;border-radius:3px;background:#16a34a;flex-shrink:0;"></div>Cumple en inspección reciente</div>'
+            +   '<div style="display:flex;align-items:center;gap:6px;font-size:0.75rem;"><div style="width:14px;height:14px;border-radius:3px;background:#dc2626;flex-shrink:0;"></div>No cumple (ambas inspecciones)</div>'
+            +   '<div style="display:flex;align-items:center;gap:6px;font-size:0.75rem;"><div style="width:14px;height:14px;border-radius:3px;background:#f59e0b;flex-shrink:0;"></div>Cumplía en inspección anterior</div>'
+            + '</div></div>';
+
+        document.getElementById('comp-resultado').innerHTML = html;
+
+        // Renderizar gráficas Chart.js
+        setTimeout(function() {
+            if (typeof Chart === 'undefined') return;
+            var percentLabelsPlugin = {
+                id: 'percentLabels',
+                afterDraw: function(chart) {
+                    var ctx = chart.ctx;
+                    chart.data.datasets.forEach(function(dataset, di) {
+                        var meta = chart.getDatasetMeta(di);
+                        meta.data.forEach(function(bar, bi) {
+                            var value = dataset.data[bi];
+                            if (!value || value < 8) return;
+                            ctx.save();
+                            ctx.fillStyle = '#fff';
+                            ctx.font = 'bold 11px sans-serif';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText(value + '%', bar.x, (bar.y + bar.base) / 2);
+                            ctx.restore();
+                        });
+                    });
+                }
+            };
+            chartQueue.forEach(function(item) {
+                var canvas = document.getElementById(item.id);
+                if (!canvas) return;
+                var existing = Chart.getChart ? Chart.getChart(canvas) : null;
+                if (existing) existing.destroy();
+                new Chart(canvas, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Reciente', 'Anterior'],
+                        datasets: [
+                            {
+                                label: 'Cumple',
+                                data: [item.sR ? item.sR.pct : null, item.sA ? item.sA.pct : null],
+                                backgroundColor: ['#16a34a', '#f59e0b']
+                            },
+                            {
+                                label: 'No cumple',
+                                data: [item.sR ? (100 - item.sR.pct) : null, item.sA ? (100 - item.sA.pct) : null],
+                                backgroundColor: ['#dc2626', '#dc2626']
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { stacked: true, grid: { display: false }, ticks: { font: { size: 11 } } },
+                            y: {
+                                stacked: true, min: 0, max: 100,
+                                ticks: { callback: function(v) { return v + '%'; }, font: { size: 10 } }
+                            }
+                        }
+                    },
+                    plugins: [percentLabelsPlugin]
+                });
+            });
+        }, 0);
     };
 
     loadFromLocal();
