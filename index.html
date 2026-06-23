@@ -678,7 +678,7 @@
 </nav>
 
 <script>
-    const APP_VERSION = "1.3";
+    const APP_VERSION = "1.3.1";
 
     (function() {
         try {
@@ -2487,31 +2487,23 @@
             const color = pctCalc >= 80 ? '#16a34a' : pctCalc >= 50 ? '#d97706' : '#dc2626';
             const tags = r.frentes.map(f => `<span class="hist-tag">${f.nombre}</span>`).join('');
 
-            // Desglose por área
-            const catDatos = {};
-            const catOrden = [];
-            (r.frentes || []).forEach(f => {
-                (f.categorias || []).forEach(cat => {
-                    const nombre = cat.nombre;
-                    if (!catDatos[nombre]) {
-                        catDatos[nombre] = { cumple: 0, total: 0 };
-                        catOrden.push(nombre);
-                    }
-                    (cat.items || []).forEach(item => {
-                        if (item.cumple === true)  { catDatos[nombre].cumple++; catDatos[nombre].total++; }
-                        else if (item.cumple === false) { catDatos[nombre].total++; }
+            // Desglose por frente y área
+            const frentesBlocks = (r.frentes || []).map((f, fi) => {
+                const cats = f.categorias || [];
+                const seenNombres = [];
+                cats.forEach(cat => { if (!seenNombres.includes(cat.nombre)) seenNombres.push(cat.nombre); });
+                const predefF = ORDEN_PREDEFINIDO.filter(n => seenNombres.includes(n));
+                const customF = seenNombres.filter(n => !ORDEN_PREDEFINIDO.includes(n));
+                const catRows = [...predefF, ...customF].map(nombre => {
+                    let cumpleCat = 0, totalCat = 0;
+                    cats.filter(c => c.nombre === nombre).forEach(cat => {
+                        (cat.items || []).forEach(item => {
+                            if (item.cumple === true)  { cumpleCat++; totalCat++; }
+                            else if (item.cumple === false) { totalCat++; }
+                        });
                     });
-                });
-            });
-            const predefinidos = ORDEN_PREDEFINIDO.filter(n => catDatos[n]);
-            const customCats  = catOrden.filter(n => !ORDEN_PREDEFINIDO.includes(n));
-            const catsConDatos = [...predefinidos, ...customCats].filter(n => catDatos[n].total > 0);
-
-            let desgloseHTML = '';
-            if (catsConDatos.length > 0) {
-                const rows = catsConDatos.map(nombre => {
-                    const { cumple, total } = catDatos[nombre];
-                    const pct   = Math.round(cumple / total * 100);
+                    if (totalCat === 0) return '';
+                    const pct   = Math.round(cumpleCat / totalCat * 100);
                     const pctNo = 100 - pct;
                     const outside = [];
                     const greenInside = pct >= 25
@@ -2536,8 +2528,15 @@
                         + '</div>'
                         + '</div>';
                 }).join('');
-                desgloseHTML = '<div style="margin-top:8px;border-top:1px solid #e2e8f0;padding-top:8px;">' + rows + '</div>';
-            }
+                if (!catRows) return '';
+                return '<div style="' + (fi > 0 ? 'margin-top:6px;' : '') + '">'
+                    + '<div style="font-size:0.75rem;font-weight:700;color:#1a5c32;margin-bottom:3px;">' + (f.nombre || '') + '</div>'
+                    + catRows
+                    + '</div>';
+            }).join('');
+            let desgloseHTML = frentesBlocks
+                ? '<div style="margin-top:8px;border-top:1px solid #e2e8f0;padding-top:8px;">' + frentesBlocks + '</div>'
+                : '';
 
             return `<div class="hist-item">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;">
