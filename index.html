@@ -677,7 +677,7 @@
 </nav>
 
 <script>
-    const APP_VERSION = "1.2.3";
+    const APP_VERSION = "1.3";
 
     (function() {
         try {
@@ -2474,6 +2474,7 @@
             lista.innerHTML = '<div class="hist-empty">Sin inspecciones archivadas.<br>Completa una inspección y toca "Archivar".</div>';
             return;
         }
+        const ORDEN_PREDEFINIDO = ['Ambiental', 'SST', 'Jurídica', 'Social', 'Técnica'];
         lista.innerHTML = hist.map((r, i) => {
             let hc = 0, hn = 0;
             (r.frentes || []).forEach(f => (f.categorias || []).forEach(cat => (cat.items || []).forEach(item => {
@@ -2484,6 +2485,59 @@
             const pctCalc = hTotal > 0 ? parseFloat((hc / hTotal * 100).toFixed(1)) : (r.pct || 0);
             const color = pctCalc >= 80 ? '#16a34a' : pctCalc >= 50 ? '#d97706' : '#dc2626';
             const tags = r.frentes.map(f => `<span class="hist-tag">${f.nombre}</span>`).join('');
+
+            // Desglose por área
+            const catDatos = {};
+            const catOrden = [];
+            (r.frentes || []).forEach(f => {
+                (f.categorias || []).forEach(cat => {
+                    const nombre = cat.nombre;
+                    if (!catDatos[nombre]) {
+                        catDatos[nombre] = { cumple: 0, total: 0 };
+                        catOrden.push(nombre);
+                    }
+                    (cat.items || []).forEach(item => {
+                        if (item.cumple === true)  { catDatos[nombre].cumple++; catDatos[nombre].total++; }
+                        else if (item.cumple === false) { catDatos[nombre].total++; }
+                    });
+                });
+            });
+            const predefinidos = ORDEN_PREDEFINIDO.filter(n => catDatos[n]);
+            const customCats  = catOrden.filter(n => !ORDEN_PREDEFINIDO.includes(n));
+            const catsConDatos = [...predefinidos, ...customCats].filter(n => catDatos[n].total > 0);
+
+            let desgloseHTML = '';
+            if (catsConDatos.length > 0) {
+                const rows = catsConDatos.map(nombre => {
+                    const { cumple, total } = catDatos[nombre];
+                    const pct   = Math.round(cumple / total * 100);
+                    const pctNo = 100 - pct;
+                    const outside = [];
+                    const greenInside = pct >= 25
+                        ? '<div style="position:absolute;left:0;width:' + pct + '%;top:0;height:100%;display:flex;align-items:center;justify-content:center;"><span style="color:#fff;font-size:0.63rem;font-weight:700;">' + pct + '%</span></div>'
+                        : '';
+                    if (pct > 0 && pct < 25) outside.push('<span style="color:#16a34a;font-size:0.62rem;font-weight:700;">' + pct + '%</span>');
+                    const redInside = pctNo >= 25
+                        ? '<div style="position:absolute;right:0;width:' + pctNo + '%;top:0;height:100%;display:flex;align-items:center;justify-content:center;"><span style="color:#fff;font-size:0.63rem;font-weight:700;">' + pctNo + '% ✗</span></div>'
+                        : '';
+                    if (pctNo > 0 && pctNo < 25) outside.push('<span style="color:#dc2626;font-size:0.62rem;font-weight:700;">' + pctNo + '% ✗</span>');
+                    const outsideHtml = outside.length > 0
+                        ? '<div style="display:flex;gap:4px;flex-shrink:0;">' + outside.join('') + '</div>'
+                        : '';
+                    return '<div style="margin-bottom:5px;">'
+                        + '<div style="font-size:0.72rem;font-weight:700;margin-bottom:2px;">' + nombre + '</div>'
+                        + '<div style="display:flex;align-items:center;gap:4px;">'
+                        +   '<div style="flex:1;position:relative;height:14px;border-radius:3px;overflow:hidden;background:#dc2626;">'
+                        +     '<div style="height:100%;width:' + pct + '%;background:#16a34a;"></div>'
+                        +     greenInside + redInside
+                        +   '</div>'
+                        +   outsideHtml
+                        + '</div>'
+                        + '</div>';
+                }).join('');
+                desgloseHTML = '<div style="margin-top:8px;border-top:1px solid #e2e8f0;padding-top:8px;">' + rows + '</div>';
+            }
+
             return `<div class="hist-item">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;">
                     <div>
@@ -2493,6 +2547,7 @@
                     </div>
                     <div class="hist-pct" style="color:${color}">${pctCalc}%</div>
                 </div>
+                ${desgloseHTML}
                 <div class="hist-frentes">${tags}</div>
                 <div style="margin-top:10px;display:flex;gap:8px;">
                     <button onclick="restaurarInspeccion(${i})" style="font-size:.75rem;padding:6px 12px;background:#2c5e3f;">↩️ Restaurar</button>
