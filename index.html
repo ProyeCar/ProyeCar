@@ -679,7 +679,98 @@
 </nav>
 
 <script>
-    const APP_VERSION = "1.4";
+    const APP_VERSION = "1.5";
+
+    const PLANTILLAS_AUTO = [
+        {
+            keywords: ["plan de manejo ambiental", "pma", "manejo ambiental"],
+            cumple: "Se verifica la implementación adecuada del Plan de Manejo Ambiental conforme a los términos y condiciones exigidos",
+            noCumple: "Se evidencia incumplimiento en la implementación del Plan de Manejo Ambiental. Se solicita a la interventoría exigir al contratista la actualización y aplicación inmediata del PMA",
+            norma: "Decreto 2041 de 2014 - Licencia Ambiental"
+        },
+        {
+            keywords: ["residuos", "respel", "escombros", "desechos", "rcd"],
+            cumple: "Se verifica el manejo, almacenamiento y disposición adecuada de residuos sólidos y materiales de construcción y demolición conforme a la normativa vigente",
+            noCumple: "Se evidencia manejo inadecuado de residuos sólidos y/o materiales RCD. Se solicita a la interventoría exigir la correcta segregación, almacenamiento temporal y disposición final en sitios autorizados",
+            norma: "Resolución 472 de 2017 - Gestión RCD"
+        },
+        {
+            keywords: ["agua", "hídric", "vertimiento", "quebrada", "acuífero"],
+            cumple: "Se verifica el manejo apropiado de fuentes hídricas y control de vertimientos, sin afectaciones evidentes a cuerpos de agua adyacentes",
+            noCumple: "Se evidencia riesgo o afectación a fuentes hídricas por inadecuado manejo de vertimientos. Se solicita implementar medidas de control inmediato para prevenir contaminación hídrica",
+            norma: "Decreto 1076 de 2015 - Recursos Hídricos"
+        },
+        {
+            keywords: ["polvo", "emisiones", "aire", "ruido", "material particulado"],
+            cumple: "Se verifica la implementación de medidas de control de emisiones atmosféricas, polvo y ruido dentro de los parámetros permisibles establecidos",
+            noCumple: "Se evidencian niveles inadecuados de polvo, ruido o emisiones atmosféricas. Se solicita implementar de manera inmediata las medidas de mitigación establecidas en el PMA",
+            norma: "Resolución 627 de 2006 - Ruido / Decreto 948 de 1995 - Emisiones"
+        },
+        {
+            keywords: ["suelo", "cobertura vegetal", "tala", "descapote", "vegetación"],
+            cumple: "Se verifica el adecuado manejo del suelo y cobertura vegetal, con las medidas de protección y restauración implementadas según lo estipulado",
+            noCumple: "Se evidencia afectación al suelo y/o cobertura vegetal sin las medidas de manejo requeridas. Se solicita implementar las acciones de restauración y protección establecidas en el PMA",
+            norma: "Decreto 1076 de 2015 - Suelos y Vegetación"
+        },
+        {
+            keywords: ["epp", "protección personal", "casco", "arnés", "botas", "guantes", "chaleco"],
+            cumple: "Se verifica el uso correcto y adecuado de los Elementos de Protección Personal por parte del personal de obra, conforme a los requisitos de seguridad establecidos",
+            noCumple: "Se evidencia uso inadecuado o ausencia de Elementos de Protección Personal en el personal de obra. Se solicita corregir de manera inmediata y reforzar la capacitación en SST",
+            norma: "Resolución 0312 de 2019 - Estándares SST"
+        },
+        {
+            keywords: ["copasst", "comité", "brigadistas", "brigadista"],
+            cumple: "Se verifica la conformación y operación activa del COPASST y las brigadas de emergencia conforme a los requisitos del Sistema de Gestión de SST",
+            noCumple: "Se evidencia deficiencia en la conformación o funcionamiento del COPASST y brigadas de emergencia. Se solicita regularizar inmediatamente conforme a la normativa de SST",
+            norma: "Decreto 1072 de 2015 - SG-SST"
+        },
+        {
+            keywords: ["señal", "demarcación", "valla", "cerramiento", "cinta"],
+            cumple: "Se verifica la correcta señalización, demarcación y cerramiento del área de trabajo, garantizando la seguridad de trabajadores y comunidad aledaña",
+            noCumple: "Se evidencian deficiencias en la señalización, demarcación o cerramiento de la zona de trabajo. Se solicita implementar de manera inmediata los dispositivos de seguridad requeridos",
+            norma: "Manual de Señalización Vial - INVIAS / Resolución 0312 de 2019"
+        },
+        {
+            keywords: ["contrato", "póliza", "amparo", "garantía"],
+            cumple: "Se verifica que las pólizas y garantías contractuales se encuentran vigentes y con los amparos requeridos conforme al contrato suscrito",
+            noCumple: "Se evidencian inconsistencias o vencimiento en las pólizas y garantías contractuales. Se solicita a la interventoría exigir la actualización inmediata de los documentos requeridos",
+            norma: "Estatuto General de Contratación - Ley 80 de 1993"
+        },
+        {
+            keywords: ["comunidad", "acta", "participación", "social", "vecinos"],
+            cumple: "Se verifica el adecuado relacionamiento con la comunidad, con evidencia de socializaciones, actas de vecindad y atención oportuna de quejas y reclamos",
+            noCumple: "Se evidencian deficiencias en el manejo social y relacionamiento comunitario. Se solicita reforzar los procesos de comunicación y gestión social con la comunidad afectada",
+            norma: "Planes de Gestión Social - Normativa CARDIQUE"
+        },
+        {
+            keywords: ["nómina", "personal", "planilla", "afiliación", "seguridad social", "parafiscales"],
+            cumple: "Se verifica el cumplimiento en el pago de nómina, afiliaciones y aportes a seguridad social y parafiscales del personal vinculado al proyecto",
+            noCumple: "Se evidencian incumplimientos en el pago de nómina y/o aportes a seguridad social del personal. Se solicita a la interventoría verificar y exigir al contratista regularizar esta situación de manera inmediata",
+            norma: "Ley 100 de 1993 - Seguridad Social / Código Sustantivo del Trabajo"
+        },
+        {
+            keywords: ["especificación", "concreto", "acero", "resistencia", "mezcla", "dosificación"],
+            cumple: "Se verifica que los materiales y procesos constructivos cumplen con las especificaciones técnicas establecidas en el contrato y las normas técnicas aplicables",
+            noCumple: "Se evidencia incumplimiento en las especificaciones técnicas de materiales o procesos constructivos. Se solicita a la interventoría exigir la corrección inmediata y presentar ensayos de calidad actualizados",
+            norma: "NSR-10 / INVIAS - Especificaciones Técnicas de Construcción"
+        }
+    ];
+    const PLANTILLA_GENERICA = {
+        keywords: [],
+        cumple: "Se verifica el cumplimiento del ítem evaluado conforme a los requerimientos técnicos, contractuales y normativos aplicables al proyecto",
+        noCumple: "Se evidencia incumplimiento del ítem evaluado. Se solicita respetuosamente a la interventoría gestionar las acciones correctivas necesarias para subsanar la situación identificada en el menor tiempo posible",
+        norma: "Normativa técnica y contractual vigente"
+    };
+    function buscarPlantilla(textoItem) {
+        var texto = (textoItem || '').toLowerCase();
+        for (var i = 0; i < PLANTILLAS_AUTO.length; i++) {
+            var p = PLANTILLAS_AUTO[i];
+            for (var j = 0; j < p.keywords.length; j++) {
+                if (texto.indexOf(p.keywords[j]) !== -1) return p;
+            }
+        }
+        return PLANTILLA_GENERICA;
+    }
 
     (function() {
         try {
@@ -1113,6 +1204,13 @@
                         obsInput.style.background = '#f0fdf4';
                         setTimeout(() => { obsInput.style.background = ''; }, 2000);
                         saveToLocal();
+                        var plantilla = buscarPlantilla(item.texto);
+                        var textoNorma = " (" + plantilla.norma + ")";
+                        if (item.cumple === true) { item.obsAuto = plantilla.cumple + textoNorma; }
+                        else if (item.cumple === false) { item.obsAuto = plantilla.noCumple + textoNorma; }
+                        else { item.obsAuto = ""; }
+                        saveToLocal();
+                        renderFrentes();
                     };
                     btnNo.onclick = (e) => {
                         e.preventDefault(); e.stopPropagation();
@@ -1124,6 +1222,13 @@
                         obsInput.style.background = '#fefce8';
                         setTimeout(() => { obsInput.style.background = ''; }, 2000);
                         saveToLocal();
+                        var plantilla = buscarPlantilla(item.texto);
+                        var textoNorma = " (" + plantilla.norma + ")";
+                        if (item.cumple === true) { item.obsAuto = plantilla.cumple + textoNorma; }
+                        else if (item.cumple === false) { item.obsAuto = plantilla.noCumple + textoNorma; }
+                        else { item.obsAuto = ""; }
+                        saveToLocal();
+                        renderFrentes();
                     };
                     estadoDiv.appendChild(btnSi); estadoDiv.appendChild(btnNo);
                     const editar = document.createElement("button"); editar.innerHTML = "✏️"; editar.className = "btn-editar";
@@ -1160,6 +1265,17 @@
                         vvInput.oninput = (e) => { item.verificacionVerbal = e.target.value; saveToLocal(); };
                         obsDiv.appendChild(vvInput);
                     }
+                    const obsAutoLabel = document.createElement("div");
+                    obsAutoLabel.style.cssText = "font-size:0.72rem;color:#64748b;margin-top:6px;margin-bottom:2px;";
+                    obsAutoLabel.innerText = "Observación técnica automática";
+                    obsDiv.appendChild(obsAutoLabel);
+                    const obsAutoTA = document.createElement("textarea");
+                    obsAutoTA.id = "obs-auto-" + idx + "-" + cat.id + "-" + item.id;
+                    obsAutoTA.rows = 3;
+                    obsAutoTA.style.cssText = "font-size:0.82rem;border:1px solid #e2e8f0;border-radius:8px;padding:8px;width:100%;box-sizing:border-box;";
+                    obsAutoTA.value = item.obsAuto || "";
+                    obsAutoTA.oninput = (e) => { item.obsAuto = e.target.value; saveToLocal(); };
+                    obsDiv.appendChild(obsAutoTA);
                     itemCard.appendChild(row); itemCard.appendChild(obsDiv);
                     itemsDiv.appendChild(itemCard);
                 });
@@ -1337,6 +1453,46 @@
             fotosDiv.appendChild(btnSubirFotosFrente);
             frenteBody.appendChild(fotosDiv);
 
+            // Resumen ejecutivo automático
+            const resumenAutoDiv = document.createElement("div");
+            resumenAutoDiv.className = "frente-obs-area";
+            const resumenAutoLabelDiv = document.createElement("div");
+            resumenAutoLabelDiv.style.cssText = "font-size:0.72rem;color:#64748b;margin-bottom:4px;display:flex;align-items:center;gap:6px;";
+            resumenAutoLabelDiv.innerText = "Resumen ejecutivo automático";
+            const btnGenResumen = document.createElement("button");
+            btnGenResumen.innerText = "🔄 Generar";
+            btnGenResumen.style.cssText = "font-size:0.72rem;padding:2px 8px;background:#e8f5e9;color:#1a5c32;border:1px solid #a7d7a9;border-radius:6px;cursor:pointer;";
+            btnGenResumen.onclick = () => { generarResumenEjecutivo(idx); };
+            resumenAutoLabelDiv.appendChild(btnGenResumen);
+            resumenAutoDiv.appendChild(resumenAutoLabelDiv);
+            const resumenAutoTA = document.createElement("textarea");
+            resumenAutoTA.rows = 4;
+            resumenAutoTA.style.cssText = "font-size:0.82rem;border:1px solid #e2e8f0;border-radius:8px;padding:8px;width:100%;box-sizing:border-box;";
+            resumenAutoTA.value = frente.resumenAuto || "";
+            resumenAutoTA.oninput = (e) => { frentes[idx].resumenAuto = e.target.value; saveToLocal(); };
+            resumenAutoDiv.appendChild(resumenAutoTA);
+            frenteBody.appendChild(resumenAutoDiv);
+
+            // Recomendaciones a interventoría (automático)
+            const recomAutoDiv = document.createElement("div");
+            recomAutoDiv.className = "frente-obs-area";
+            const recomAutoLabelDiv = document.createElement("div");
+            recomAutoLabelDiv.style.cssText = "font-size:0.72rem;color:#64748b;margin-bottom:4px;display:flex;align-items:center;gap:6px;";
+            recomAutoLabelDiv.innerText = "Recomendaciones a interventoría (automático)";
+            const btnGenRecom = document.createElement("button");
+            btnGenRecom.innerText = "🔄 Generar";
+            btnGenRecom.style.cssText = "font-size:0.72rem;padding:2px 8px;background:#e8f5e9;color:#1a5c32;border:1px solid #a7d7a9;border-radius:6px;cursor:pointer;";
+            btnGenRecom.onclick = () => { generarRecomendaciones(idx); };
+            recomAutoLabelDiv.appendChild(btnGenRecom);
+            recomAutoDiv.appendChild(recomAutoLabelDiv);
+            const recomAutoTA = document.createElement("textarea");
+            recomAutoTA.rows = 4;
+            recomAutoTA.style.cssText = "font-size:0.82rem;border:1px solid #e2e8f0;border-radius:8px;padding:8px;width:100%;box-sizing:border-box;";
+            recomAutoTA.value = frente.recomAuto || "";
+            recomAutoTA.oninput = (e) => { frentes[idx].recomAuto = e.target.value; saveToLocal(); };
+            recomAutoDiv.appendChild(recomAutoTA);
+            frenteBody.appendChild(recomAutoDiv);
+
             // Observaciones específicas
             const obsEspecificasDiv = document.createElement("div");
             obsEspecificasDiv.className = "frente-obs-area";
@@ -1424,6 +1580,55 @@
                 }
             } catch(e) {}
         }
+    }
+
+    function generarResumenEjecutivo(idx) {
+        var frente = frentes[idx];
+        var total = 0, cumple = 0, noCumple = 0;
+        var catNames = [];
+        var catIncumpl = {};
+        frente.categorias.forEach(function(cat) {
+            catNames.push(cat.nombre);
+            cat.items.forEach(function(it) {
+                if (it.cumple === true) { cumple++; total++; }
+                else if (it.cumple === false) { noCumple++; total++; catIncumpl[cat.nombre] = (catIncumpl[cat.nombre] || 0) + 1; }
+            });
+        });
+        var pct = total > 0 ? Math.round(cumple / total * 100) : 0;
+        var areasIncumpl = Object.keys(catIncumpl).sort(function(a,b){ return catIncumpl[b]-catIncumpl[a]; });
+        var areaMax = areasIncumpl.length > 0 ? areasIncumpl[0] : 'los componentes evaluados';
+        var texto = 'Durante la visita de inspección al frente ' + frente.nombre
+            + ', se evaluaron ' + total + ' ítem(s) en los componentes ' + catNames.join(', ')
+            + '. Se registró un cumplimiento del ' + pct + '%, identificándose ' + noCumple + ' hallazgo(s) de incumplimiento, principalmente en ' + areaMax
+            + '. Se requiere atención prioritaria en los aspectos señalados para garantizar el cumplimiento de las obligaciones contractuales y normativas vigentes.';
+        frentes[idx].resumenAuto = texto;
+        saveToLocal();
+        renderFrentes();
+    }
+
+    function generarRecomendaciones(idx) {
+        var frente = frentes[idx];
+        var items = [];
+        frente.categorias.forEach(function(cat) {
+            cat.items.forEach(function(it) {
+                if (it.cumple === false) {
+                    var p = buscarPlantilla(it.texto);
+                    var accion = p.noCumple.split('.')[0] + '.';
+                    items.push(accion);
+                }
+            });
+        });
+        var texto;
+        if (items.length === 0) {
+            texto = 'No se identificaron hallazgos de incumplimiento en el frente ' + frente.nombre + ' durante la presente visita de inspección.';
+        } else {
+            texto = 'Cordialmente nos permitimos solicitar a la interventoría tomar las medidas necesarias para dar cumplimiento a los siguientes aspectos identificados durante la visita de inspección al frente ' + frente.nombre + ': '
+                + items.map(function(a, i) { return (i+1) + '. ' + a; }).join(' ')
+                + ' Agradecemos su gestión oportuna para subsanar los hallazgos en el menor tiempo posible.';
+        }
+        frentes[idx].recomAuto = texto;
+        saveToLocal();
+        renderFrentes();
     }
 
     document.getElementById('exportar-items-custom').onclick = function() {
@@ -1958,6 +2163,7 @@
                     var eb = estadoBadge(item.cumple);
                     var obsText = item.obs ? esc(item.obs) : '<em style="color:#9ca3af">Sin observación</em>';
                     if (item.tipoVerificacion === "verbal" && item.verificacionVerbal) { obsText += '<br><span style="color:#6b7280;font-style:italic">Verificación: '+esc(item.verificacionVerbal)+'</span>'; }
+                    if (item.obsAuto && item.obsAuto.trim()) { obsText += '<br><span style="font-style:italic;font-size:8.5pt;color:#374151">'+esc(item.obsAuto)+'</span>'; }
                     html += '<tr>'
                         + '<td style="font-weight:500"><strong>'+item.id.toUpperCase()+'</strong> — '+esc(item.texto)+'</td>'
                         + '<td><span class="e-badge" style="background:'+eb.bg+';color:'+eb.text+'">'+eb.label+'</span></td>'
@@ -2004,9 +2210,17 @@
                 }
             }
 
+            if (frente.resumenAuto && frente.resumenAuto.trim()) {
+                html += '<div class="sub-t">📊 Resumen Ejecutivo</div>';
+                html += '<div class="obs-box"><strong>Resumen ejecutivo:</strong><br>'+esc(frente.resumenAuto).replace(/\n/g,"<br>")+'</div>';
+            }
             if (frente.observaciones && frente.observaciones.trim()) {
                 html += '<div class="sub-t">📝 Observaciones Específicas del Frente</div>';
                 html += '<div class="obs-box">'+esc(frente.observaciones).replace(/\n/g,"<br>")+'</div>';
+            }
+            if (frente.recomAuto && frente.recomAuto.trim()) {
+                html += '<div class="sub-t">📋 Recomendaciones a Interventoría</div>';
+                html += '<div class="rec-box"><strong>Recomendaciones a interventoría:</strong><br>'+esc(frente.recomAuto).replace(/\n/g,"<br>")+'</div>';
             }
             if (frente.recomendaciones && frente.recomendaciones.trim()) {
                 html += '<div class="sub-t">⚠️ Recomendaciones Técnicas</div>';
@@ -2268,6 +2482,7 @@
                     var it=cat.items[ii],bd=badge(it.cumple);
                     var itObsText=it.obs?esc(it.obs):'<em style="color:#9ca3af">Sin observaci&oacute;n</em>';
                     if(it.tipoVerificacion==="verbal"&&it.verificacionVerbal){itObsText+='<br><span style="color:#6b7280;font-style:italic">Verificación: '+esc(it.verificacionVerbal)+'</span>';}
+                    if(it.obsAuto&&it.obsAuto.trim()){itObsText+='<br><span style="font-style:italic;font-size:8.5pt;color:#374151">'+esc(it.obsAuto)+'</span>';}
                     h += '<tr><td style="font-weight:500"><strong>'+it.id.toUpperCase()+'</strong> — '+esc(it.texto)+'</td>'
                         +'<td><span class="e-badge" style="background:'+bd.bg+';color:'+bd.col+'">'+bd.lbl+'</span></td>'
                         +'<td style="color:#374151;font-size:8.5pt">'+itObsText+'</td></tr>';
@@ -2314,10 +2529,14 @@
             }
 
             // Observaciones y recomendaciones
+            if(fr.resumenAuto && fr.resumenAuto.trim())
+                h += '<div class="sub-t">&#128202; Resumen Ejecutivo</div><div class="obs-box"><strong>Resumen ejecutivo:</strong><br>'+esc(fr.resumenAuto).replace(/\n/g,'<br>')+'</div>';
             if(fr.observaciones && fr.observaciones.trim())
-                h += '<div class="sub-t">&#128221; Observaciones</div><div class="obs-box">'+esc(fr.observaciones).replace(/\\n/g,'<br>')+'</div>';
+                h += '<div class="sub-t">&#128221; Observaciones</div><div class="obs-box">'+esc(fr.observaciones).replace(/\n/g,'<br>')+'</div>';
+            if(fr.recomAuto && fr.recomAuto.trim())
+                h += '<div class="sub-t">&#128203; Recomendaciones a Interventoría</div><div class="rec-box"><strong>Recomendaciones a interventoría:</strong><br>'+esc(fr.recomAuto).replace(/\n/g,'<br>')+'</div>';
             if(fr.recomendaciones && fr.recomendaciones.trim())
-                h += '<div class="sub-t">&#9888; Recomendaciones</div><div class="rec-box">'+esc(fr.recomendaciones).replace(/\\n/g,'<br>')+'</div>';
+                h += '<div class="sub-t">&#9888; Recomendaciones</div><div class="rec-box">'+esc(fr.recomendaciones).replace(/\n/g,'<br>')+'</div>';
 
             h += '</div>'; // fin frente-pg
         }
