@@ -726,7 +726,7 @@ if ('serviceWorker' in navigator) {
 </nav>
 
 <script>
-    const APP_VERSION = "1.5.20";
+    const APP_VERSION = "1.5.21";
 
     const PLANTILLAS_AUTO = [
         {
@@ -3406,6 +3406,8 @@ if ('serviceWorker' in navigator) {
                 var colorMayorReciente = cumpleReciente > noCumpleReciente ? '#16a34a' : '#dc2626';
                 var colorMenorAnterior = cumpleAnterior < noCumpleAnterior ? '#f59e0b' : '#dc2626';
                 var colorMayorAnterior = cumpleAnterior > noCumpleAnterior ? '#f59e0b' : '#dc2626';
+                pendientes.push({ chartId: chartId, frenteNombre: fNombre, areaNombre: areaNombre, pctR: pR, pctA: pA, diff: diff });
+                var captured = false;
                 var ch = new Chart(canvas, {
                     type: 'bar',
                     data: {
@@ -3418,6 +3420,25 @@ if ('serviceWorker' in navigator) {
                     options: {
                         responsive: false, maintainAspectRatio: false,
                         plugins: { legend: { display: false } },
+                        animation: {
+                            onComplete: function() {
+                                if (captured) return;
+                                captured = true;
+                                var imgData = canvas.toDataURL('image/png');
+                                window.graficasComparacionPDF.push({
+                                    frenteNombre: fNombre,
+                                    areaNombre:   areaNombre,
+                                    pctReciente:  pR,
+                                    pctAnterior:  pA,
+                                    diff:         diff,
+                                    imgData:      imgData
+                                });
+                                if (window.graficasComparacionPDF.length === pendientes.length) {
+                                    document.getElementById('btn-listo-comparacion').style.display = '';
+                                }
+                                document.body.removeChild(tempDiv);
+                            }
+                        },
                         scales: {
                             x: { stacked: true, grid: { display: false }, ticks: { font: { size: 11 } } },
                             y: { stacked: true, min: 0, max: 100, ticks: { callback: function(v) { return v + '%'; }, font: { size: 10 } } }
@@ -3426,22 +3447,6 @@ if ('serviceWorker' in navigator) {
                     plugins: [pctPlugin]
                 });
                 window._compPdfCharts.push(ch);
-                pendientes.push({ chartId: chartId, frenteNombre: fNombre, areaNombre: areaNombre, pctR: pR, pctA: pA, diff: diff });
-                setTimeout(function() {
-                    var imgData = canvas.toDataURL('image/png');
-                    window.graficasComparacionPDF.push({
-                        frenteNombre: fNombre,
-                        areaNombre:   areaNombre,
-                        pctReciente:  pR,
-                        pctAnterior:  pA,
-                        diff:         diff,
-                        imgData:      imgData
-                    });
-                    if (window.graficasComparacionPDF.length === pendientes.length) {
-                        document.getElementById('btn-listo-comparacion').style.display = '';
-                    }
-                    document.body.removeChild(tempDiv);
-                }, 500);
             });
         });
 
