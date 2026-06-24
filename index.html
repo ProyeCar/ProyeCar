@@ -701,7 +701,7 @@
 </nav>
 
 <script>
-    const APP_VERSION = "1.5.12";
+    const APP_VERSION = "1.5.13";
 
     const PLANTILLAS_AUTO = [
         {
@@ -3083,16 +3083,8 @@
                         data: {
                             labels: ['Reciente', 'Anterior'],
                             datasets: [
-                                {
-                                    label: 'Cumple',
-                                    data: [item.sR ? item.sR.pct : null, item.sA ? item.sA.pct : null],
-                                    backgroundColor: ['#16a34a', '#f59e0b']
-                                },
-                                {
-                                    label: 'No cumple',
-                                    data: [item.sR ? (100 - item.sR.pct) : null, item.sA ? (100 - item.sA.pct) : null],
-                                    backgroundColor: ['#dc2626', '#dc2626']
-                                }
+                                { label: 'No cumple/Cumplía', data: [item.sR ? (100 - item.sR.pct) : null, item.sA ? item.sA.pct : null], backgroundColor: ['#dc2626', '#f59e0b'] },
+                                { label: 'Cumple', data: [item.sR ? item.sR.pct : null, item.sA ? (100 - item.sA.pct) : null], backgroundColor: ['#16a34a', '#dc2626'] }
                             ]
                         },
                         options: {
