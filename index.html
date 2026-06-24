@@ -732,7 +732,7 @@ if ('serviceWorker' in navigator) {
 </nav>
 
 <script>
-    const APP_VERSION = "1.5.17";
+    const APP_VERSION = "1.5.19";
 
     const PLANTILLAS_AUTO = [
         {
@@ -3538,6 +3538,8 @@ if ('serviceWorker' in navigator) {
 
     function abrirComparacionSemanal() {
         var historial = JSON.parse(localStorage.getItem('cardique_historial') || '[]');
+
+        // Poblar selectores legacy (mantiene compatibilidad con generarGraficasComparacionPDF)
         var opts = '<option value="">— Sin comparación —</option>'
             + historial.map(function(r, i) {
                 return '<option value="' + i + '">' + (r.proyecto || 'Sin nombre') + ' — ' + (r.fecha || '') + '</option>';
@@ -3549,7 +3551,7 @@ if ('serviceWorker' in navigator) {
         window.comparacionSemanal = { inspeccion1: null, inspeccion2: null };
         if (s1) s1.onchange = function() {
             var idx = parseInt(this.value);
-            window.comparacionSemanal = { inspeccion1: isNaN(idx) ? null : historial[idx], inspeccion2: null };
+            window.comparacionSemanal = { inspeccion1: isNaN(idx) ? null : historial[idx], inspeccion2: window.comparacionSemanal ? window.comparacionSemanal.inspeccion2 : null };
         };
         if (s2) s2.onchange = function() {
             var idx = parseInt(this.value);
@@ -3563,6 +3565,116 @@ if ('serviceWorker' in navigator) {
                 window.print();
             };
         }
+
+        // ── Modal visual ──
+        var prev = document.getElementById('modal-comp-semanal');
+        if (prev) prev.remove();
+
+        function cardInfo(insp) {
+            if (!insp) return '<span style="color:#9ca3af;font-size:0.78rem;">Toca ⋮ para seleccionar</span>';
+            return '<span style="font-weight:700;font-size:0.84rem;color:#1e3a2f;">' + (insp.proyecto || 'Sin nombre') + '</span>'
+                 + '<br><span style="font-size:0.72rem;color:#6b7280;">' + (insp.fecha || '') + '</span>';
+        }
+
+        function updateCard(role) {
+            var el = document.getElementById('cs-info-' + role);
+            if (el) el.innerHTML = cardInfo(role === 'ant' ? window.comparacionSemanal.inspeccion1 : window.comparacionSemanal.inspeccion2);
+        }
+
+        function closePicker() {
+            var p = document.getElementById('cs-picker');
+            if (p) p.remove();
+        }
+
+        function showPicker(role, anchor) {
+            closePicker();
+            var picker = document.createElement('div');
+            picker.id = 'cs-picker';
+            picker.style.cssText = 'position:fixed;background:white;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.18);z-index:10001;max-height:220px;overflow-y:auto;min-width:260px;border:1px solid #e5e7eb;';
+            var rect = anchor.getBoundingClientRect();
+            picker.style.top = (rect.bottom + 6) + 'px';
+            picker.style.left = Math.max(8, rect.right - 260) + 'px';
+            if (!historial.length) {
+                picker.innerHTML = '<div style="padding:14px 16px;color:#9ca3af;font-size:0.82rem;">No hay historial guardado</div>';
+            } else {
+                historial.forEach(function(r, i) {
+                    var item = document.createElement('div');
+                    item.style.cssText = 'padding:10px 16px;cursor:pointer;border-bottom:1px solid #f3f4f6;font-size:0.82rem;transition:background 0.15s;';
+                    item.innerHTML = '<div style="font-weight:600;color:#1e3a2f;">' + (r.proyecto || 'Sin nombre') + '</div>'
+                        + '<div style="color:#6b7280;font-size:0.72rem;">' + (r.fecha || '') + '</div>';
+                    item.addEventListener('mouseenter', function() { this.style.background = '#f0fdf4'; });
+                    item.addEventListener('mouseleave', function() { this.style.background = ''; });
+                    item.addEventListener('click', function() {
+                        if (role === 'ant') {
+                            window.comparacionSemanal.inspeccion1 = historial[i];
+                            if (s1) s1.value = i;
+                        } else {
+                            window.comparacionSemanal.inspeccion2 = historial[i];
+                            if (s2) s2.value = i;
+                        }
+                        updateCard(role);
+                        closePicker();
+                    });
+                    picker.appendChild(item);
+                });
+            }
+            document.body.appendChild(picker);
+            setTimeout(function() {
+                document.addEventListener('click', function off(e) {
+                    if (!picker.contains(e.target) && e.target !== anchor) { closePicker(); document.removeEventListener('click', off); }
+                });
+            }, 10);
+        }
+
+        var realFF = document.getElementById('filtro-frente-pdf');
+        var realFA = document.getElementById('filtro-area-pdf');
+
+        var modal = document.createElement('div');
+        modal.id = 'modal-comp-semanal';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.52);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+        modal.innerHTML =
+            '<div style="background:white;border-radius:20px;padding:24px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.25);">' +
+              '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">' +
+                '<h3 style="font-size:1rem;font-weight:700;color:#1e3a2f;margin:0;">📊 Comparación Semanal</h3>' +
+                '<button id="cs-close" style="background:none;border:none;box-shadow:none;color:#6b7280;font-size:1.1rem;cursor:pointer;padding:4px 8px;line-height:1;">✕</button>' +
+              '</div>' +
+              '<div style="display:flex;align-items:center;justify-content:space-between;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;margin-bottom:10px;">' +
+                '<div><div style="font-size:0.65rem;font-weight:700;color:#64748b;letter-spacing:0.6px;text-transform:uppercase;margin-bottom:4px;">Anterior</div>' +
+                '<div id="cs-info-ant">' + cardInfo(null) + '</div></div>' +
+                '<button id="cs-menu-ant" style="background:none;border:1px solid #d1d5db;border-radius:8px;box-shadow:none;color:#374151;font-size:1rem;padding:4px 10px;cursor:pointer;flex-shrink:0;">⋮</button>' +
+              '</div>' +
+              '<div style="display:flex;align-items:center;justify-content:space-between;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:12px 14px;margin-bottom:16px;">' +
+                '<div><div style="font-size:0.65rem;font-weight:700;color:#16a34a;letter-spacing:0.6px;text-transform:uppercase;margin-bottom:4px;">Reciente</div>' +
+                '<div id="cs-info-rec">' + cardInfo(null) + '</div></div>' +
+                '<button id="cs-menu-rec" style="background:none;border:1px solid #bbf7d0;border-radius:8px;box-shadow:none;color:#16a34a;font-size:1rem;padding:4px 10px;cursor:pointer;flex-shrink:0;">⋮</button>' +
+              '</div>' +
+              '<div style="display:flex;gap:8px;margin-bottom:16px;">' +
+                '<select id="cs-filtro-frente" style="flex:1;padding:8px 10px;border-radius:10px;border:1px solid #d1d5db;font-size:0.78rem;background:white;color:#374151;"><option value="todos">Todos los frentes</option></select>' +
+                '<select id="cs-filtro-area" style="flex:1;padding:8px 10px;border-radius:10px;border:1px solid #d1d5db;font-size:0.78rem;background:white;color:#374151;"><option value="todas">Todas las áreas</option></select>' +
+              '</div>' +
+              '<button id="cs-generar" style="width:100%;background:linear-gradient(135deg,#1a5c35,#16a34a);color:white;border:none;border-radius:12px;padding:13px;font-size:0.9rem;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(22,163,74,0.3);">🔄 Generar</button>' +
+            '</div>';
+        document.body.appendChild(modal);
+
+        // Sincronizar filtros con los reales
+        var csFF = document.getElementById('cs-filtro-frente');
+        var csFA = document.getElementById('cs-filtro-area');
+        if (csFF && realFF) { csFF.innerHTML = realFF.innerHTML; csFF.value = realFF.value; csFF.addEventListener('change', function() { realFF.value = this.value; realFF.dispatchEvent(new Event('change')); }); }
+        if (csFA && realFA) { csFA.innerHTML = realFA.innerHTML; csFA.value = realFA.value; csFA.addEventListener('change', function() { realFA.value = this.value; realFA.dispatchEvent(new Event('change')); }); }
+
+        document.getElementById('cs-close').addEventListener('click', function() { closePicker(); modal.remove(); });
+        modal.addEventListener('click', function(e) { if (e.target === modal) { closePicker(); modal.remove(); } });
+        document.getElementById('cs-menu-ant').addEventListener('click', function(e) { e.stopPropagation(); showPicker('ant', this); });
+        document.getElementById('cs-menu-rec').addEventListener('click', function(e) { e.stopPropagation(); showPicker('rec', this); });
+        document.getElementById('cs-generar').addEventListener('click', function() {
+            if (!window.comparacionSemanal || !window.comparacionSemanal.inspeccion1 || !window.comparacionSemanal.inspeccion2) {
+                alert('Selecciona las dos inspecciones para comparar.');
+                return;
+            }
+            closePicker();
+            modal.remove();
+            generarGraficasComparacionPDF();
+        });
     }
 
     loadFromLocal();
