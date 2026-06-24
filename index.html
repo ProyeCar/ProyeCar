@@ -726,7 +726,7 @@ if ('serviceWorker' in navigator) {
 </nav>
 
 <script>
-    const APP_VERSION = "1.5.27";
+    const APP_VERSION = "1.5.28";
     console.log('🚀 ProyeCar v' + APP_VERSION + ' cargado');
 
     const PLANTILLAS_AUTO = [
@@ -3698,6 +3698,13 @@ function abrirModalComparacionSemanal() {
         + '<label>Reciente:</label><select id="comp-sel-b" style="width:100%;padding:8px;margin-bottom:10px;"><option>-</option></select>'
         + '<button onclick="generarGraficasComparacionPDF()" style="width:100%;padding:10px;background:#16a34a;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">Generar</button>'
         + '<div id="modal-graficas" style="margin-top:16px;"></div>';
+
+    var hist = JSON.parse(localStorage.getItem('cardique_historial') || '[]');
+    var opciones = hist.map(function(h, i) {
+        return '<option value="' + i + '">' + (h.proyecto || 'Sin nombre') + ' — ' + (h.fecha || '') + '</option>';
+    }).join('');
+    modal.querySelector('#comp-sel-a').innerHTML = opciones;
+    modal.querySelector('#comp-sel-b').innerHTML = opciones;
 
     document.body.appendChild(overlay);
     document.body.appendChild(modal);
