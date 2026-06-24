@@ -647,15 +647,37 @@ if ('serviceWorker' in navigator) {
                 Generar informe para Dirección
             </button>
         </div>
-        <div id="comparacion-box" style="display:none;"><select id="comp-inspeccion-1"></select><select id="comp-inspeccion-2"></select></div>
-        <div id="filtros-comp-pdf" style="display:none;margin:8px 0 4px;">
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <select id="filtro-frente-pdf" style="flex:1;min-width:140px;padding:6px 10px;border-radius:8px;border:0.5px solid var(--color-border-tertiary);font-size:12px;background:var(--color-background-primary);color:var(--color-text-primary);"><option value="todos">Todos los frentes</option></select>
-                <select id="filtro-area-pdf" style="flex:1;min-width:140px;padding:6px 10px;border-radius:8px;border:0.5px solid var(--color-border-tertiary);font-size:12px;background:var(--color-background-primary);color:var(--color-text-primary);"><option value="todas">Todas las áreas</option></select>
+        <!-- ── Comparación Semanal ── -->
+        <div id="cs-seccion" style="margin-top:14px;border:1px solid #bbf7d0;border-radius:14px;overflow:hidden;">
+            <div id="cs-toggle-row" onclick="csToggle()" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:linear-gradient(135deg,#f0fdf4,#f8fafc);cursor:pointer;user-select:none;">
+                <span style="font-size:0.88rem;font-weight:700;color:#1e3a2f;">📊 Incluir comparación semanal</span>
+                <div id="cs-toggle-switch" style="width:40px;height:22px;background:#d1d5db;border-radius:11px;position:relative;transition:background 0.25s;flex-shrink:0;">
+                    <div id="cs-toggle-knob" style="position:absolute;top:3px;left:3px;width:16px;height:16px;background:white;border-radius:50%;transition:transform 0.25s;box-shadow:0 1px 4px rgba(0,0,0,0.25);"></div>
+                </div>
+            </div>
+            <div id="cs-body" style="display:none;padding:12px 14px 14px;background:white;">
+                <div id="comparacion-box" style="display:none;"><select id="comp-inspeccion-1"></select><select id="comp-inspeccion-2"></select></div>
+                <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+                    <div style="flex:1;min-width:130px;">
+                        <div style="font-size:0.65rem;font-weight:700;color:#64748b;letter-spacing:0.6px;text-transform:uppercase;margin-bottom:4px;">Anterior</div>
+                        <select id="cs-sel-ant" style="width:100%;padding:7px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:12px;background:white;color:#374151;"><option value="">— Sin comparación —</option></select>
+                    </div>
+                    <div style="flex:1;min-width:130px;">
+                        <div style="font-size:0.65rem;font-weight:700;color:#16a34a;letter-spacing:0.6px;text-transform:uppercase;margin-bottom:4px;">Reciente</div>
+                        <select id="cs-sel-rec" style="width:100%;padding:7px 10px;border-radius:8px;border:1px solid #bbf7d0;font-size:12px;background:white;color:#374151;"><option value="">— Sin comparación —</option></select>
+                    </div>
+                </div>
+                <div id="filtros-comp-pdf" style="display:none;margin-bottom:8px;">
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <select id="filtro-frente-pdf" style="flex:1;min-width:140px;padding:6px 10px;border-radius:8px;border:0.5px solid var(--color-border-tertiary);font-size:12px;background:var(--color-background-primary);color:var(--color-text-primary);"><option value="todos">Todos los frentes</option></select>
+                        <select id="filtro-area-pdf" style="flex:1;min-width:140px;padding:6px 10px;border-radius:8px;border:0.5px solid var(--color-border-tertiary);font-size:12px;background:var(--color-background-primary);color:var(--color-text-primary);"><option value="todas">Todas las áreas</option></select>
+                    </div>
+                </div>
+                <button onclick="csSemanalGenerar()" style="width:100%;background:linear-gradient(135deg,#1a5c35,#16a34a);color:white;border:none;border-radius:10px;padding:11px;font-size:0.85rem;font-weight:700;cursor:pointer;margin-bottom:4px;box-shadow:0 3px 10px rgba(22,163,74,0.25);">🔄 Generar comparación</button>
+                <div id="contenedor-graficas-pdf" style="margin-top:8px;"></div>
+                <button id="btn-listo-comparacion" onclick="generarInformeConComparacion()" style="display:none;width:100%;background:linear-gradient(135deg,#0d9488,#14b8a6);color:white;border:none;border-radius:12px;padding:13px;font-size:0.9rem;font-weight:700;cursor:pointer;margin-top:8px;">📄 Generar comparación semanal en PDF</button>
             </div>
         </div>
-        <div id="contenedor-graficas-pdf" style="margin-top:16px;"></div>
-        <button id="btn-listo-comparacion" onclick="generarInformeConComparacion()" style="display:none;width:100%;background:linear-gradient(135deg,#0d9488,#14b8a6);color:white;border:none;border-radius:12px;padding:13px;font-size:0.9rem;font-weight:700;cursor:pointer;margin-top:8px;">📄 Generar comparación semanal en PDF</button>
         <button id="reset-global" class="btn-peligro">🔄 Reiniciar todo</button>
         <button id="guardar-manual" style="background:#2c5e3f;">💾 Guardar manualmente</button>
         <span id="save-indicator" class="save-indicator"></span>
@@ -707,7 +729,7 @@ if ('serviceWorker' in navigator) {
 </nav>
 
 <script>
-    const APP_VERSION = "1.5.30";
+    const APP_VERSION = "1.5.31";
     console.log('🚀 ProyeCar v' + APP_VERSION + ' cargado');
 
     const PLANTILLAS_AUTO = [
@@ -3664,6 +3686,72 @@ if ('serviceWorker' in navigator) {
     actualizarSelectoresCompPdf();
     document.getElementById('filtro-frente-pdf').addEventListener('change', _renderizarCompPdf);
     document.getElementById('filtro-area-pdf').addEventListener('change', _renderizarCompPdf);
+</script>
+<script>
+// ── Comparación Semanal — sección inline ──
+var _csAbierto = false;
+
+function csPoblarSelectores() {
+    var hist = JSON.parse(localStorage.getItem('cardique_historial') || '[]');
+    var opts = '<option value="">— Sin comparación —</option>'
+        + hist.map(function(r, i) {
+            return '<option value="' + i + '">' + (r.fecha || 'Sin fecha') + ' — ' + (r.proyecto || 'Sin nombre') + '</option>';
+        }).join('');
+    var elAnt = document.getElementById('cs-sel-ant');
+    var elRec = document.getElementById('cs-sel-rec');
+    if (elAnt) elAnt.innerHTML = opts;
+    if (elRec) elRec.innerHTML = opts;
+    actualizarSelectoresCompPdf();
+}
+
+function csToggle() {
+    _csAbierto = !_csAbierto;
+    var body = document.getElementById('cs-body');
+    var sw   = document.getElementById('cs-toggle-switch');
+    var knob = document.getElementById('cs-toggle-knob');
+    if (_csAbierto) {
+        body.style.display = '';
+        sw.style.background = '#16a34a';
+        knob.style.transform = 'translateX(18px)';
+        csPoblarSelectores();
+        var idxA = (document.getElementById('comp-sel-a') || {}).value;
+        var idxB = (document.getElementById('comp-sel-b') || {}).value;
+        if (idxA) { var sa = document.getElementById('cs-sel-ant'); if (sa) sa.value = idxA; }
+        if (idxB) { var sr = document.getElementById('cs-sel-rec'); if (sr) sr.value = idxB; }
+    } else {
+        body.style.display = 'none';
+        sw.style.background = '#d1d5db';
+        knob.style.transform = 'translateX(0)';
+    }
+}
+
+function csSemanalGenerar() {
+    var idxAnt = document.getElementById('cs-sel-ant').value;
+    var idxRec = document.getElementById('cs-sel-rec').value;
+    if (idxAnt === '' || idxRec === '') { alert('Selecciona las dos inspecciones para comparar.'); return; }
+    if (idxAnt === idxRec) { alert('Selecciona dos inspecciones diferentes.'); return; }
+    actualizarSelectoresCompPdf();
+    var s1 = document.getElementById('comp-inspeccion-1');
+    var s2 = document.getElementById('comp-inspeccion-2');
+    if (s1) s1.value = idxAnt;
+    if (s2) s2.value = idxRec;
+    generarGraficasComparacionPDF();
+}
+
+// Sync: al comparar en pantalla Comparar, propagar selecciones a sección semanal
+(function() {
+    var btnCmp = document.getElementById('btn-comparar');
+    if (!btnCmp) return;
+    btnCmp.addEventListener('click', function() {
+        setTimeout(function() {
+            if (!_csAbierto) return;
+            var idxA = (document.getElementById('comp-sel-a') || {}).value;
+            var idxB = (document.getElementById('comp-sel-b') || {}).value;
+            if (idxA) { var sa = document.getElementById('cs-sel-ant'); if (sa) sa.value = idxA; }
+            if (idxB) { var sr = document.getElementById('cs-sel-rec'); if (sr) sr.value = idxB; }
+        }, 100);
+    });
+})();
 </script>
 </body>
 </html>
