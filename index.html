@@ -701,7 +701,7 @@
 </nav>
 
 <script>
-    const APP_VERSION = "1.5.7";
+    const APP_VERSION = "1.5.10";
 
     const PLANTILLAS_AUTO = [
         {
@@ -3281,6 +3281,7 @@
                 cWrap.style.cssText = 'position:relative;height:150px;';
                 var canvas = document.createElement('canvas');
                 canvas.id = chartId;
+                canvas.width = 400; canvas.height = 150;
                 cWrap.appendChild(canvas);
                 wrapper.appendChild(cWrap);
                 contenedor.appendChild(wrapper);
@@ -3306,8 +3307,8 @@
                     data: {
                         labels: ['Reciente', 'Anterior'],
                         datasets: [
-                            { label: 'Cumple',    data: [pR, pA],                                                               backgroundColor: ['#16a34a', '#f59e0b'] },
-                            { label: 'No cumple', data: [pR !== null ? 100 - pR : null, pA !== null ? 100 - pA : null], backgroundColor: ['#dc2626', '#dc2626'] }
+                            { label: 'No cumple/Cumplía', data: [pR !== null ? 100 - pR : null, pA !== null ? pA : null], backgroundColor: ['#dc2626', '#f59e0b'] },
+                            { label: 'Cumple', data: [pR !== null ? pR : null, pA !== null ? 100 - pA : null], backgroundColor: ['#16a34a', '#dc2626'] }
                         ]
                     },
                     options: {
@@ -3322,6 +3323,21 @@
                 });
                 window._compPdfCharts.push(ch);
                 pendientes.push({ chartId: chartId, frenteNombre: fR.nombre, areaNombre: catR.nombre, pctR: pR, pctA: pA, diff: diff });
+                setTimeout(function() {
+                    ch.resize();
+                    var imgData = canvas.toDataURL('image/png');
+                    window.graficasComparacionPDF.push({
+                        frenteNombre: fR.nombre,
+                        areaNombre:   catR.nombre,
+                        pctReciente:  pR,
+                        pctAnterior:  pA,
+                        diff:         diff,
+                        imgData:      imgData
+                    });
+                    if (window.graficasComparacionPDF.length === pendientes.length) {
+                        document.getElementById('btn-listo-comparacion').style.display = '';
+                    }
+                }, 500);
             });
         });
 
@@ -3329,21 +3345,6 @@
             contenedor.innerHTML = '<div style="font-size:0.8rem;color:#6b7280;padding:8px 0;">Sin datos para mostrar con los filtros actuales.</div>';
             return;
         }
-
-        setTimeout(function() {
-            window.graficasComparacionPDF = pendientes.map(function(p) {
-                var c = document.getElementById(p.chartId);
-                return {
-                    frenteNombre: p.frenteNombre,
-                    areaNombre:   p.areaNombre,
-                    pctReciente:  p.pctR,
-                    pctAnterior:  p.pctA,
-                    diff:         p.diff,
-                    imgData:      c ? c.toDataURL('image/png') : ''
-                };
-            });
-            document.getElementById('btn-listo-comparacion').style.display = '';
-        }, 100);
     }
 
     function generarInformeConComparacion() {
@@ -3372,18 +3373,9 @@
             }
         });
         var diffProm = countDiff > 0 ? Math.round(sumDiff / countDiff) : 0;
-        var tendStr = areasSubieron > areasBajaron
-            ? 'avance general de ' + diffProm + ' pp en promedio'
-            : areasBajaron > areasSubieron
-                ? 'retroceso de ' + Math.abs(diffProm) + ' pp en promedio'
-                : 'comportamiento estable (' + diffProm + ' pp promedio)';
-        var maxStr = maxItem ? maxItem.frenteNombre + ' / ' + maxItem.areaNombre + ' (↑ +' + maxItem.diff + ' pp)' : '';
-        var minStr = (minItem && minItem.diff < 0) ? minItem.frenteNombre + ' / ' + minItem.areaNombre + ' (↓ ' + minItem.diff + ' pp)' : '';
-        var resumen = fechaA2 + ' → ' + fechaR + '. '
-            + totalAreas + ' área(s) evaluada(s). '
-            + tendStr + '.'
-            + (maxStr ? ' Mayor avance: ' + maxStr + '.' : '')
-            + (minStr ? ' Mayor retroceso: ' + minStr + '.' : '');
+        var resumen = fechaA2 + '→' + fechaR + '. '
+            + totalAreas + ' área(s). Avance ' + diffProm + 'pp.'
+            + (maxItem ? ' Mayor: ' + maxItem.frenteNombre + '/' + maxItem.areaNombre + '(+' + maxItem.diff + 'pp).' : '');
 
         function eH(s) { return (s || '').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -3403,8 +3395,8 @@
         h += '</div>';
 
         // Resumen gris
-        h += '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;font-size:9pt;color:#374151;margin-bottom:16px;line-height:1.6;">'
-            + '<strong>Resumen de tendencia:</strong> ' + eH(resumen) + '</div>';
+        h += '<div style="background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;padding:12px;margin:16px 0;font-size:9pt;">'
+            + 'Resumen de tendencia: ' + eH(resumen) + '</div>';
 
         // Por cada gráfica
         graficas.forEach(function(g) {
@@ -3433,9 +3425,9 @@
         h += '<div style="background:#f8fafc;border-radius:8px;padding:10px 14px;margin-top:8px;">';
         h += '<div style="font-size:8pt;font-weight:700;color:#374151;margin-bottom:6px;">Guía de colores</div>';
         h += '<div style="display:flex;flex-direction:column;gap:3px;">'
-            + '<div style="display:flex;align-items:center;gap:6px;font-size:8pt;"><div style="width:12px;height:12px;border-radius:2px;background:#16a34a;flex-shrink:0;"></div>Cumple en inspección reciente</div>'
-            + '<div style="display:flex;align-items:center;gap:6px;font-size:8pt;"><div style="width:12px;height:12px;border-radius:2px;background:#dc2626;flex-shrink:0;"></div>No cumple (ambas inspecciones)</div>'
-            + '<div style="display:flex;align-items:center;gap:6px;font-size:8pt;"><div style="width:12px;height:12px;border-radius:2px;background:#f59e0b;flex-shrink:0;"></div>Cumplía en inspección anterior</div>'
+            + '<div style="display:flex;align-items:center;gap:6px;font-size:8pt;"><div style="width:12px;height:12px;border-radius:2px;background:#16a34a;flex-shrink:0;"></div>Verde=Cumple reciente</div>'
+            + '<div style="display:flex;align-items:center;gap:6px;font-size:8pt;"><div style="width:12px;height:12px;border-radius:2px;background:#dc2626;flex-shrink:0;"></div>Rojo=No cumple ambas</div>'
+            + '<div style="display:flex;align-items:center;gap:6px;font-size:8pt;"><div style="width:12px;height:12px;border-radius:2px;background:#f59e0b;flex-shrink:0;"></div>Naranja=Cumplía anterior</div>'
             + '</div></div>';
         h += '</div>';
 
