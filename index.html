@@ -644,7 +644,7 @@ if ('serviceWorker' in navigator) {
                 <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
                 Compartir inspección
             </button>
-            <button id="btn-semanal" class="btn-h" style="background:linear-gradient(135deg,#0d9488,#14b8a6);" onclick="toggleComparacionSemanal();abrirComparacionSemanal()">
+            <button id="btn-semanal" class="btn-h" style="background:linear-gradient(135deg,#0d9488,#14b8a6);" onclick="abrirModalComparacionSemanal()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
                 Incluir comparación semanal
             </button>
@@ -726,7 +726,7 @@ if ('serviceWorker' in navigator) {
 </nav>
 
 <script>
-    const APP_VERSION = "1.5.24";
+    const APP_VERSION = "1.5.25";
     console.log('🚀 ProyeCar v' + APP_VERSION + ' cargado');
 
     const PLANTILLAS_AUTO = [
@@ -3683,6 +3683,16 @@ if ('serviceWorker' in navigator) {
 <script>
 function toggleComparacionSemanal() {
   document.getElementById('comparacion-box').classList.toggle('abierto');
+}
+function abrirModalComparacionSemanal() {
+    var overlay = document.createElement('div');
+    overlay.id = 'overlay-comp';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:999;';
+    overlay.onclick = function() { document.getElementById('overlay-comp').remove(); };
+    var modal = document.getElementById('comparacion-box').cloneNode(true);
+    modal.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:90%;max-height:90%;overflow-y:auto;z-index:9999;background:white;border-radius:12px;padding:20px;box-shadow:0 10px 40px rgba(0,0,0,0.3);';
+    document.body.appendChild(overlay);
+    document.body.appendChild(modal);
 }
 </script>
 </body>
