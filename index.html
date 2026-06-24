@@ -575,12 +575,7 @@
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(regs => {
-    regs.forEach(reg => reg.unregister());
-  });
-  setTimeout(() => {
-    navigator.serviceWorker.register('sw.js?v=' + Math.random()).catch(err => {});
-  }, 100);
+  navigator.serviceWorker.register('sw.js?v=' + Math.random()).catch(err => {});
 }
 </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
