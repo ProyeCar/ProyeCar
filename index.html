@@ -572,12 +572,10 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-      if('serviceWorker' in navigator){
-        navigator.serviceWorker.register('./sw.js').then(function(reg){
-          reg.update();
-          setInterval(function(){ reg.update(); }, 60000);
-        });
-      }
+// Temporalmente desactivado para fuerza limpieza
+if ('serviceWorker' in navigator && false) {
+  // SW desactivado
+}
     </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
 <script>
