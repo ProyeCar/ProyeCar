@@ -701,7 +701,7 @@
 </nav>
 
 <script>
-    const APP_VERSION = "1.5.10";
+    const APP_VERSION = "1.5.11";
 
     const PLANTILLAS_AUTO = [
         {
@@ -3361,21 +3361,17 @@
 
         // Tendencia
         var totalAreas = graficas.length;
-        var areasSubieron = 0, areasBajaron = 0, sumDiff = 0, countDiff = 0;
-        var maxItem = null, minItem = null;
-        graficas.forEach(function(g) {
-            if (g.diff !== null) {
-                if (g.diff > 0) areasSubieron++;
-                else if (g.diff < 0) areasBajaron++;
-                sumDiff += g.diff; countDiff++;
-                if (!maxItem || g.diff > maxItem.diff) maxItem = g;
-                if (!minItem || g.diff < minItem.diff) minItem = g;
-            }
-        });
+        var sumDiff = 0, countDiff = 0;
+        graficas.forEach(function(g) { if (g.diff !== null) { sumDiff += g.diff; countDiff++; } });
         var diffProm = countDiff > 0 ? Math.round(sumDiff / countDiff) : 0;
-        var resumen = fechaA2 + '→' + fechaR + '. '
-            + totalAreas + ' área(s). Avance ' + diffProm + 'pp.'
-            + (maxItem ? ' Mayor: ' + maxItem.frenteNombre + '/' + maxItem.areaNombre + '(+' + maxItem.diff + 'pp).' : '');
+        var areasParts = graficas.map(function(g) {
+            var diffStr = g.diff !== null ? ' (' + (g.diff >= 0 ? '↑+' : '↓') + g.diff + 'pp)' : '';
+            return g.areaNombre + ': ' + (g.pctReciente !== null ? g.pctReciente + '%' : 'N/A') + diffStr;
+        }).join('. ');
+        var resumen = fechaA2 + ' → ' + fechaR + '. '
+            + totalAreas + ' área(s) evaluada(s). '
+            + (areasParts ? areasParts + '. ' : '')
+            + 'Avance promedio: ' + diffProm + 'pp.';
 
         function eH(s) { return (s || '').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
