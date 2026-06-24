@@ -292,6 +292,8 @@
         .btn-pdf:hover { box-shadow: 0 5px 18px rgba(217,119,6,0.4); }
         .btn-peligro { background: linear-gradient(135deg, #b91c1c, #ef4444); box-shadow: 0 3px 12px rgba(185,28,28,0.3); }
         .btn-sec { background: linear-gradient(135deg, #475569, #64748b); box-shadow: 0 3px 12px rgba(71,85,105,0.25); }
+        .comparacion-box { max-height: 0; opacity: 0; overflow: hidden; transition: 0.3s; }
+        .comparacion-box.abierto { max-height: 400px; opacity: 1; }
         .btn-agregar-frente { background: linear-gradient(135deg, #0d3321, #1a5c35); margin-top: 10px; }
         .btn-herramientas-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:12px; width:100%; }
         .btn-h { display:flex !important; flex-direction:column; align-items:center; justify-content:center; width:100% !important; aspect-ratio:1; border-radius:16px !important; padding:10px 4px !important; font-size:0.62rem !important; font-weight:700; letter-spacing:0.3px; gap:6px; min-width:unset; box-shadow:0 4px 14px rgba(0,0,0,0.18) !important; transition:all 0.25s !important; line-height:1.2; text-align:center; }
@@ -650,7 +652,7 @@ if ('serviceWorker' in navigator) {
                 <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
                 Compartir inspección
             </button>
-            <button id="btn-semanal" class="btn-h" style="background:linear-gradient(135deg,#0d9488,#14b8a6);" onclick="abrirComparacionSemanal()">
+            <button id="btn-semanal" class="btn-h" style="background:linear-gradient(135deg,#0d9488,#14b8a6);" onclick="toggleComparacionSemanal();abrirComparacionSemanal()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
                 Incluir comparación semanal
             </button>
@@ -659,7 +661,7 @@ if ('serviceWorker' in navigator) {
                 Generar informe para Dirección
             </button>
         </div>
-        <div id="seccion-comp-pdf" style="width:100%;margin-bottom:8px;padding:14px 12px;border:1px solid #bbf7d0;border-radius:12px;background:#f0fdf4;">
+        <div id="comparacion-box" class="comparacion-box" style="width:100%;margin-bottom:8px;padding:14px 12px;border:1px solid #bbf7d0;border-radius:12px;background:#f0fdf4;">
             <div style="font-size:0.95rem;font-weight:600;color:#1e3a2f;margin-bottom:10px;">📊 Incluir comparación semanal</div>
             <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
                 <div style="flex:1;min-width:140px;">
@@ -732,7 +734,7 @@ if ('serviceWorker' in navigator) {
 </nav>
 
 <script>
-    const APP_VERSION = "1.5.19";
+    const APP_VERSION = "1.5.20";
 
     const PLANTILLAS_AUTO = [
         {
@@ -3681,6 +3683,11 @@ if ('serviceWorker' in navigator) {
     actualizarSelectoresCompPdf();
     document.getElementById('filtro-frente-pdf').addEventListener('change', _renderizarCompPdf);
     document.getElementById('filtro-area-pdf').addEventListener('change', generarGraficasComparacionPDF);
+</script>
+<script>
+function toggleComparacionSemanal() {
+  document.getElementById('comparacion-box').classList.toggle('abierto');
+}
 </script>
 </body>
 </html>
