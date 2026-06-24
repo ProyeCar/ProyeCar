@@ -679,7 +679,7 @@
 </nav>
 
 <script>
-    const APP_VERSION = "1.5.3";
+    const APP_VERSION = "1.5.2";
 
     const PLANTILLAS_AUTO = [
         {
@@ -1059,6 +1059,23 @@
                 { nombre: "Frente 2 - Box Matagente", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" }
             ];
         }
+        // Backfill item.obs para ítems calificados sin observación
+        var obsBackfillChanged = false;
+        frentes.forEach(function(f) {
+            f.categorias.forEach(function(cat) {
+                cat.items.forEach(function(item) {
+                    if (item.cumple === true && (!item.obs || item.obs.trim() === "")) {
+                        item.obs = "Verificado en campo.";
+                        obsBackfillChanged = true;
+                    } else if (item.cumple === false && (!item.obs || item.obs.trim() === "")) {
+                        var plantilla = buscarPlantilla(item.texto);
+                        item.obs = plantilla.noCumple.substring(0, 180) + " (" + plantilla.norma + ")";
+                        obsBackfillChanged = true;
+                    }
+                });
+            });
+        });
+        if (obsBackfillChanged) saveToLocal();
         renderFrentes();
     }
     const savedLogo = localStorage.getItem("cardique_logo");
