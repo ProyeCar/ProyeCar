@@ -3159,13 +3159,12 @@
                 if (f.nombre && allFrenteNames.indexOf(f.nombre) === -1) allFrenteNames.push(f.nombre);
             });
         });
-        // Áreas únicas (union)
-        var allAreaMap = {}, allAreaOrder = [];
+        // Áreas únicas (union por nombre)
+        var allAreaNames = [];
         [reciente, anterior].forEach(function(insp) {
             (insp.frentes || []).forEach(function(f) {
                 (f.categorias || []).forEach(function(cat) {
-                    var k = cat.id || cat.nombre;
-                    if (k && !allAreaMap[k]) { allAreaMap[k] = cat.nombre; allAreaOrder.push(k); }
+                    if (cat.nombre && allAreaNames.indexOf(cat.nombre) === -1) allAreaNames.push(cat.nombre);
                 });
             });
         });
@@ -3178,7 +3177,7 @@
         var sfa = document.getElementById('filtro-area-pdf');
         var prevArea = sfa.value;
         sfa.innerHTML = '<option value="todas">Todas las áreas</option>'
-            + allAreaOrder.map(function(k) { return '<option value="' + k + '">' + allAreaMap[k].replace(/&/g,'&amp;') + '</option>'; }).join('');
+            + allAreaNames.map(function(n) { return '<option value="' + n.replace(/&/g,'&amp;').replace(/"/g,'&quot;') + '">' + n.replace(/&/g,'&amp;') + '</option>'; }).join('');
         if (prevArea && prevArea !== 'todas') { sfa.value = prevArea; }
 
         document.getElementById('filtros-comp-pdf').style.display = '';
@@ -3214,53 +3213,81 @@
             return t > 0 ? Math.round(c / t * 100) : null;
         }
 
+        // Unión de frentes y áreas de ambas inspecciones
+        var allFrentesUnion = [];
+        [reciente, anterior].forEach(function(insp) {
+            (insp.frentes || []).forEach(function(f) {
+                if (f.nombre && allFrentesUnion.indexOf(f.nombre) === -1) allFrentesUnion.push(f.nombre);
+            });
+        });
+        var areasUnicas = [];
+        [reciente, anterior].forEach(function(insp) {
+            (insp.frentes || []).forEach(function(f) {
+                (f.categorias || []).forEach(function(cat) {
+                    if (cat.nombre && areasUnicas.indexOf(cat.nombre) === -1) areasUnicas.push(cat.nombre);
+                });
+            });
+        });
+
+        // Recopilar TODAS sin filtro
         window.graficasComparacionPDF_todas = [];
-        (reciente.frentes || []).forEach(function(fR) {
-            var fA = (anterior.frentes || []).find(function(f) { return f.nombre === fR.nombre; });
-            (fR.categorias || []).forEach(function(catR) {
-                var catA = fA ? (fA.categorias || []).find(function(c) { return c.nombre === catR.nombre; }) : null;
-                var pR = pctCat(catR.items);
+        allFrentesUnion.forEach(function(fNombre) {
+            var fR = (reciente.frentes || []).find(function(f) { return f.nombre === fNombre; });
+            var fA = (anterior.frentes || []).find(function(f) { return f.nombre === fNombre; });
+            areasUnicas.forEach(function(areaNombre) {
+                var catR = fR ? (fR.categorias || []).find(function(c) { return c.nombre === areaNombre; }) : null;
+                var catA = fA ? (fA.categorias || []).find(function(c) { return c.nombre === areaNombre; }) : null;
+                var pR = catR ? pctCat(catR.items) : null;
                 var pA = catA ? pctCat(catA.items) : null;
                 if (pR === null && pA === null) return;
                 var diff = (pR !== null && pA !== null) ? pR - pA : null;
-                window.graficasComparacionPDF_todas.push({ frenteNombre: fR.nombre, areaNombre: catR.nombre, pctReciente: pR, pctAnterior: pA, diff: diff });
+                window.graficasComparacionPDF_todas.push({ frenteNombre: fNombre, areaNombre: areaNombre, pctReciente: pR, pctAnterior: pA, diff: diff });
             });
         });
 
         var pendientes = [];
 
-        (reciente.frentes || []).forEach(function(fR) {
-            if (filtroFrente !== 'todos' && fR.nombre !== filtroFrente) return;
-            var fA = (anterior.frentes || []).find(function(f) { return f.nombre === fR.nombre; });
+        allFrentesUnion.forEach(function(fNombre) {
+            if (filtroFrente !== 'todos' && fNombre !== filtroFrente) return;
+            var fR = (reciente.frentes || []).find(function(f) { return f.nombre === fNombre; });
+            var fA = (anterior.frentes || []).find(function(f) { return f.nombre === fNombre; });
             var frenteHdrCreado = false;
 
-            (fR.categorias || []).forEach(function(catR) {
-                var areaKey = catR.id || catR.nombre;
-                var mostrarArea = filtroArea === 'todas' || areaKey === filtroArea;
+            areasUnicas.forEach(function(areaNombre) {
+                var mostrarArea = filtroArea === 'todas' || areaNombre === filtroArea;
                 if (!mostrarArea) return;
-                var catA = fA ? (fA.categorias || []).find(function(c) { return c.nombre === catR.nombre; }) : null;
-                var pR = pctCat(catR.items);
+                var catR = fR ? (fR.categorias || []).find(function(c) { return c.nombre === areaNombre; }) : null;
+                var catA = fA ? (fA.categorias || []).find(function(c) { return c.nombre === areaNombre; }) : null;
+                var pR = catR ? pctCat(catR.items) : null;
                 var pA = catA ? pctCat(catA.items) : null;
                 if (pR === null && pA === null) return;
-
-                var diff = (pR !== null && pA !== null) ? pR - pA : null;
 
                 // Encabezado de frente (solo la primera vez)
                 if (!frenteHdrCreado) {
                     var fHdr = document.createElement('div');
                     fHdr.style.cssText = 'font-size:0.8rem;font-weight:700;color:#1e3a2f;margin:12px 0 4px;padding:4px 8px;background:#e8f5e9;border-radius:6px;';
-                    fHdr.textContent = '🏗️ ' + fR.nombre;
+                    fHdr.textContent = '🏗️ ' + fNombre;
                     contenedor.appendChild(fHdr);
                     frenteHdrCreado = true;
                 }
 
+                // Solo existe en una inspección
+                if (pR === null || pA === null) {
+                    var noComp = document.createElement('div');
+                    noComp.style.cssText = 'margin-bottom:12px;padding:10px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc;';
+                    noComp.innerHTML = '<span style="font-size:0.78rem;font-weight:600;color:#374151;">' + areaNombre.replace(/&/g,'&amp;') + '</span>'
+                        + '<div style="font-size:0.75rem;color:#94a3b8;margin-top:6px;">Sin datos para comparar (solo existe en una inspección)</div>';
+                    contenedor.appendChild(noComp);
+                    return;
+                }
+
+                var diff = pR - pA;
+
                 // Etiqueta diff
                 var diffLabel = '', diffStyle = '';
-                if (diff !== null) {
-                    if (diff > 0)      { diffLabel = '↑ +' + diff + ' pp'; diffStyle = 'background:#dcfce7;color:#15803d;'; }
-                    else if (diff < 0) { diffLabel = '↓ ' + diff + ' pp';  diffStyle = 'background:#fee2e2;color:#b91c1c;'; }
-                    else               { diffLabel = '= Sin cambio';             diffStyle = 'background:#f3f4f6;color:#6b7280;'; }
-                }
+                if (diff > 0)      { diffLabel = '↑ +' + diff + ' pp'; diffStyle = 'background:#dcfce7;color:#15803d;'; }
+                else if (diff < 0) { diffLabel = '↓ ' + diff + ' pp';  diffStyle = 'background:#fee2e2;color:#b91c1c;'; }
+                else               { diffLabel = '= Sin cambio';        diffStyle = 'background:#f3f4f6;color:#6b7280;'; }
 
                 var chartId = 'cpdf-' + pendientes.length;
 
@@ -3272,7 +3299,7 @@
                 hdrRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;';
                 var areaSpan = document.createElement('span');
                 areaSpan.style.cssText = 'font-size:0.78rem;font-weight:600;color:#374151;';
-                areaSpan.textContent = catR.nombre;
+                areaSpan.textContent = areaNombre;
                 hdrRow.appendChild(areaSpan);
                 if (diffLabel) {
                     var dSpan = document.createElement('span');
@@ -3285,13 +3312,9 @@
                 // Porcentajes 28px side-by-side
                 var pctRow = document.createElement('div');
                 pctRow.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:8px;';
-                pctRow.innerHTML = (pR !== null
-                    ? '<div style="text-align:center;flex:1;"><div style="font-size:28px;font-weight:700;color:#16a34a;line-height:1;">' + pR + '%</div><div style="font-size:0.65rem;color:#16a34a;font-weight:600;margin-top:2px;">Reciente</div></div>'
-                    : '<div style="flex:1;text-align:center;font-size:0.75rem;color:#94a3b8;">N/A<br><span style="font-size:0.65rem;color:#16a34a;">Reciente</span></div>')
+                pctRow.innerHTML = '<div style="text-align:center;flex:1;"><div style="font-size:28px;font-weight:700;color:#16a34a;line-height:1;">' + pR + '%</div><div style="font-size:0.65rem;color:#16a34a;font-weight:600;margin-top:2px;">Reciente</div></div>'
                     + '<div style="color:#94a3b8;font-size:0.9rem;">vs</div>'
-                    + (pA !== null
-                    ? '<div style="text-align:center;flex:1;"><div style="font-size:28px;font-weight:700;color:#b45309;line-height:1;">' + pA + '%</div><div style="font-size:0.65rem;color:#b45309;font-weight:600;margin-top:2px;">Anterior</div></div>'
-                    : '<div style="flex:1;text-align:center;font-size:0.75rem;color:#94a3b8;">N/A<br><span style="font-size:0.65rem;color:#b45309;">Anterior</span></div>');
+                    + '<div style="text-align:center;flex:1;"><div style="font-size:28px;font-weight:700;color:#b45309;line-height:1;">' + pA + '%</div><div style="font-size:0.65rem;color:#b45309;font-weight:600;margin-top:2px;">Anterior</div></div>';
                 wrapper.appendChild(pctRow);
 
                 // Canvas height:150px
@@ -3325,8 +3348,8 @@
                     data: {
                         labels: ['Reciente', 'Anterior'],
                         datasets: [
-                            { label: 'No cumple/Cumplía', data: [pR !== null ? 100 - pR : null, pA !== null ? pA : null], backgroundColor: ['#dc2626', '#f59e0b'] },
-                            { label: 'Cumple', data: [pR !== null ? pR : null, pA !== null ? 100 - pA : null], backgroundColor: ['#16a34a', '#dc2626'] }
+                            { label: 'No cumple/Cumplía', data: [100 - pR, pA], backgroundColor: ['#dc2626', '#f59e0b'] },
+                            { label: 'Cumple', data: [pR, 100 - pA], backgroundColor: ['#16a34a', '#dc2626'] }
                         ]
                     },
                     options: {
@@ -3340,13 +3363,13 @@
                     plugins: [pctPlugin]
                 });
                 window._compPdfCharts.push(ch);
-                pendientes.push({ chartId: chartId, frenteNombre: fR.nombre, areaNombre: catR.nombre, pctR: pR, pctA: pA, diff: diff });
+                pendientes.push({ chartId: chartId, frenteNombre: fNombre, areaNombre: areaNombre, pctR: pR, pctA: pA, diff: diff });
                 setTimeout(function() {
                     ch.resize();
                     var imgData = canvas.toDataURL('image/png');
                     window.graficasComparacionPDF.push({
-                        frenteNombre: fR.nombre,
-                        areaNombre:   catR.nombre,
+                        frenteNombre: fNombre,
+                        areaNombre:   areaNombre,
                         pctReciente:  pR,
                         pctAnterior:  pA,
                         diff:         diff,
