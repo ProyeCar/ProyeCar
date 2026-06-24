@@ -3176,6 +3176,7 @@ if ('serviceWorker' in navigator) {
     }
 
     function generarGraficasComparacionPDF() {
+        document.getElementById('comparacion-box').style.maxHeight = 'none';
         var hist = getHistorial();
         var v1 = document.getElementById('comp-inspeccion-1').value;
         var v2 = document.getElementById('comp-inspeccion-2').value;
@@ -3238,6 +3239,7 @@ if ('serviceWorker' in navigator) {
             box.classList.add('abierto');
         }
         _renderizarCompPdf();
+        document.getElementById('comparacion-box').style.maxHeight = '';
     }
 
     function _renderizarCompPdf() {
