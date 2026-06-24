@@ -3368,15 +3368,17 @@ if ('serviceWorker' in navigator) {
                     + '<div style="text-align:center;flex:1;"><div style="font-size:28px;font-weight:700;color:#b45309;line-height:1;">' + pA + '%</div><div style="font-size:0.65rem;color:#b45309;font-weight:600;margin-top:2px;">Anterior</div></div>';
                 wrapper.appendChild(pctRow);
 
-                // Canvas height:150px
-                var cWrap = document.createElement('div');
-                cWrap.style.cssText = 'position:relative;height:350px;';
+                contenedor.appendChild(wrapper);
+
+                // Contenedor invisible temporal — evita restricciones CSS del comparacion-box
+                var tempDiv = document.createElement('div');
+                tempDiv.style.cssText = 'position:absolute;left:-9999px;top:0;width:700px;';
+                document.body.appendChild(tempDiv);
                 var canvas = document.createElement('canvas');
                 canvas.id = chartId;
-                canvas.width = 700; canvas.height = 350;
-                cWrap.appendChild(canvas);
-                wrapper.appendChild(cWrap);
-                contenedor.appendChild(wrapper);
+                canvas.width = 700;
+                canvas.height = 300;
+                tempDiv.appendChild(canvas);
 
                 var pctPlugin = {
                     id: 'pp_' + chartId,
@@ -3414,7 +3416,7 @@ if ('serviceWorker' in navigator) {
                         ]
                     },
                     options: {
-                        responsive: true, maintainAspectRatio: false,
+                        responsive: false, maintainAspectRatio: false,
                         plugins: { legend: { display: false } },
                         scales: {
                             x: { stacked: true, grid: { display: false }, ticks: { font: { size: 11 } } },
@@ -3426,7 +3428,6 @@ if ('serviceWorker' in navigator) {
                 window._compPdfCharts.push(ch);
                 pendientes.push({ chartId: chartId, frenteNombre: fNombre, areaNombre: areaNombre, pctR: pR, pctA: pA, diff: diff });
                 setTimeout(function() {
-                    ch.resize();
                     var imgData = canvas.toDataURL('image/png');
                     window.graficasComparacionPDF.push({
                         frenteNombre: fNombre,
@@ -3439,6 +3440,7 @@ if ('serviceWorker' in navigator) {
                     if (window.graficasComparacionPDF.length === pendientes.length) {
                         document.getElementById('btn-listo-comparacion').style.display = '';
                     }
+                    document.body.removeChild(tempDiv);
                 }, 500);
             });
         });
