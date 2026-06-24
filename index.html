@@ -3159,15 +3159,31 @@
                 if (f.nombre && allFrenteNames.indexOf(f.nombre) === -1) allFrenteNames.push(f.nombre);
             });
         });
-        // Áreas únicas (union por nombre)
-        var allAreaNames = [];
+        // Áreas únicas — idéntico a renderComparar (captura + orden ORDEN_CAT)
+        var ORDEN_CAT = ['Ambiental', 'SST', 'Jurídica', 'Social', 'Técnica'];
+        var allCatsMap = {}, allCatsOrder = [];
         [reciente, anterior].forEach(function(insp) {
             (insp.frentes || []).forEach(function(f) {
                 (f.categorias || []).forEach(function(cat) {
-                    if (cat.nombre && allAreaNames.indexOf(cat.nombre) === -1) allAreaNames.push(cat.nombre);
+                    var key = cat.id || cat.nombre;
+                    if (key && !allCatsMap[key]) {
+                        allCatsMap[key] = { id: key, nombre: cat.nombre };
+                        allCatsOrder.push(key);
+                    }
                 });
             });
         });
+        var predList = ORDEN_CAT.map(function(n) {
+            var k = allCatsOrder.find(function(k) { return allCatsMap[k].nombre === n; });
+            return k ? allCatsMap[k] : null;
+        }).filter(Boolean);
+        var customList = allCatsOrder.filter(function(k) {
+            return ORDEN_CAT.indexOf(allCatsMap[k].nombre) === -1;
+        }).map(function(k) { return allCatsMap[k]; });
+        var orderedCatList = [].concat(predList, customList);
+        var selectorOpts = orderedCatList.map(function(c) {
+            return '<option value="' + c.id + '">' + c.nombre + '</option>';
+        }).join('');
 
         var sff = document.getElementById('filtro-frente-pdf');
         var prevFrente = sff.value;
@@ -3176,8 +3192,7 @@
         if (prevFrente && prevFrente !== 'todos') { sff.value = prevFrente; }
         var sfa = document.getElementById('filtro-area-pdf');
         var prevArea = sfa.value;
-        sfa.innerHTML = '<option value="todas">Todas las áreas</option>'
-            + allAreaNames.map(function(n) { return '<option value="' + n.replace(/&/g,'&amp;').replace(/"/g,'&quot;') + '">' + n.replace(/&/g,'&amp;') + '</option>'; }).join('');
+        sfa.innerHTML = '<option value="todas">Todas las áreas</option>' + selectorOpts;
         if (prevArea && prevArea !== 'todas') { sfa.value = prevArea; }
 
         document.getElementById('filtros-comp-pdf').style.display = '';
@@ -3254,10 +3269,11 @@
             var frenteHdrCreado = false;
 
             areasUnicas.forEach(function(areaNombre) {
-                var mostrarArea = filtroArea === 'todas' || areaNombre === filtroArea;
-                if (!mostrarArea) return;
                 var catR = fR ? (fR.categorias || []).find(function(c) { return c.nombre === areaNombre; }) : null;
                 var catA = fA ? (fA.categorias || []).find(function(c) { return c.nombre === areaNombre; }) : null;
+                var areaId = (catR && catR.id) || (catA && catA.id) || areaNombre;
+                var mostrarArea = filtroArea === 'todas' || areaId === filtroArea;
+                if (!mostrarArea) return;
                 var pR = catR ? pctCat(catR.items) : null;
                 var pA = catA ? pctCat(catA.items) : null;
                 if (pR === null && pA === null) return;
