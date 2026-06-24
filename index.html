@@ -701,7 +701,7 @@
 </nav>
 
 <script>
-    const APP_VERSION = "1.5.11";
+    const APP_VERSION = "1.5.12";
 
     const PLANTILLAS_AUTO = [
         {
@@ -3171,11 +3171,15 @@
         });
 
         var sff = document.getElementById('filtro-frente-pdf');
+        var prevFrente = sff.value;
         sff.innerHTML = '<option value="todos">Todos los frentes</option>'
             + allFrenteNames.map(function(n) { return '<option value="' + n.replace(/&/g,'&amp;').replace(/"/g,'&quot;') + '">' + n.replace(/&/g,'&amp;') + '</option>'; }).join('');
+        if (prevFrente && prevFrente !== 'todos') { sff.value = prevFrente; }
         var sfa = document.getElementById('filtro-area-pdf');
+        var prevArea = sfa.value;
         sfa.innerHTML = '<option value="todas">Todas las áreas</option>'
             + allAreaOrder.map(function(k) { return '<option value="' + k + '">' + allAreaMap[k].replace(/&/g,'&amp;') + '</option>'; }).join('');
+        if (prevArea && prevArea !== 'todas') { sfa.value = prevArea; }
 
         document.getElementById('filtros-comp-pdf').style.display = '';
         document.getElementById('contenedor-graficas-pdf').innerHTML = '';
@@ -3232,7 +3236,8 @@
 
             (fR.categorias || []).forEach(function(catR) {
                 var areaKey = catR.id || catR.nombre;
-                if (filtroArea !== 'todas' && areaKey !== filtroArea) return;
+                var mostrarArea = filtroArea === 'todas' || areaKey === filtroArea;
+                if (!mostrarArea) return;
                 var catA = fA ? (fA.categorias || []).find(function(c) { return c.nombre === catR.nombre; }) : null;
                 var pR = pctCat(catR.items);
                 var pA = catA ? pctCat(catA.items) : null;
@@ -3450,7 +3455,7 @@
     loadFromLocal();
     actualizarSelectoresCompPdf();
     document.getElementById('filtro-frente-pdf').addEventListener('change', _renderizarCompPdf);
-    document.getElementById('filtro-area-pdf').addEventListener('change', _renderizarCompPdf);
+    document.getElementById('filtro-area-pdf').addEventListener('change', generarGraficasComparacionPDF);
 </script>
 </body>
 </html>
