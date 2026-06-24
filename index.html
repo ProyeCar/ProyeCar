@@ -679,7 +679,7 @@
 </nav>
 
 <script>
-    const APP_VERSION = "1.5.2";
+    const APP_VERSION = "1.5.3";
 
     const PLANTILLAS_AUTO = [
         {
@@ -1588,23 +1588,33 @@
 
     function generarRecomendaciones(idx) {
         var frente = frentes[idx];
-        var items = [];
+        var itemsNoCumple = [];
         frente.categorias.forEach(function(cat) {
             cat.items.forEach(function(it) {
                 if (it.cumple === false) {
-                    var p = buscarPlantilla(it.texto);
-                    var accion = p.noCumple.split('.')[0] + '.';
-                    items.push(accion);
+                    var descripcion;
+                    if (it.obs && it.obs.trim() !== "") {
+                        var primerPunto = it.obs.indexOf('.');
+                        descripcion = primerPunto !== -1 && primerPunto < 120
+                            ? it.obs.substring(0, primerPunto + 1)
+                            : it.obs.substring(0, 120);
+                    } else {
+                        descripcion = buscarPlantilla(it.texto).noCumple.substring(0, 120);
+                    }
+                    itemsNoCumple.push({ texto: it.texto, descripcion: descripcion });
                 }
             });
         });
         var texto;
-        if (items.length === 0) {
-            texto = 'No se identificaron hallazgos de incumplimiento en el frente ' + frente.nombre + ' durante la presente visita de inspección.';
+        if (itemsNoCumple.length === 0) {
+            texto = 'Durante la visita de inspección al frente ' + frente.nombre + ' no se identificaron hallazgos de incumplimiento. Se reconoce la gestión del contratista en el cumplimiento de las obligaciones evaluadas.';
         } else {
-            texto = 'Cordialmente nos permitimos solicitar a la interventoría tomar las medidas necesarias para dar cumplimiento a los siguientes aspectos identificados durante la visita de inspección al frente ' + frente.nombre + ': '
-                + items.map(function(a, i) { return (i+1) + '. ' + a; }).join(' ')
-                + ' Agradecemos su gestión oportuna para subsanar los hallazgos en el menor tiempo posible.';
+            var lista = itemsNoCumple.map(function(it, i) {
+                return (i + 1) + '. ' + it.texto + ': ' + it.descripcion;
+            }).join('\n');
+            texto = 'Cordialmente nos permitimos solicitar a la interventoría gestionar las acciones correctivas necesarias para atender los siguientes hallazgos identificados durante la visita de inspección al frente ' + frente.nombre + ':\n\n'
+                + lista + '\n\n'
+                + 'Agradecemos su oportuna gestión para subsanar los aspectos señalados y garantizar el cumplimiento de las obligaciones contractuales y normativas vigentes.';
         }
         frentes[idx].recomendaciones = texto;
         saveToLocal();
