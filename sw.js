@@ -1,5 +1,4 @@
-const CACHE_VERSION = Date.now();
-const CACHE_NAME = 'cardique-cache-' + CACHE_VERSION;
+const CACHE_NAME = 'cardique-v' + Math.random();
 
 self.addEventListener('install', event => {
   self.skipWaiting();
