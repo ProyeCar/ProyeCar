@@ -726,7 +726,7 @@ if ('serviceWorker' in navigator) {
 </nav>
 
 <script>
-    const APP_VERSION = "1.5.25";
+    const APP_VERSION = "1.5.26";
     console.log('🚀 ProyeCar v' + APP_VERSION + ' cargado');
 
     const PLANTILLAS_AUTO = [
@@ -3685,6 +3685,7 @@ function toggleComparacionSemanal() {
   document.getElementById('comparacion-box').classList.toggle('abierto');
 }
 function abrirModalComparacionSemanal() {
+    alert('Modal abierto');
     var overlay = document.createElement('div');
     overlay.id = 'overlay-comp';
     overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:999;';
