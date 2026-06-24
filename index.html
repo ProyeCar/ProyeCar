@@ -580,6 +580,14 @@
       }
     </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    regs.forEach(reg => reg.unregister());
+  });
+}
+</script>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 </head>
 <body>
 <div id="pantalla-inspeccion" class="pantalla activa"><div class="container">
