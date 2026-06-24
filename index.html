@@ -627,6 +627,28 @@
         <button id="importar-items-custom" class="btn-sec" style="background:linear-gradient(135deg,#0ea5e9,#0284c7);">📥 Importar ítems compartidos</button>
         <button id="exportar-json" class="btn-sec">📥 Exportar respaldo JSON</button>
         <button id="compartir-inspeccion" class="btn-sec" style="background:linear-gradient(135deg,#7c3aed,#a855f7);margin-bottom:8px;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;">🤝 Compartir inspección</button>
+        <div id="seccion-comp-pdf" style="width:100%;margin-bottom:8px;padding:14px 12px;border:1px solid #bbf7d0;border-radius:12px;background:#f0fdf4;">
+            <div style="font-size:0.95rem;font-weight:600;color:#1e3a2f;margin-bottom:10px;">📊 Incluir comparación semanal</div>
+            <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+                <div style="flex:1;min-width:140px;">
+                    <div style="font-size:0.72rem;color:#6b7280;margin-bottom:3px;">Anterior</div>
+                    <select id="comp-inspeccion-1" style="width:100%;padding:6px 10px;border-radius:8px;border:0.5px solid var(--color-border-tertiary);font-size:12px;background:var(--color-background-primary);color:var(--color-text-primary);"><option value="">— Sin comparación —</option></select>
+                </div>
+                <div style="flex:1;min-width:140px;">
+                    <div style="font-size:0.72rem;color:#6b7280;margin-bottom:3px;">Reciente</div>
+                    <select id="comp-inspeccion-2" style="width:100%;padding:6px 10px;border-radius:8px;border:0.5px solid var(--color-border-tertiary);font-size:12px;background:var(--color-background-primary);color:var(--color-text-primary);"><option value="">— Sin comparación —</option></select>
+                </div>
+            </div>
+            <div id="filtros-comp-pdf" style="display:none;margin-bottom:8px;">
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <select id="filtro-frente-pdf" style="flex:1;min-width:140px;padding:6px 10px;border-radius:8px;border:0.5px solid var(--color-border-tertiary);font-size:12px;background:var(--color-background-primary);color:var(--color-text-primary);"><option value="todos">Todos los frentes</option></select>
+                    <select id="filtro-area-pdf" style="flex:1;min-width:140px;padding:6px 10px;border-radius:8px;border:0.5px solid var(--color-border-tertiary);font-size:12px;background:var(--color-background-primary);color:var(--color-text-primary);"><option value="todas">Todas las áreas</option></select>
+                </div>
+            </div>
+            <button onclick="generarGraficasComparacionPDF()" style="font-size:0.8rem;padding:8px 14px;background:#1e6f3f;border-radius:8px;margin-bottom:6px;width:100%;">🔄 Generar</button>
+            <div id="contenedor-graficas-pdf"></div>
+            <button id="btn-listo-comparacion" style="display:none;font-size:0.8rem;padding:8px 14px;background:#16a34a;border-radius:8px;margin-top:6px;width:100%;" onclick="generarInformeConComparacion()">✅ Listo — Generar informe con comparación</button>
+        </div>
         <button id="generar-pdf" class="btn-pdf">📄 Generar Informe para Dirección</button>
         <button id="reset-global" class="btn-peligro">🔄 Reiniciar todo</button>
         <button id="guardar-manual" style="background:#2c5e3f;">💾 Guardar manualmente</button>
@@ -679,7 +701,7 @@
 </nav>
 
 <script>
-    const APP_VERSION = "1.5.6";
+    const APP_VERSION = "1.5.7";
 
     const PLANTILLAS_AUTO = [
         {
@@ -2519,6 +2541,27 @@
             h += '</div>'; // fin frente-pg
         }
 
+        // Comparación semanal (si generarInformeConComparacion la activó)
+        if (window.graficasComparacionPDF && window.graficasComparacionPDF.length > 0) {
+            var compD = window._compPdfData || {};
+            var fechaComp1 = compD.anterior ? (compD.anterior.fecha || '') : '';
+            var fechaComp2 = compD.reciente ? (compD.reciente.fecha || '') : '';
+            h += '<div style="page-break-before:always;margin-top:20px;">';
+            h += '<h3 style="font-size:12pt;font-weight:600;margin-bottom:12px;color:#1e3a2f;">Comparaci&oacute;n semanal: ' + esc(fechaComp1) + ' vs ' + esc(fechaComp2) + '</h3>';
+            window.graficasComparacionPDF.forEach(function(g) {
+                var diff = (g.pctReciente !== null && g.pctAnterior !== null) ? (g.pctReciente - g.pctAnterior) : null;
+                var diffStr = diff !== null ? ' (' + (diff >= 0 ? '↑ +' : '↓ ') + diff + ' pp)' : '';
+                h += '<div style="margin-bottom:16px;">';
+                h += '<p style="font-size:9pt;color:#666;margin:0 0 4px;">' + esc(g.frenteNombre) + ' &mdash; ' + esc(g.areaNombre) + ': '
+                    + (g.pctReciente !== null ? g.pctReciente + '%' : 'N/A') + ' vs '
+                    + (g.pctAnterior !== null ? g.pctAnterior + '%' : 'N/A') + diffStr + '</p>';
+                h += '<img src="' + g.imgData + '" style="width:100%;border:1px solid #e2e8f0;border-radius:6px;display:block;"/>';
+                h += '</div>';
+            });
+            h += '</div>';
+            window.graficasComparacionPDF = null;
+        }
+
         h += '<\/body><\/html>';
 
         // ── 9. Abrir informe ──
@@ -3099,7 +3142,181 @@
         renderResultados('todos', 'todas');
     };
 
+    // ── Comparación semanal en PDF ──
+    function actualizarSelectoresCompPdf() {
+        var hist = getHistorial();
+        var opts = '<option value="">— Sin comparación —</option>'
+            + hist.map(function(r, i) {
+                return '<option value="' + i + '">' + (r.fecha || 'Sin fecha') + ' — ' + (r.proyecto || 'Sin nombre') + '</option>';
+            }).join('');
+        var s1 = document.getElementById('comp-inspeccion-1');
+        var s2 = document.getElementById('comp-inspeccion-2');
+        if (s1) s1.innerHTML = opts;
+        if (s2) s2.innerHTML = opts;
+    }
+
+    function generarGraficasComparacionPDF() {
+        var hist = getHistorial();
+        var v1 = document.getElementById('comp-inspeccion-1').value;
+        var v2 = document.getElementById('comp-inspeccion-2').value;
+        if (v1 === '' || v2 === '') { alert('Selecciona dos inspecciones para comparar.'); return; }
+        if (v1 === v2) { alert('Selecciona dos inspecciones diferentes.'); return; }
+        var inspA = hist[parseInt(v1)], inspB = hist[parseInt(v2)];
+        var fechaA = new Date(inspA.fecha || 0), fechaB = new Date(inspB.fecha || 0);
+        var reciente = fechaA >= fechaB ? inspA : inspB;
+        var anterior  = fechaA >= fechaB ? inspB : inspA;
+
+        var allFrenteNames = [];
+        [reciente, anterior].forEach(function(insp) {
+            (insp.frentes || []).forEach(function(f) {
+                if (f.nombre && allFrenteNames.indexOf(f.nombre) === -1) allFrenteNames.push(f.nombre);
+            });
+        });
+        var allAreaMap = {}, allAreaOrder = [];
+        [reciente, anterior].forEach(function(insp) {
+            (insp.frentes || []).forEach(function(f) {
+                (f.categorias || []).forEach(function(cat) {
+                    var k = cat.id || cat.nombre;
+                    if (k && !allAreaMap[k]) { allAreaMap[k] = cat.nombre; allAreaOrder.push(k); }
+                });
+            });
+        });
+
+        var sff = document.getElementById('filtro-frente-pdf');
+        sff.innerHTML = '<option value="todos">Todos los frentes</option>'
+            + allFrenteNames.map(function(n) { return '<option value="' + n.replace(/&/g,'&amp;').replace(/"/g,'&quot;') + '">' + n.replace(/&/g,'&amp;') + '</option>'; }).join('');
+        var sfa = document.getElementById('filtro-area-pdf');
+        sfa.innerHTML = '<option value="todas">Todas las áreas</option>'
+            + allAreaOrder.map(function(k) { return '<option value="' + k + '">' + allAreaMap[k].replace(/&/g,'&amp;') + '</option>'; }).join('');
+
+        document.getElementById('filtros-comp-pdf').style.display = '';
+        window._compPdfData = { reciente: reciente, anterior: anterior };
+        _renderizarCompPdf();
+    }
+
+    function _renderizarCompPdf() {
+        if (!window._compPdfData) return;
+        var reciente = window._compPdfData.reciente;
+        var anterior = window._compPdfData.anterior;
+        var filtroFrente = document.getElementById('filtro-frente-pdf').value;
+        var filtroArea   = document.getElementById('filtro-area-pdf').value;
+
+        if (window._compPdfCharts) {
+            window._compPdfCharts.forEach(function(ch) { try { ch.destroy(); } catch(e) {} });
+        }
+        window._compPdfCharts = [];
+
+        var contenedor = document.getElementById('contenedor-graficas-pdf');
+        contenedor.innerHTML = '';
+
+        function pctCat(items) {
+            var c = 0, t = 0;
+            (items || []).forEach(function(it) {
+                if (it.cumple === true) { c++; t++; }
+                else if (it.cumple === false) { t++; }
+            });
+            return t > 0 ? Math.round(c / t * 100) : null;
+        }
+
+        var pendientes = [];
+
+        (reciente.frentes || []).forEach(function(fR) {
+            if (filtroFrente !== 'todos' && fR.nombre !== filtroFrente) return;
+            var fA = (anterior.frentes || []).find(function(f) { return f.nombre === fR.nombre; });
+            (fR.categorias || []).forEach(function(catR) {
+                var areaKey = catR.id || catR.nombre;
+                if (filtroArea !== 'todas' && areaKey !== filtroArea) return;
+                var catA = fA ? (fA.categorias || []).find(function(c) { return c.nombre === catR.nombre; }) : null;
+                var pR = pctCat(catR.items);
+                var pA = catA ? pctCat(catA.items) : null;
+                if (pR === null && pA === null) return;
+
+                var chartId = 'cpdf-' + pendientes.length;
+                var wrapper = document.createElement('div');
+                wrapper.style.cssText = 'margin-bottom:10px;padding:8px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;';
+                var lbl = document.createElement('div');
+                lbl.style.cssText = 'font-size:0.75rem;font-weight:600;color:#1e3a2f;margin-bottom:4px;';
+                lbl.textContent = fR.nombre + ' — ' + catR.nombre;
+                var cWrap = document.createElement('div');
+                cWrap.style.cssText = 'position:relative;height:90px;';
+                var canvas = document.createElement('canvas');
+                canvas.id = chartId;
+                cWrap.appendChild(canvas);
+                wrapper.appendChild(lbl);
+                wrapper.appendChild(cWrap);
+                contenedor.appendChild(wrapper);
+
+                var pctPlugin = {
+                    id: 'pp_' + chartId,
+                    afterDraw: function(chart) {
+                        var ctx = chart.ctx;
+                        chart.data.datasets.forEach(function(ds, di) {
+                            chart.getDatasetMeta(di).data.forEach(function(bar, bi) {
+                                var v = ds.data[bi];
+                                if (!v || v < 8) return;
+                                ctx.save(); ctx.fillStyle = '#fff'; ctx.font = 'bold 10px sans-serif';
+                                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                                ctx.fillText(v + '%', bar.x, (bar.y + bar.base) / 2);
+                                ctx.restore();
+                            });
+                        });
+                    }
+                };
+                var ch = new Chart(canvas, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Reciente', 'Anterior'],
+                        datasets: [
+                            { label: 'Cumple', data: [pR, pA], backgroundColor: ['#16a34a', '#f59e0b'] },
+                            { label: 'No cumple', data: [pR !== null ? 100 - pR : null, pA !== null ? 100 - pA : null], backgroundColor: ['#dc2626', '#dc2626'] }
+                        ]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 } } },
+                            y: { stacked: true, min: 0, max: 100, ticks: { callback: function(v) { return v + '%'; }, font: { size: 9 } } }
+                        }
+                    },
+                    plugins: [pctPlugin]
+                });
+                window._compPdfCharts.push(ch);
+                pendientes.push({ chartId: chartId, frenteNombre: fR.nombre, areaNombre: catR.nombre, pctR: pR, pctA: pA });
+            });
+        });
+
+        if (pendientes.length === 0) {
+            contenedor.innerHTML = '<div style="font-size:0.8rem;color:#6b7280;padding:8px 0;">Sin datos para mostrar con los filtros actuales.</div>';
+            document.getElementById('btn-listo-comparacion').style.display = 'none';
+            window.graficasComparacionPDF = [];
+            return;
+        }
+
+        setTimeout(function() {
+            window.graficasComparacionPDF = pendientes.map(function(p) {
+                var c = document.getElementById(p.chartId);
+                return {
+                    frenteNombre: p.frenteNombre,
+                    areaNombre:   p.areaNombre,
+                    pctReciente:  p.pctR,
+                    pctAnterior:  p.pctA,
+                    imgData:      c ? c.toDataURL('image/png') : ''
+                };
+            });
+            document.getElementById('btn-listo-comparacion').style.display = '';
+        }, 400);
+    }
+
+    function generarInformeConComparacion() {
+        window._pdfWin = window.open('', '_blank');
+        generarInformeDireccion();
+    }
+
     loadFromLocal();
+    actualizarSelectoresCompPdf();
+    document.getElementById('filtro-frente-pdf').addEventListener('change', _renderizarCompPdf);
+    document.getElementById('filtro-area-pdf').addEventListener('change', _renderizarCompPdf);
 </script>
 </body>
 </html>
