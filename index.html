@@ -679,7 +679,7 @@
 </nav>
 
 <script>
-    const APP_VERSION = "1.5.1";
+    const APP_VERSION = "1.5.2";
 
     const PLANTILLAS_AUTO = [
         {
@@ -1192,6 +1192,7 @@
                     // Create obsInput first so btnNo can reference it
                     const obsDiv = document.createElement("div"); obsDiv.className = "item-obs";
                     const obsInput = document.createElement("textarea"); obsInput.placeholder = "Observación del ítem (auto-completa al marcar No cumple)"; obsInput.value = item.obs || "";
+                    obsInput.id = "obs-item-" + idx + "-" + cat.id + "-" + item.id;
                     obsInput.rows = 4; obsInput.style.cssText = "min-height:80px;resize:vertical;";
                     obsInput.oninput = (e) => { item.obs = e.target.value; saveToLocal(); };
 
@@ -1201,7 +1202,11 @@
                         btnSi.classList.add('activo'); btnNo.classList.remove('activo');
                         const sugC = getSugerenciaCumple(item.id);
                         if (sugC) { item.obs = sugC; obsInput.value = sugC; }
-                        else if (!item.obs) { item.obs = "Verificado en campo."; obsInput.value = "Verificado en campo."; }
+                        else if (!item.obs || item.obs.trim() === "") {
+                            item.obs = "Verificado en campo.";
+                            var taObsSi = document.getElementById("obs-item-" + idx + "-" + cat.id + "-" + item.id);
+                            if (taObsSi) taObsSi.value = item.obs;
+                        }
                         obsInput.style.background = '#f0fdf4';
                         setTimeout(() => { obsInput.style.background = ''; }, 2000);
                         saveToLocal();
@@ -1212,11 +1217,12 @@
                         btnNo.classList.add('activo'); btnSi.classList.remove('activo');
                         const sugN = getSugerencia(item.id);
                         if (sugN) { item.obs = sugN; obsInput.value = sugN; }
-                        else if (!item.obs) {
+                        else if (!item.obs || item.obs.trim() === "") {
                             var p = buscarPlantilla(item.texto);
                             var noCumpleTexto = p.noCumple.length > 180 ? p.noCumple.substring(0, 180) : p.noCumple;
-                            var autoObs = noCumpleTexto + " (" + p.norma + ")";
-                            item.obs = autoObs; obsInput.value = autoObs;
+                            item.obs = noCumpleTexto + " (" + p.norma + ")";
+                            var taObsNo = document.getElementById("obs-item-" + idx + "-" + cat.id + "-" + item.id);
+                            if (taObsNo) taObsNo.value = item.obs;
                         }
                         obsInput.style.background = '#fefce8';
                         setTimeout(() => { obsInput.style.background = ''; }, 2000);
