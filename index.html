@@ -672,9 +672,9 @@ if ('serviceWorker' in navigator) {
                 </div>
             </div>
             <button onclick="generarGraficasComparacionPDF()" style="font-size:0.8rem;padding:8px 14px;background:#1e6f3f;border-radius:8px;margin-bottom:6px;width:100%;">🔄 Generar</button>
-            <div id="contenedor-graficas-pdf"></div>
             <button id="btn-listo-comparacion" style="display:none;font-size:0.8rem;padding:8px 14px;background:#16a34a;border-radius:8px;margin-top:6px;width:100%;" onclick="generarInformeConComparacion()">✅ Listo — Generar informe con comparación</button>
         </div>
+        <div id="contenedor-graficas-pdf" style="margin-top:16px;"></div>
         <button id="reset-global" class="btn-peligro">🔄 Reiniciar todo</button>
         <button id="guardar-manual" style="background:#2c5e3f;">💾 Guardar manualmente</button>
         <span id="save-indicator" class="save-indicator"></span>
@@ -726,7 +726,7 @@ if ('serviceWorker' in navigator) {
 </nav>
 
 <script>
-    const APP_VERSION = "1.5.23";
+    const APP_VERSION = "1.5.24";
     console.log('🚀 ProyeCar v' + APP_VERSION + ' cargado');
 
     const PLANTILLAS_AUTO = [
@@ -3239,11 +3239,212 @@ if ('serviceWorker' in navigator) {
     }
 
     function _renderizarCompPdf() {
-        if (!window._compPdfData) { alert('Sin datos'); return; }
+        if (!window._compPdfData) return;
         var reciente = window._compPdfData.reciente;
         var anterior = window._compPdfData.anterior;
+        var filtroFrente = document.getElementById('filtro-frente-pdf').value;
+        var filtroArea   = document.getElementById('filtro-area-pdf').value;
+
+        if (window._compPdfCharts) {
+            window._compPdfCharts.forEach(function(ch) { try { ch.destroy(); } catch(e) {} });
+        }
+        window._compPdfCharts = [];
+        window.graficasComparacionPDF = [];
+        document.getElementById('btn-listo-comparacion').style.display = 'none';
+
         var contenedor = document.getElementById('contenedor-graficas-pdf');
-        contenedor.innerHTML = '<div style="padding:10px;background:#f0fdf4;border-radius:8px;"><strong>✓ Datos cargados:</strong><br/>Reciente: ' + (reciente.proyecto || 'N/A') + '<br/>Anterior: ' + (anterior.proyecto || 'N/A') + '</div>';
+        contenedor.innerHTML = '';
+
+        function pctCat(items) {
+            var c = 0, t = 0;
+            (items || []).forEach(function(it) {
+                if (it.cumple === true) { c++; t++; }
+                else if (it.cumple === false) { t++; }
+            });
+            return t > 0 ? Math.round(c / t * 100) : null;
+        }
+
+        var allFrentesUnion = [];
+        [reciente, anterior].forEach(function(insp) {
+            (insp.frentes || []).forEach(function(f) {
+                if (f.nombre && allFrentesUnion.indexOf(f.nombre) === -1) allFrentesUnion.push(f.nombre);
+            });
+        });
+        var areasUnicas = [];
+        [reciente, anterior].forEach(function(insp) {
+            (insp.frentes || []).forEach(function(f) {
+                (f.categorias || []).forEach(function(cat) {
+                    if (cat.nombre && areasUnicas.indexOf(cat.nombre) === -1) areasUnicas.push(cat.nombre);
+                });
+            });
+        });
+
+        window.graficasComparacionPDF_todas = [];
+        allFrentesUnion.forEach(function(fNombre) {
+            var fR = (reciente.frentes || []).find(function(f) { return f.nombre === fNombre; });
+            var fA = (anterior.frentes || []).find(function(f) { return f.nombre === fNombre; });
+            areasUnicas.forEach(function(areaNombre) {
+                var catR = fR ? (fR.categorias || []).find(function(c) { return c.nombre === areaNombre; }) : null;
+                var catA = fA ? (fA.categorias || []).find(function(c) { return c.nombre === areaNombre; }) : null;
+                var pR = catR ? pctCat(catR.items) : null;
+                var pA = catA ? pctCat(catA.items) : null;
+                if (pR === null && pA === null) return;
+                var diff = (pR !== null && pA !== null) ? pR - pA : null;
+                window.graficasComparacionPDF_todas.push({ frenteNombre: fNombre, areaNombre: areaNombre, pctReciente: pR, pctAnterior: pA, diff: diff });
+            });
+        });
+
+        var pendientes = [];
+
+        allFrentesUnion.forEach(function(fNombre) {
+            if (filtroFrente !== 'todos' && fNombre !== filtroFrente) return;
+            var fR = (reciente.frentes || []).find(function(f) { return f.nombre === fNombre; });
+            var fA = (anterior.frentes || []).find(function(f) { return f.nombre === fNombre; });
+            var frenteHdrCreado = false;
+
+            areasUnicas.forEach(function(areaNombre) {
+                var catR = fR ? (fR.categorias || []).find(function(c) { return c.nombre === areaNombre; }) : null;
+                var catA = fA ? (fA.categorias || []).find(function(c) { return c.nombre === areaNombre; }) : null;
+                var areaId = (catR && catR.id) || (catA && catA.id) || areaNombre;
+                var mostrarArea = filtroArea === 'todas' || areaId === filtroArea;
+                if (!mostrarArea) return;
+                var pR = catR ? pctCat(catR.items) : null;
+                var pA = catA ? pctCat(catA.items) : null;
+                if (pR === null && pA === null) return;
+
+                if (!frenteHdrCreado) {
+                    var fHdr = document.createElement('div');
+                    fHdr.style.cssText = 'font-size:0.8rem;font-weight:700;color:#1e3a2f;margin:12px 0 4px;padding:4px 8px;background:#e8f5e9;border-radius:6px;';
+                    fHdr.textContent = '🏗️ ' + fNombre;
+                    contenedor.appendChild(fHdr);
+                    frenteHdrCreado = true;
+                }
+
+                if (pR === null || pA === null) {
+                    var noComp = document.createElement('div');
+                    noComp.style.cssText = 'margin-bottom:12px;padding:10px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc;';
+                    noComp.innerHTML = '<span style="font-size:0.78rem;font-weight:600;color:#374151;">' + areaNombre.replace(/&/g,'&amp;') + '</span>'
+                        + '<div style="font-size:0.75rem;color:#94a3b8;margin-top:6px;">Sin datos para comparar (solo existe en una inspección)</div>';
+                    contenedor.appendChild(noComp);
+                    return;
+                }
+
+                var diff = pR - pA;
+                var diffLabel = '', diffStyle = '';
+                if (diff > 0)      { diffLabel = '↑ +' + diff + ' pp'; diffStyle = 'background:#dcfce7;color:#15803d;'; }
+                else if (diff < 0) { diffLabel = '↓ ' + diff + ' pp';  diffStyle = 'background:#fee2e2;color:#b91c1c;'; }
+                else               { diffLabel = '= Sin cambio';        diffStyle = 'background:#f3f4f6;color:#6b7280;'; }
+
+                var chartId = 'cpdf-' + pendientes.length;
+
+                var wrapper = document.createElement('div');
+                wrapper.style.cssText = 'margin-bottom:12px;padding:10px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc;';
+
+                var hdrRow = document.createElement('div');
+                hdrRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;';
+                var areaSpan = document.createElement('span');
+                areaSpan.style.cssText = 'font-size:0.78rem;font-weight:600;color:#374151;';
+                areaSpan.textContent = areaNombre;
+                hdrRow.appendChild(areaSpan);
+                if (diffLabel) {
+                    var dSpan = document.createElement('span');
+                    dSpan.style.cssText = 'font-size:0.7rem;font-weight:700;padding:2px 8px;border-radius:20px;' + diffStyle;
+                    dSpan.textContent = diffLabel;
+                    hdrRow.appendChild(dSpan);
+                }
+                wrapper.appendChild(hdrRow);
+
+                var pctRow = document.createElement('div');
+                pctRow.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:8px;';
+                pctRow.innerHTML = '<div style="text-align:center;flex:1;"><div style="font-size:28px;font-weight:700;color:#16a34a;line-height:1;">' + pR + '%</div><div style="font-size:0.65rem;color:#16a34a;font-weight:600;margin-top:2px;">Reciente</div></div>'
+                    + '<div style="color:#94a3b8;font-size:0.9rem;">vs</div>'
+                    + '<div style="text-align:center;flex:1;"><div style="font-size:28px;font-weight:700;color:#b45309;line-height:1;">' + pA + '%</div><div style="font-size:0.65rem;color:#b45309;font-weight:600;margin-top:2px;">Anterior</div></div>';
+                wrapper.appendChild(pctRow);
+                contenedor.appendChild(wrapper);
+
+                var tempDiv = document.createElement('div');
+                tempDiv.style.cssText = 'position:absolute;left:-9999px;top:0;width:700px;';
+                document.body.appendChild(tempDiv);
+                var canvas = document.createElement('canvas');
+                canvas.id = chartId;
+                canvas.width = 700;
+                canvas.height = 300;
+                tempDiv.appendChild(canvas);
+
+                var pctPlugin = {
+                    id: 'pp_' + chartId,
+                    afterDraw: function(chart) {
+                        var ctx = chart.ctx;
+                        chart.data.datasets.forEach(function(ds, di) {
+                            chart.getDatasetMeta(di).data.forEach(function(bar, bi) {
+                                var v = ds.data[bi];
+                                if (!v || v < 8) return;
+                                ctx.save(); ctx.fillStyle = '#fff'; ctx.font = 'bold 11px sans-serif';
+                                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                                ctx.fillText(v + '%', bar.x, (bar.y + bar.base) / 2);
+                                ctx.restore();
+                            });
+                        });
+                    }
+                };
+                var cumpleReciente = pR, noCumpleReciente = 100 - pR;
+                var cumpleAnterior = pA, noCumpleAnterior = 100 - pA;
+                var menorReciente = Math.min(cumpleReciente, noCumpleReciente);
+                var mayorReciente = Math.max(cumpleReciente, noCumpleReciente);
+                var menorAnterior = Math.min(cumpleAnterior, noCumpleAnterior);
+                var mayorAnterior = Math.max(cumpleAnterior, noCumpleAnterior);
+                var colorMenorReciente = cumpleReciente < noCumpleReciente ? '#16a34a' : '#dc2626';
+                var colorMayorReciente = cumpleReciente > noCumpleReciente ? '#16a34a' : '#dc2626';
+                var colorMenorAnterior = cumpleAnterior < noCumpleAnterior ? '#f59e0b' : '#dc2626';
+                var colorMayorAnterior = cumpleAnterior > noCumpleAnterior ? '#f59e0b' : '#dc2626';
+                pendientes.push({ chartId: chartId, frenteNombre: fNombre, areaNombre: areaNombre, pctR: pR, pctA: pA, diff: diff });
+                var captured = false;
+                var ch = new Chart(canvas, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Reciente', 'Anterior'],
+                        datasets: [
+                            { label: 'Menor', data: [menorReciente, menorAnterior], backgroundColor: [colorMenorReciente, colorMenorAnterior], borderRadius: 4, barPercentage: 0.6 },
+                            { label: 'Mayor', data: [mayorReciente, mayorAnterior], backgroundColor: [colorMayorReciente, colorMayorAnterior], borderRadius: 4, barPercentage: 0.6 }
+                        ]
+                    },
+                    options: {
+                        responsive: false, maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        animation: {
+                            onComplete: function() {
+                                if (captured) return;
+                                captured = true;
+                                var imgData = canvas.toDataURL('image/png');
+                                window.graficasComparacionPDF.push({
+                                    frenteNombre: fNombre,
+                                    areaNombre:   areaNombre,
+                                    pctReciente:  pR,
+                                    pctAnterior:  pA,
+                                    diff:         diff,
+                                    imgData:      imgData
+                                });
+                                if (window.graficasComparacionPDF.length === pendientes.length) {
+                                    document.getElementById('btn-listo-comparacion').style.display = '';
+                                }
+                                document.body.removeChild(tempDiv);
+                            }
+                        },
+                        scales: {
+                            x: { stacked: true, grid: { display: false }, ticks: { font: { size: 11 } } },
+                            y: { stacked: true, min: 0, max: 100, ticks: { callback: function(v) { return v + '%'; }, font: { size: 10 } } }
+                        }
+                    },
+                    plugins: [pctPlugin]
+                });
+                window._compPdfCharts.push(ch);
+            });
+        });
+
+        if (pendientes.length === 0) {
+            contenedor.innerHTML = '<div style="font-size:0.8rem;color:#6b7280;padding:8px 0;">Sin datos para mostrar con los filtros actuales.</div>';
+            return;
+        }
     }
 
     function generarInformeConComparacion() {
