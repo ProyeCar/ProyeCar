@@ -679,7 +679,7 @@
 </nav>
 
 <script>
-    const APP_VERSION = "1.5";
+    const APP_VERSION = "1.5.1";
 
     const PLANTILLAS_AUTO = [
         {
@@ -1191,7 +1191,8 @@
                     const btnNo = document.createElement("button"); btnNo.innerText = "❌ No cumple"; btnNo.className = `btn-nocumple ${item.cumple === false ? "activo" : ""}`;
                     // Create obsInput first so btnNo can reference it
                     const obsDiv = document.createElement("div"); obsDiv.className = "item-obs";
-                    const obsInput = document.createElement("input"); obsInput.placeholder = "Observación del ítem (auto-completa al marcar No cumple)"; obsInput.value = item.obs || "";
+                    const obsInput = document.createElement("textarea"); obsInput.placeholder = "Observación del ítem (auto-completa al marcar No cumple)"; obsInput.value = item.obs || "";
+                    obsInput.rows = 4; obsInput.style.cssText = "min-height:80px;resize:vertical;";
                     obsInput.oninput = (e) => { item.obs = e.target.value; saveToLocal(); };
 
                     btnSi.onclick = (e) => {
@@ -1200,17 +1201,10 @@
                         btnSi.classList.add('activo'); btnNo.classList.remove('activo');
                         const sugC = getSugerenciaCumple(item.id);
                         if (sugC) { item.obs = sugC; obsInput.value = sugC; }
-                        else { item.obs = ""; obsInput.value = ""; }
+                        else if (!item.obs) { item.obs = "Verificado en campo."; obsInput.value = "Verificado en campo."; }
                         obsInput.style.background = '#f0fdf4';
                         setTimeout(() => { obsInput.style.background = ''; }, 2000);
                         saveToLocal();
-                        var plantilla = buscarPlantilla(item.texto);
-                        var textoNorma = " (" + plantilla.norma + ")";
-                        if (item.cumple === true) { item.obsAuto = plantilla.cumple + textoNorma; }
-                        else if (item.cumple === false) { item.obsAuto = plantilla.noCumple + textoNorma; }
-                        else { item.obsAuto = ""; }
-                        saveToLocal();
-                        renderFrentes();
                     };
                     btnNo.onclick = (e) => {
                         e.preventDefault(); e.stopPropagation();
@@ -1218,17 +1212,15 @@
                         btnNo.classList.add('activo'); btnSi.classList.remove('activo');
                         const sugN = getSugerencia(item.id);
                         if (sugN) { item.obs = sugN; obsInput.value = sugN; }
-                        else { item.obs = ""; obsInput.value = ""; }
+                        else if (!item.obs) {
+                            var p = buscarPlantilla(item.texto);
+                            var noCumpleTexto = p.noCumple.length > 180 ? p.noCumple.substring(0, 180) : p.noCumple;
+                            var autoObs = noCumpleTexto + " (" + p.norma + ")";
+                            item.obs = autoObs; obsInput.value = autoObs;
+                        }
                         obsInput.style.background = '#fefce8';
                         setTimeout(() => { obsInput.style.background = ''; }, 2000);
                         saveToLocal();
-                        var plantilla = buscarPlantilla(item.texto);
-                        var textoNorma = " (" + plantilla.norma + ")";
-                        if (item.cumple === true) { item.obsAuto = plantilla.cumple + textoNorma; }
-                        else if (item.cumple === false) { item.obsAuto = plantilla.noCumple + textoNorma; }
-                        else { item.obsAuto = ""; }
-                        saveToLocal();
-                        renderFrentes();
                     };
                     estadoDiv.appendChild(btnSi); estadoDiv.appendChild(btnNo);
                     const editar = document.createElement("button"); editar.innerHTML = "✏️"; editar.className = "btn-editar";
@@ -1265,17 +1257,6 @@
                         vvInput.oninput = (e) => { item.verificacionVerbal = e.target.value; saveToLocal(); };
                         obsDiv.appendChild(vvInput);
                     }
-                    const obsAutoLabel = document.createElement("div");
-                    obsAutoLabel.style.cssText = "font-size:0.72rem;color:#64748b;margin-top:6px;margin-bottom:2px;";
-                    obsAutoLabel.innerText = "Observación técnica automática";
-                    obsDiv.appendChild(obsAutoLabel);
-                    const obsAutoTA = document.createElement("textarea");
-                    obsAutoTA.id = "obs-auto-" + idx + "-" + cat.id + "-" + item.id;
-                    obsAutoTA.rows = 3;
-                    obsAutoTA.style.cssText = "font-size:0.82rem;border:1px solid #e2e8f0;border-radius:8px;padding:8px;width:100%;box-sizing:border-box;";
-                    obsAutoTA.value = item.obsAuto || "";
-                    obsAutoTA.oninput = (e) => { item.obsAuto = e.target.value; saveToLocal(); };
-                    obsDiv.appendChild(obsAutoTA);
                     itemCard.appendChild(row); itemCard.appendChild(obsDiv);
                     itemsDiv.appendChild(itemCard);
                 });
@@ -1453,52 +1434,20 @@
             fotosDiv.appendChild(btnSubirFotosFrente);
             frenteBody.appendChild(fotosDiv);
 
-            // Resumen ejecutivo automático
-            const resumenAutoDiv = document.createElement("div");
-            resumenAutoDiv.className = "frente-obs-area";
-            const resumenAutoLabelDiv = document.createElement("div");
-            resumenAutoLabelDiv.style.cssText = "font-size:0.72rem;color:#64748b;margin-bottom:4px;display:flex;align-items:center;gap:6px;";
-            resumenAutoLabelDiv.innerText = "Resumen ejecutivo automático";
-            const btnGenResumen = document.createElement("button");
-            btnGenResumen.innerText = "🔄 Generar";
-            btnGenResumen.style.cssText = "font-size:0.72rem;padding:2px 8px;background:#e8f5e9;color:#1a5c32;border:1px solid #a7d7a9;border-radius:6px;cursor:pointer;";
-            btnGenResumen.onclick = () => { generarResumenEjecutivo(idx); };
-            resumenAutoLabelDiv.appendChild(btnGenResumen);
-            resumenAutoDiv.appendChild(resumenAutoLabelDiv);
-            const resumenAutoTA = document.createElement("textarea");
-            resumenAutoTA.rows = 4;
-            resumenAutoTA.style.cssText = "font-size:0.82rem;border:1px solid #e2e8f0;border-radius:8px;padding:8px;width:100%;box-sizing:border-box;";
-            resumenAutoTA.value = frente.resumenAuto || "";
-            resumenAutoTA.oninput = (e) => { frentes[idx].resumenAuto = e.target.value; saveToLocal(); };
-            resumenAutoDiv.appendChild(resumenAutoTA);
-            frenteBody.appendChild(resumenAutoDiv);
-
-            // Recomendaciones a interventoría (automático)
-            const recomAutoDiv = document.createElement("div");
-            recomAutoDiv.className = "frente-obs-area";
-            const recomAutoLabelDiv = document.createElement("div");
-            recomAutoLabelDiv.style.cssText = "font-size:0.72rem;color:#64748b;margin-bottom:4px;display:flex;align-items:center;gap:6px;";
-            recomAutoLabelDiv.innerText = "Recomendaciones a interventoría (automático)";
-            const btnGenRecom = document.createElement("button");
-            btnGenRecom.innerText = "🔄 Generar";
-            btnGenRecom.style.cssText = "font-size:0.72rem;padding:2px 8px;background:#e8f5e9;color:#1a5c32;border:1px solid #a7d7a9;border-radius:6px;cursor:pointer;";
-            btnGenRecom.onclick = () => { generarRecomendaciones(idx); };
-            recomAutoLabelDiv.appendChild(btnGenRecom);
-            recomAutoDiv.appendChild(recomAutoLabelDiv);
-            const recomAutoTA = document.createElement("textarea");
-            recomAutoTA.rows = 4;
-            recomAutoTA.style.cssText = "font-size:0.82rem;border:1px solid #e2e8f0;border-radius:8px;padding:8px;width:100%;box-sizing:border-box;";
-            recomAutoTA.value = frente.recomAuto || "";
-            recomAutoTA.oninput = (e) => { frentes[idx].recomAuto = e.target.value; saveToLocal(); };
-            recomAutoDiv.appendChild(recomAutoTA);
-            frenteBody.appendChild(recomAutoDiv);
-
             // Observaciones específicas
             const obsEspecificasDiv = document.createElement("div");
             obsEspecificasDiv.className = "frente-obs-area";
+            const obsTituloRow = document.createElement("div");
+            obsTituloRow.style.cssText = "display:flex;align-items:center;gap:6px;margin-bottom:4px;";
             const obsTitulo = document.createElement("h4");
             obsTitulo.innerText = "📝 Observaciones";
-            obsEspecificasDiv.appendChild(obsTitulo);
+            obsTituloRow.appendChild(obsTitulo);
+            const btnGenResumen = document.createElement("button");
+            btnGenResumen.innerText = "🔄 Generar";
+            btnGenResumen.style.cssText = "font-size:0.72rem;padding:2px 8px;background:#e8f5e9;color:#1a5c32;border:1px solid #a7d7a9;border-radius:6px;cursor:pointer;font-weight:normal;";
+            btnGenResumen.onclick = () => { generarResumenEjecutivo(idx); };
+            obsTituloRow.appendChild(btnGenResumen);
+            obsEspecificasDiv.appendChild(obsTituloRow);
             const obsTextarea = document.createElement("textarea");
             obsTextarea.rows = 2;
             obsTextarea.placeholder = "Observaciones particulares...";
@@ -1511,9 +1460,17 @@
             // Recomendaciones (sin "editable")
             const recomendacionesDiv = document.createElement("div");
             recomendacionesDiv.className = "frente-recomendaciones-area";
+            const recTituloRow = document.createElement("div");
+            recTituloRow.style.cssText = "display:flex;align-items:center;gap:6px;margin-bottom:4px;";
             const recTitulo = document.createElement("h4");
             recTitulo.innerText = "📋 Recomendaciones";
-            recomendacionesDiv.appendChild(recTitulo);
+            recTituloRow.appendChild(recTitulo);
+            const btnGenRecom = document.createElement("button");
+            btnGenRecom.innerText = "🔄 Generar";
+            btnGenRecom.style.cssText = "font-size:0.72rem;padding:2px 8px;background:#e8f5e9;color:#1a5c32;border:1px solid #a7d7a9;border-radius:6px;cursor:pointer;font-weight:normal;";
+            btnGenRecom.onclick = () => { generarRecomendaciones(idx); };
+            recTituloRow.appendChild(btnGenRecom);
+            recomendacionesDiv.appendChild(recTituloRow);
             const recTextarea = document.createElement("textarea");
             recTextarea.rows = 3;
             recTextarea.placeholder = "Recomendaciones específicas...";
@@ -1601,7 +1558,7 @@
             + ', se evaluaron ' + total + ' ítem(s) en los componentes ' + catNames.join(', ')
             + '. Se registró un cumplimiento del ' + pct + '%, identificándose ' + noCumple + ' hallazgo(s) de incumplimiento, principalmente en ' + areaMax
             + '. Se requiere atención prioritaria en los aspectos señalados para garantizar el cumplimiento de las obligaciones contractuales y normativas vigentes.';
-        frentes[idx].resumenAuto = texto;
+        frentes[idx].observaciones = texto;
         saveToLocal();
         renderFrentes();
     }
@@ -1626,7 +1583,7 @@
                 + items.map(function(a, i) { return (i+1) + '. ' + a; }).join(' ')
                 + ' Agradecemos su gestión oportuna para subsanar los hallazgos en el menor tiempo posible.';
         }
-        frentes[idx].recomAuto = texto;
+        frentes[idx].recomendaciones = texto;
         saveToLocal();
         renderFrentes();
     }
@@ -2163,7 +2120,6 @@
                     var eb = estadoBadge(item.cumple);
                     var obsText = item.obs ? esc(item.obs) : '<em style="color:#9ca3af">Sin observación</em>';
                     if (item.tipoVerificacion === "verbal" && item.verificacionVerbal) { obsText += '<br><span style="color:#6b7280;font-style:italic">Verificación: '+esc(item.verificacionVerbal)+'</span>'; }
-                    if (item.obsAuto && item.obsAuto.trim()) { obsText += '<br><span style="font-style:italic;font-size:8.5pt;color:#374151">'+esc(item.obsAuto)+'</span>'; }
                     html += '<tr>'
                         + '<td style="font-weight:500"><strong>'+item.id.toUpperCase()+'</strong> — '+esc(item.texto)+'</td>'
                         + '<td><span class="e-badge" style="background:'+eb.bg+';color:'+eb.text+'">'+eb.label+'</span></td>'
@@ -2210,17 +2166,9 @@
                 }
             }
 
-            if (frente.resumenAuto && frente.resumenAuto.trim()) {
-                html += '<div class="sub-t">📊 Resumen Ejecutivo</div>';
-                html += '<div class="obs-box"><strong>Resumen ejecutivo:</strong><br>'+esc(frente.resumenAuto).replace(/\n/g,"<br>")+'</div>';
-            }
             if (frente.observaciones && frente.observaciones.trim()) {
                 html += '<div class="sub-t">📝 Observaciones Específicas del Frente</div>';
                 html += '<div class="obs-box">'+esc(frente.observaciones).replace(/\n/g,"<br>")+'</div>';
-            }
-            if (frente.recomAuto && frente.recomAuto.trim()) {
-                html += '<div class="sub-t">📋 Recomendaciones a Interventoría</div>';
-                html += '<div class="rec-box"><strong>Recomendaciones a interventoría:</strong><br>'+esc(frente.recomAuto).replace(/\n/g,"<br>")+'</div>';
             }
             if (frente.recomendaciones && frente.recomendaciones.trim()) {
                 html += '<div class="sub-t">⚠️ Recomendaciones Técnicas</div>';
@@ -2482,7 +2430,6 @@
                     var it=cat.items[ii],bd=badge(it.cumple);
                     var itObsText=it.obs?esc(it.obs):'<em style="color:#9ca3af">Sin observaci&oacute;n</em>';
                     if(it.tipoVerificacion==="verbal"&&it.verificacionVerbal){itObsText+='<br><span style="color:#6b7280;font-style:italic">Verificación: '+esc(it.verificacionVerbal)+'</span>';}
-                    if(it.obsAuto&&it.obsAuto.trim()){itObsText+='<br><span style="font-style:italic;font-size:8.5pt;color:#374151">'+esc(it.obsAuto)+'</span>';}
                     h += '<tr><td style="font-weight:500"><strong>'+it.id.toUpperCase()+'</strong> — '+esc(it.texto)+'</td>'
                         +'<td><span class="e-badge" style="background:'+bd.bg+';color:'+bd.col+'">'+bd.lbl+'</span></td>'
                         +'<td style="color:#374151;font-size:8.5pt">'+itObsText+'</td></tr>';
@@ -2529,12 +2476,8 @@
             }
 
             // Observaciones y recomendaciones
-            if(fr.resumenAuto && fr.resumenAuto.trim())
-                h += '<div class="sub-t">&#128202; Resumen Ejecutivo</div><div class="obs-box"><strong>Resumen ejecutivo:</strong><br>'+esc(fr.resumenAuto).replace(/\n/g,'<br>')+'</div>';
             if(fr.observaciones && fr.observaciones.trim())
                 h += '<div class="sub-t">&#128221; Observaciones</div><div class="obs-box">'+esc(fr.observaciones).replace(/\n/g,'<br>')+'</div>';
-            if(fr.recomAuto && fr.recomAuto.trim())
-                h += '<div class="sub-t">&#128203; Recomendaciones a Interventoría</div><div class="rec-box"><strong>Recomendaciones a interventoría:</strong><br>'+esc(fr.recomAuto).replace(/\n/g,'<br>')+'</div>';
             if(fr.recomendaciones && fr.recomendaciones.trim())
                 h += '<div class="sub-t">&#9888; Recomendaciones</div><div class="rec-box">'+esc(fr.recomendaciones).replace(/\n/g,'<br>')+'</div>';
 
