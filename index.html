@@ -3233,6 +3233,10 @@ if ('serviceWorker' in navigator) {
         document.getElementById('contenedor-graficas-pdf').innerHTML = '';
         document.getElementById('btn-listo-comparacion').style.display = 'none';
         window._compPdfData = { reciente: reciente, anterior: anterior };
+        var box = document.getElementById('comparacion-box');
+        if (box && !box.classList.contains('abierto')) {
+            box.classList.add('abierto');
+        }
         _renderizarCompPdf();
     }
 
