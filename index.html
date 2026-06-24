@@ -701,7 +701,7 @@
 </nav>
 
 <script>
-    const APP_VERSION = "1.5.14";
+    const APP_VERSION = "1.5.15";
 
     const PLANTILLAS_AUTO = [
         {
@@ -3503,6 +3503,35 @@
         window._compPdfHtml = h;
         window._pdfWin = window.open('', '_blank');
         generarInformeDireccion();
+    }
+
+    function abrirComparacionSemanal() {
+        var historial = JSON.parse(localStorage.getItem('cardique_historial') || '[]');
+        var opts = '<option value="">— Sin comparación —</option>'
+            + historial.map(function(r, i) {
+                return '<option value="' + i + '">' + (r.proyecto || 'Sin nombre') + ' — ' + (r.fecha || '') + '</option>';
+            }).join('');
+        var s1 = document.getElementById('comp-inspeccion-1');
+        var s2 = document.getElementById('comp-inspeccion-2');
+        if (s1) s1.innerHTML = opts;
+        if (s2) s2.innerHTML = opts;
+        window.comparacionSemanal = { inspeccion1: null, inspeccion2: null };
+        if (s1) s1.onchange = function() {
+            var idx = parseInt(this.value);
+            window.comparacionSemanal = { inspeccion1: isNaN(idx) ? null : historial[idx], inspeccion2: null };
+        };
+        if (s2) s2.onchange = function() {
+            var idx = parseInt(this.value);
+            if (!window.comparacionSemanal) window.comparacionSemanal = {};
+            window.comparacionSemanal.inspeccion2 = isNaN(idx) ? null : historial[idx];
+        };
+        var btnListo = document.getElementById('btn-listo-comparacion');
+        if (btnListo) {
+            btnListo.onclick = function() {
+                generarGraficasComparacionPDF(window.comparacionSemanal.inspeccion1, window.comparacionSemanal.inspeccion2);
+                window.print();
+            };
+        }
     }
 
     loadFromLocal();
