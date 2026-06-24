@@ -726,7 +726,7 @@ if ('serviceWorker' in navigator) {
 </nav>
 
 <script>
-    const APP_VERSION = "1.5.28";
+    const APP_VERSION = "1.5.29";
     console.log('🚀 ProyeCar v' + APP_VERSION + ' cargado');
 
     const PLANTILLAS_AUTO = [
@@ -3681,6 +3681,14 @@ if ('serviceWorker' in navigator) {
     document.getElementById('filtro-area-pdf').addEventListener('change', generarGraficasComparacionPDF);
 </script>
 <script>
+function generarDesdeModal() {
+    var hist = JSON.parse(localStorage.getItem('cardique_historial') || '[]');
+    var v1 = document.querySelector('#comp-sel-a').value;
+    var v2 = document.querySelector('#comp-sel-b').value;
+    document.getElementById('comp-inspeccion-1').value = v1;
+    document.getElementById('comp-inspeccion-2').value = v2;
+    generarGraficasComparacionPDF();
+}
 function toggleComparacionSemanal() {
   document.getElementById('comparacion-box').classList.toggle('abierto');
 }
@@ -3696,7 +3704,7 @@ function abrirModalComparacionSemanal() {
         + '<div style="clear:both;"></div>'
         + '<label>Anterior:</label><select id="comp-sel-a" style="width:100%;padding:8px;margin-bottom:10px;"><option>-</option></select>'
         + '<label>Reciente:</label><select id="comp-sel-b" style="width:100%;padding:8px;margin-bottom:10px;"><option>-</option></select>'
-        + '<button onclick="generarGraficasComparacionPDF()" style="width:100%;padding:10px;background:#16a34a;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">Generar</button>'
+        + '<button onclick="generarDesdeModal()" style="width:100%;padding:10px;background:#16a34a;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">Generar</button>'
         + '<div id="modal-graficas" style="margin-top:16px;"></div>';
 
     var hist = JSON.parse(localStorage.getItem('cardique_historial') || '[]');
