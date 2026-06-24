@@ -679,7 +679,7 @@
 </nav>
 
 <script>
-    const APP_VERSION = "1.5.5";
+    const APP_VERSION = "1.5.6";
 
     const PLANTILLAS_AUTO = [
         {
@@ -2881,12 +2881,27 @@
         }).map(function(k) { return allCatsMap[k]; });
         var orderedCatList = [].concat(predList, customList);
 
-        // Selector de área
+        // Selectores de frente y área
+        var allFrenteNames = [];
+        [reciente, anterior].forEach(function(insp) {
+            (insp.frentes || []).forEach(function(f) {
+                if (f.nombre && allFrenteNames.indexOf(f.nombre) === -1) allFrenteNames.push(f.nombre);
+            });
+        });
+        var selectorFrenteOpts = allFrenteNames.map(function(n) {
+            return '<option value="' + n.replace(/&/g,'&amp;').replace(/"/g,'&quot;') + '">' + n.replace(/&/g,'&amp;') + '</option>';
+        }).join('');
         var selectorOpts = orderedCatList.map(function(c) {
             return '<option value="' + c.id + '">' + c.nombre + '</option>';
         }).join('');
         document.getElementById('comp-resultado').innerHTML =
-            '<div id="selector-area-comparar" style="margin-bottom:16px;">'
+            '<div style="margin-bottom:12px;">'
+            + '<label style="font-size:11px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Filtrar por frente</label>'
+            + '<select id="filtro-frente" style="width:100%;padding:8px 12px;border-radius:8px;border:0.5px solid var(--color-border-tertiary);font-size:13px;background:var(--color-background-primary);color:var(--color-text-primary);">'
+            + '<option value="todos">Todos los frentes</option>'
+            + selectorFrenteOpts
+            + '</select></div>'
+            + '<div id="selector-area-comparar" style="margin-bottom:16px;">'
             + '<label style="font-size:11px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Filtrar por área</label>'
             + '<select id="filtro-area" style="width:100%;padding:8px 12px;border-radius:8px;border:0.5px solid var(--color-border-tertiary);font-size:13px;background:var(--color-background-primary);color:var(--color-text-primary);">'
             + '<option value="todas">Todas las áreas</option>'
@@ -2894,7 +2909,11 @@
             + '</select></div>'
             + '<div id="comp-resultados-body"></div>';
 
-        function renderResultados(filtroArea) {
+        var activeCharts = [];
+
+        function renderResultados(filtroFrente, filtroArea) {
+            activeCharts.forEach(function(ch) { try { ch.destroy(); } catch(e) {} });
+            activeCharts = [];
             var html = '', chartQueue = [];
 
             // Encabezado inspecciones
@@ -2912,6 +2931,7 @@
 
             // PASO 3: frentes de la inspección reciente
             (reciente.frentes || []).forEach(function(fR, fi) {
+                if (filtroFrente !== 'todos' && fR.nombre !== filtroFrente) return;
                 var fA = (anterior.frentes || []).find(function(f) { return f.nombre === fR.nombre; });
                 var catsR = fR.categorias || [], catsA = fA ? (fA.categorias || []) : [];
                 var seenNames = [];
@@ -3029,7 +3049,7 @@
                     if (!canvas) return;
                     var existing = Chart.getChart ? Chart.getChart(canvas) : null;
                     if (existing) existing.destroy();
-                    new Chart(canvas, {
+                    var newChart = new Chart(canvas, {
                         type: 'bar',
                         data: {
                             labels: ['Reciente', 'Anterior'],
@@ -3060,17 +3080,23 @@
                         },
                         plugins: [percentLabelsPlugin]
                     });
+                    activeCharts.push(newChart);
                 });
             }, 0);
         }
 
-        // Evento cambio de filtro — re-renderizar solo resultados
+        // Eventos de cambio de filtro — filtro frente y área combinados
+        document.getElementById('filtro-frente').addEventListener('change', function() {
+            var filtroArea = document.getElementById('filtro-area').value;
+            renderResultados(this.value, filtroArea);
+        });
         document.getElementById('filtro-area').addEventListener('change', function() {
-            renderResultados(this.value);
+            var filtroFrente = document.getElementById('filtro-frente').value;
+            renderResultados(filtroFrente, this.value);
         });
 
-        // Render inicial con todas las áreas
-        renderResultados('todas');
+        // Render inicial
+        renderResultados('todos', 'todas');
     };
 
     loadFromLocal();
