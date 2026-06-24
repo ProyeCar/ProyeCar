@@ -292,8 +292,6 @@
         .btn-pdf:hover { box-shadow: 0 5px 18px rgba(217,119,6,0.4); }
         .btn-peligro { background: linear-gradient(135deg, #b91c1c, #ef4444); box-shadow: 0 3px 12px rgba(185,28,28,0.3); }
         .btn-sec { background: linear-gradient(135deg, #475569, #64748b); box-shadow: 0 3px 12px rgba(71,85,105,0.25); }
-        .comparacion-box { max-height: 0; opacity: 0; overflow: hidden; transition: 0.3s; }
-        .comparacion-box.abierto { max-height: 400px; opacity: 1; }
         .btn-agregar-frente { background: linear-gradient(135deg, #0d3321, #1a5c35); margin-top: 10px; }
         .btn-herramientas-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:12px; width:100%; }
         .btn-h { display:flex !important; flex-direction:column; align-items:center; justify-content:center; width:100% !important; aspect-ratio:1; border-radius:16px !important; padding:10px 4px !important; font-size:0.62rem !important; font-weight:700; letter-spacing:0.3px; gap:6px; min-width:unset; box-shadow:0 4px 14px rgba(0,0,0,0.18) !important; transition:all 0.25s !important; line-height:1.2; text-align:center; }
@@ -644,35 +642,10 @@ if ('serviceWorker' in navigator) {
                 <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
                 Compartir inspección
             </button>
-            <button id="btn-semanal" class="btn-h" style="background:linear-gradient(135deg,#0d9488,#14b8a6);" onclick="abrirModalComparacionSemanal()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-                Incluir comparación semanal
-            </button>
             <button id="generar-pdf" class="btn-h" style="background:linear-gradient(135deg,#d97706,#f59e0b);">
                 <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                 Generar informe para Dirección
             </button>
-        </div>
-        <div id="comparacion-box" class="comparacion-box" style="width:100%;margin-bottom:8px;padding:14px 12px;border:1px solid #bbf7d0;border-radius:12px;background:#f0fdf4;">
-            <div style="font-size:0.95rem;font-weight:600;color:#1e3a2f;margin-bottom:10px;">📊 Incluir comparación semanal</div>
-            <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
-                <div style="flex:1;min-width:140px;">
-                    <div style="font-size:0.72rem;color:#6b7280;margin-bottom:3px;">Anterior</div>
-                    <select id="comp-inspeccion-1" style="width:100%;padding:6px 10px;border-radius:8px;border:0.5px solid var(--color-border-tertiary);font-size:12px;background:var(--color-background-primary);color:var(--color-text-primary);"><option value="">— Sin comparación —</option></select>
-                </div>
-                <div style="flex:1;min-width:140px;">
-                    <div style="font-size:0.72rem;color:#6b7280;margin-bottom:3px;">Reciente</div>
-                    <select id="comp-inspeccion-2" style="width:100%;padding:6px 10px;border-radius:8px;border:0.5px solid var(--color-border-tertiary);font-size:12px;background:var(--color-background-primary);color:var(--color-text-primary);"><option value="">— Sin comparación —</option></select>
-                </div>
-            </div>
-            <div id="filtros-comp-pdf" style="display:none;margin-bottom:8px;">
-                <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                    <select id="filtro-frente-pdf" style="flex:1;min-width:140px;padding:6px 10px;border-radius:8px;border:0.5px solid var(--color-border-tertiary);font-size:12px;background:var(--color-background-primary);color:var(--color-text-primary);"><option value="todos">Todos los frentes</option></select>
-                    <select id="filtro-area-pdf" style="flex:1;min-width:140px;padding:6px 10px;border-radius:8px;border:0.5px solid var(--color-border-tertiary);font-size:12px;background:var(--color-background-primary);color:var(--color-text-primary);"><option value="todas">Todas las áreas</option></select>
-                </div>
-            </div>
-            <button onclick="generarGraficasComparacionPDF()" style="font-size:0.8rem;padding:8px 14px;background:#1e6f3f;border-radius:8px;margin-bottom:6px;width:100%;">🔄 Generar</button>
-            <button id="btn-listo-comparacion" style="display:none;font-size:0.8rem;padding:8px 14px;background:#16a34a;border-radius:8px;margin-top:6px;width:100%;" onclick="generarInformeConComparacion()">✅ Listo — Generar informe con comparación</button>
         </div>
         <div id="contenedor-graficas-pdf" style="margin-top:16px;"></div>
         <button id="reset-global" class="btn-peligro">🔄 Reiniciar todo</button>
@@ -726,7 +699,7 @@ if ('serviceWorker' in navigator) {
 </nav>
 
 <script>
-    const APP_VERSION = "1.5.29";
+    const APP_VERSION = "1.5.30";
     console.log('🚀 ProyeCar v' + APP_VERSION + ' cargado');
 
     const PLANTILLAS_AUTO = [
@@ -3679,44 +3652,6 @@ if ('serviceWorker' in navigator) {
     actualizarSelectoresCompPdf();
     document.getElementById('filtro-frente-pdf').addEventListener('change', _renderizarCompPdf);
     document.getElementById('filtro-area-pdf').addEventListener('change', generarGraficasComparacionPDF);
-</script>
-<script>
-function generarDesdeModal() {
-    var hist = JSON.parse(localStorage.getItem('cardique_historial') || '[]');
-    var v1 = document.querySelector('#comp-sel-a').value;
-    var v2 = document.querySelector('#comp-sel-b').value;
-    document.getElementById('comp-inspeccion-1').value = v1;
-    document.getElementById('comp-inspeccion-2').value = v2;
-    generarGraficasComparacionPDF();
-}
-function toggleComparacionSemanal() {
-  document.getElementById('comparacion-box').classList.toggle('abierto');
-}
-function abrirModalComparacionSemanal() {
-    var overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9998;';
-    overlay.onclick = function() { document.body.removeChild(overlay); document.body.removeChild(modal); };
-
-    var modal = document.createElement('div');
-    modal.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:85%;max-height:80%;background:white;border-radius:12px;padding:16px;z-index:9999;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,0.3);';
-    modal.innerHTML = '<h3 style="margin:0 0 12px;color:#1e3a2f;">Comparación Semanal</h3>'
-        + '<button onclick="this.closest(\'div\').parentElement.previousSibling.remove(); this.closest(\'div\').parentElement.remove();" style="float:right;background:none;border:none;font-size:20px;cursor:pointer;">✕</button>'
-        + '<div style="clear:both;"></div>'
-        + '<label>Anterior:</label><select id="comp-sel-a" style="width:100%;padding:8px;margin-bottom:10px;"><option>-</option></select>'
-        + '<label>Reciente:</label><select id="comp-sel-b" style="width:100%;padding:8px;margin-bottom:10px;"><option>-</option></select>'
-        + '<button onclick="generarDesdeModal()" style="width:100%;padding:10px;background:#16a34a;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">Generar</button>'
-        + '<div id="modal-graficas" style="margin-top:16px;"></div>';
-
-    var hist = JSON.parse(localStorage.getItem('cardique_historial') || '[]');
-    var opciones = hist.map(function(h, i) {
-        return '<option value="' + i + '">' + (h.proyecto || 'Sin nombre') + ' — ' + (h.fecha || '') + '</option>';
-    }).join('');
-    modal.querySelector('#comp-sel-a').innerHTML = opciones;
-    modal.querySelector('#comp-sel-b').innerHTML = opciones;
-
-    document.body.appendChild(overlay);
-    document.body.appendChild(modal);
-}
 </script>
 </body>
 </html>
