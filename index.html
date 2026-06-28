@@ -729,7 +729,7 @@ if ('serviceWorker' in navigator) {
 </nav>
 
 <script>
-    const APP_VERSION = "1.5.34";
+    const APP_VERSION = "1.5.35";
     console.log('🚀 ProyeCar v' + APP_VERSION + ' cargado');
 
     const PLANTILLAS_AUTO = [
@@ -2367,20 +2367,30 @@ if ('serviceWorker' in navigator) {
         var gTot=gC+gN+gS, gPct=gTot>0?parseFloat((gC/gTot*100).toFixed(1)):0;
         var sCol=gPct>=80?'#16a34a':gPct>=50?'#d97706':'#dc2626';
 
-        // ── 6b. Stats por área ──
+        // ── 6b. Stats por área (ítems en eje X) ──
         var catStatsArr = [];
         CATEGORIAS_BASE.forEach(function(catBase) {
-            var catData = { nombre: catBase.nombre, frentes: [] };
-            for (var fi3 = 0; fi3 < frentes.length; fi3++) {
-                var fr3 = frentes[fi3], cat3 = null;
-                for (var ci3 = 0; ci3 < fr3.categorias.length; ci3++) {
-                    if (fr3.categorias[ci3].id === catBase.id) { cat3 = fr3.categorias[ci3]; break; }
+            var itemsData = catBase.items.map(function(itemBase) {
+                var c = 0, n = 0;
+                for (var fi3 = 0; fi3 < frentes.length; fi3++) {
+                    var fr3 = frentes[fi3], cat3 = null;
+                    for (var ci3 = 0; ci3 < fr3.categorias.length; ci3++) {
+                        if (fr3.categorias[ci3].id === catBase.id) { cat3 = fr3.categorias[ci3]; break; }
+                    }
+                    if (cat3) {
+                        for (var ii3 = 0; ii3 < cat3.items.length; ii3++) {
+                            if (cat3.items[ii3].id === itemBase.id) {
+                                if (cat3.items[ii3].cumple === true) c++;
+                                else if (cat3.items[ii3].cumple === false) n++;
+                                break;
+                            }
+                        }
+                    }
                 }
-                var cc3 = 0, cn3 = 0;
-                if (cat3) { cat3.items.forEach(function(it3) { if (it3.cumple === true) cc3++; else if (it3.cumple === false) cn3++; }); }
-                catData.frentes.push({ nombre: fr3.nombre, c: cc3, n: cn3 });
-            }
-            catStatsArr.push(catData);
+                return { id: itemBase.id, texto: itemBase.texto, c: c, n: n };
+            });
+            var hasCalificados = itemsData.some(function(it) { return it.c > 0 || it.n > 0; });
+            catStatsArr.push({ nombre: catBase.nombre, items: itemsData, hasCalificados: hasCalificados });
         });
 
         // ── 7. Helpers ──
@@ -2508,9 +2518,10 @@ if ('serviceWorker' in navigator) {
         h += '<div class="sec-h">2. Cumplimiento por Área</div><div class="sec-b">';
         h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:4px 0;">';
         for (var catI = 0; catI < catStatsArr.length; catI++) {
+            if (!catStatsArr[catI].hasCalificados) continue;
             h += '<div style="border:1px solid #d1fae5;border-radius:10px;padding:12px 14px;background:white;">'
                 + '<div style="font-weight:700;font-size:9.5pt;color:#1e3a2f;margin-bottom:8px;">' + esc(catStatsArr[catI].nombre) + '</div>'
-                + '<div style="position:relative;height:130px;"><canvas id="cat_chart_' + catI + '"></canvas></div>'
+                + '<div style="position:relative;height:140px;"><canvas id="cat_chart_' + catI + '"></canvas></div>'
                 + '</div>';
         }
         h += '</div></div>';
@@ -2605,22 +2616,24 @@ if ('serviceWorker' in navigator) {
             window.graficasComparacionPDF = null;
         }
 
-        // ── Script Chart.js para PDF ──
+        // ── Script Chart.js para PDF (ítems en eje X) ──
         var catJson = JSON.stringify(catStatsArr);
         h += '<script>window.addEventListener("load",function(){'
             + 'if(typeof Chart==="undefined")return;'
+            + 'function trunc(s){return s.length>20?s.substring(0,20)+"...":s;}'
             + 'var d=' + catJson + ';'
             + 'd.forEach(function(cat,ci){'
+            + 'if(!cat.hasCalificados)return;'
             + 'var el=document.getElementById("cat_chart_"+ci);if(!el)return;'
-            + 'var labels=cat.frentes.map(function(f){return f.nombre;});'
-            + 'var cumple=cat.frentes.map(function(f){return f.c;});'
-            + 'var noCumple=cat.frentes.map(function(f){return f.n;});'
+            + 'var labels=cat.items.map(function(it){return trunc(it.texto);});'
+            + 'var cumple=cat.items.map(function(it){return it.c;});'
+            + 'var noCumple=cat.items.map(function(it){return it.n;});'
             + 'new Chart(el,{type:"bar",data:{labels:labels,datasets:['
             + '{label:"Cumple",data:cumple,backgroundColor:"#16a34a",stack:"s"},'
             + '{label:"No Cumple",data:noCumple,backgroundColor:"#dc2626",stack:"s"}'
             + ']},options:{responsive:true,maintainAspectRatio:false,'
             + 'plugins:{legend:{position:"bottom",labels:{font:{family:"Calibri,Arial,sans-serif",size:10}}}},'
-            + 'scales:{x:{stacked:true,ticks:{font:{family:"Calibri,Arial,sans-serif",size:8},maxRotation:40,maxTicksLimit:8}},'
+            + 'scales:{x:{stacked:true,ticks:{font:{family:"Calibri,Arial,sans-serif",size:7},maxRotation:45}},'
             + 'y:{stacked:true,beginAtZero:true,ticks:{stepSize:1,font:{family:"Calibri,Arial,sans-serif",size:9}}}}'
             + '}});'
             + '});'
