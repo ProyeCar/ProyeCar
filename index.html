@@ -729,7 +729,7 @@ if ('serviceWorker' in navigator) {
 </nav>
 
 <script>
-    const APP_VERSION = "1.5.40";
+    const APP_VERSION = "1.5.41";
     console.log('🚀 ProyeCar v' + APP_VERSION + ' cargado');
 
     const PLANTILLAS_AUTO = [
@@ -2626,8 +2626,8 @@ if ('serviceWorker' in navigator) {
             }
             if (arAreas.length > 0) {
                 var arSorted = arAreas.slice().sort(function(a, b) { return b.pct - a.pct; });
-                arAreas.forEach(function(a) { a.rank = arSorted.findIndex(function(s) { return s.nombre === a.nombre; }) + 1; });
-                areaResData.push({ nombre: arfr.nombre, areas: arAreas });
+                arSorted.forEach(function(a, i) { a.rank = i + 1; });
+                areaResData.push({ nombre: arfr.nombre, areas: arSorted });
             }
         }
         if (areaResData.length > 0) {
@@ -2668,6 +2668,18 @@ if ('serviceWorker' in navigator) {
             var arJson = JSON.stringify(areaResData);
             h += '<script>window.addEventListener("load",function(){'
                 + 'if(typeof Chart==="undefined")return;'
+                + 'var pctPlugin={id:"pctLabel",afterDraw:function(chart){'
+                + 'var ctx=chart.ctx,meta=chart.getDatasetMeta(0);'
+                + 'meta.data.forEach(function(bar,i){'
+                + 'var pct=chart.data.datasets[0].data[i];'
+                + 'var col=pct>=70?"#16a34a":pct>=50?"#f59e0b":"#dc2626";'
+                + 'var lbl=pct.toFixed(1)+"%";'
+                + 'ctx.save();ctx.font="bold 11px Calibri,Arial,sans-serif";ctx.textBaseline="middle";'
+                + 'if(pct>=30){ctx.fillStyle="white";ctx.textAlign="right";ctx.fillText(lbl,bar.x-6,bar.y);}'
+                + 'else{ctx.fillStyle=col;ctx.textAlign="left";ctx.fillText(lbl,bar.x+4,bar.y);}'
+                + 'ctx.restore();'
+                + '});'
+                + '}};'
                 + 'var d=' + arJson + ';'
                 + 'd.forEach(function(frData,ardi){'
                 + 'var el=document.getElementById("areares_chart_"+ardi);if(!el)return;'
@@ -2680,7 +2692,7 @@ if ('serviceWorker' in navigator) {
                 + 'plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.parsed.x.toFixed(1)+"%";}}}},'
                 + 'scales:{x:{min:0,max:100,ticks:{callback:function(v){return v+"%";},font:{family:"Calibri,Arial,sans-serif",size:9}}},'
                 + 'y:{ticks:{font:{family:"Calibri,Arial,sans-serif",size:8}}}}'
-                + '}});'
+                + '},plugins:[pctPlugin]});'
                 + '});'
                 + '});<\/script>';
         }
