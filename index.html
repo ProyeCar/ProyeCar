@@ -729,7 +729,7 @@ if ('serviceWorker' in navigator) {
 </nav>
 
 <script>
-    const APP_VERSION = "1.5.37";
+    const APP_VERSION = "1.5.38";
     console.log('🚀 ProyeCar v' + APP_VERSION + ' cargado');
 
     const PLANTILLAS_AUTO = [
@@ -2502,9 +2502,9 @@ if ('serviceWorker' in navigator) {
                 if (cc5 + cn5 > 0) { hasAreaCal = true; break; }
             }
             if (!hasAreaCal) continue;
-            h += '<div style="margin-bottom:22px;page-break-inside:avoid;break-inside:avoid;">';
+            h += '<div style="display:block;overflow:visible;margin-bottom:22px;page-break-inside:avoid;break-inside:avoid;break-before:auto;orphans:4;widows:4;">';
             h += '<div style="font-weight:700;font-size:10pt;color:#1e3a2f;background:#f0fdf4;border-left:4px solid #2b9348;padding:6px 10px;border-radius:0 6px 6px 0;margin-bottom:12px;page-break-after:avoid;">&#127959; ' + esc(frj.nombre) + '</div>';
-            h += '<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:14px;">';
+            h += '<div style="display:block;overflow:visible;">';
             for (var cj = 0; cj < frj.categorias.length; cj++) {
                 var catj = frj.categorias[cj], cc4 = 0, cn4 = 0, cs4 = 0;
                 for (var ij = 0; ij < catj.items.length; ij++) {
@@ -2515,9 +2515,9 @@ if ('serviceWorker' in navigator) {
                 var tot4 = cc4 + cn4 + cs4;
                 var pct4 = parseFloat((cc4 / (cc4 + cn4) * 100).toFixed(1));
                 var col4 = pct4 >= 80 ? '#16a34a' : pct4 >= 50 ? '#d97706' : '#dc2626';
-                h += '<div style="border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;background:white;text-align:center;min-width:280px;flex:1;page-break-inside:avoid;break-inside:avoid;">'
+                h += '<div style="display:block;border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;background:white;text-align:center;width:100%;box-sizing:border-box;margin-bottom:14px;page-break-inside:avoid;break-inside:avoid;break-before:auto;overflow:visible;orphans:4;widows:4;">'
                     + '<div style="font-weight:700;font-size:10pt;color:#1e3a2f;margin-bottom:8px;">' + esc(catj.nombre) + '</div>'
-                    + pie(cc4, cn4, cs4, 180)
+                    + '<div style="display:flex;justify-content:center;margin:0 auto;">' + pie(cc4, cn4, cs4, 160) + '</div>'
                     + '<div style="font-size:14pt;font-weight:800;color:' + col4 + ';margin-top:8px;">' + pct4 + '%</div>'
                     + '<table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:9pt;text-align:left;">'
                     + '<tr><td style="padding:2px 0;">Total</td><td style="text-align:right;font-weight:600;">' + tot4 + '</td></tr>'
