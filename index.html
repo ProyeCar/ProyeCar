@@ -729,7 +729,7 @@ if ('serviceWorker' in navigator) {
 </nav>
 
 <script>
-    const APP_VERSION = "1.5.31";
+    const APP_VERSION = "1.5.34";
     console.log('🚀 ProyeCar v' + APP_VERSION + ' cargado');
 
     const PLANTILLAS_AUTO = [
@@ -2367,6 +2367,22 @@ if ('serviceWorker' in navigator) {
         var gTot=gC+gN+gS, gPct=gTot>0?parseFloat((gC/gTot*100).toFixed(1)):0;
         var sCol=gPct>=80?'#16a34a':gPct>=50?'#d97706':'#dc2626';
 
+        // ── 6b. Stats por área ──
+        var catStatsArr = [];
+        CATEGORIAS_BASE.forEach(function(catBase) {
+            var catData = { nombre: catBase.nombre, frentes: [] };
+            for (var fi3 = 0; fi3 < frentes.length; fi3++) {
+                var fr3 = frentes[fi3], cat3 = null;
+                for (var ci3 = 0; ci3 < fr3.categorias.length; ci3++) {
+                    if (fr3.categorias[ci3].id === catBase.id) { cat3 = fr3.categorias[ci3]; break; }
+                }
+                var cc3 = 0, cn3 = 0;
+                if (cat3) { cat3.items.forEach(function(it3) { if (it3.cumple === true) cc3++; else if (it3.cumple === false) cn3++; }); }
+                catData.frentes.push({ nombre: fr3.nombre, c: cc3, n: cn3 });
+            }
+            catStatsArr.push(catData);
+        });
+
         // ── 7. Helpers ──
         function esc(v) { return (v||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
         function pie(c,n,s,sz) {
@@ -2419,6 +2435,7 @@ if ('serviceWorker' in navigator) {
             + '<meta name="viewport" content="width=device-width,initial-scale=1">'
             + '<title>Informe CARDIQUE</title>'
             + '<style>' + CSS + '<\/style>'
+            + '<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"><\/script>'
             + '<\/head><body>';
 
         // Barra de herramientas (oculta al imprimir)
@@ -2486,6 +2503,17 @@ if ('serviceWorker' in navigator) {
                 +'<td style="text-align:center;font-weight:800;color:'+tbc+'">'+st.pct+'%</td></tr>';
         }
         h += '</tbody></table></div>';
+
+        // ── 8b. Gráficas por área ──
+        h += '<div class="sec-h">2. Cumplimiento por Área</div><div class="sec-b">';
+        h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:4px 0;">';
+        for (var catI = 0; catI < catStatsArr.length; catI++) {
+            h += '<div style="border:1px solid #d1fae5;border-radius:10px;padding:12px 14px;background:white;">'
+                + '<div style="font-weight:700;font-size:9.5pt;color:#1e3a2f;margin-bottom:8px;">' + esc(catStatsArr[catI].nombre) + '</div>'
+                + '<div style="position:relative;height:130px;"><canvas id="cat_chart_' + catI + '"></canvas></div>'
+                + '</div>';
+        }
+        h += '</div></div>';
 
         // Detalle por frente
         for(var fi=0;fi<frentes.length;fi++){
@@ -2576,6 +2604,27 @@ if ('serviceWorker' in navigator) {
             window._compPdfHtml = null;
             window.graficasComparacionPDF = null;
         }
+
+        // ── Script Chart.js para PDF ──
+        var catJson = JSON.stringify(catStatsArr);
+        h += '<script>window.addEventListener("load",function(){'
+            + 'if(typeof Chart==="undefined")return;'
+            + 'var d=' + catJson + ';'
+            + 'd.forEach(function(cat,ci){'
+            + 'var el=document.getElementById("cat_chart_"+ci);if(!el)return;'
+            + 'var labels=cat.frentes.map(function(f){return f.nombre;});'
+            + 'var cumple=cat.frentes.map(function(f){return f.c;});'
+            + 'var noCumple=cat.frentes.map(function(f){return f.n;});'
+            + 'new Chart(el,{type:"bar",data:{labels:labels,datasets:['
+            + '{label:"Cumple",data:cumple,backgroundColor:"#16a34a",stack:"s"},'
+            + '{label:"No Cumple",data:noCumple,backgroundColor:"#dc2626",stack:"s"}'
+            + ']},options:{responsive:true,maintainAspectRatio:false,'
+            + 'plugins:{legend:{position:"bottom",labels:{font:{family:"Calibri,Arial,sans-serif",size:10}}}},'
+            + 'scales:{x:{stacked:true,ticks:{font:{family:"Calibri,Arial,sans-serif",size:8},maxRotation:40,maxTicksLimit:8}},'
+            + 'y:{stacked:true,beginAtZero:true,ticks:{stepSize:1,font:{family:"Calibri,Arial,sans-serif",size:9}}}}'
+            + '}});'
+            + '});'
+            + '});<\/script>';
 
         h += '<\/body><\/html>';
 
