@@ -729,7 +729,7 @@ if ('serviceWorker' in navigator) {
 </nav>
 
 <script>
-    const APP_VERSION = "1.5.39";
+    const APP_VERSION = "1.5.40";
     console.log('🚀 ProyeCar v' + APP_VERSION + ' cargado');
 
     const PLANTILLAS_AUTO = [
@@ -2420,6 +2420,7 @@ if ('serviceWorker' in navigator) {
             + '<meta name="viewport" content="width=device-width,initial-scale=1">'
             + '<title>Informe CARDIQUE</title>'
             + '<style>' + CSS + '<\/style>'
+            + '<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"><\/script>'
             + '<\/head><body>';
 
         // Barra de herramientas (oculta al imprimir)
@@ -2606,6 +2607,82 @@ if ('serviceWorker' in navigator) {
                 h += '<div class="rec-block"><div class="sub-t">&#9888; Recomendaciones</div><div class="rec-box">'+esc(fr.recomendaciones).replace(/\n/g,'<br>')+'</div></div>';
 
             h += '</div>'; // fin frente-pg
+        }
+
+        // ── Sección 3: Resumen comparativo por área por frente ──
+        var areaResData = [];
+        for (var arfi = 0; arfi < frentes.length; arfi++) {
+            var arfr = frentes[arfi], arAreas = [];
+            for (var arci = 0; arci < arfr.categorias.length; arci++) {
+                var arcat = arfr.categorias[arci], arc = 0, arn = 0, ars = 0;
+                for (var arii = 0; arii < arcat.items.length; arii++) {
+                    var arit = arcat.items[arii];
+                    if (arit.cumple === true) arc++; else if (arit.cumple === false) arn++; else ars++;
+                }
+                if (arc + arn === 0) continue;
+                var artot = arc + arn + ars;
+                var arpct = parseFloat((arc / (arc + arn) * 100).toFixed(1));
+                arAreas.push({ nombre: arcat.nombre, c: arc, n: arn, s: ars, tot: artot, pct: arpct });
+            }
+            if (arAreas.length > 0) {
+                var arSorted = arAreas.slice().sort(function(a, b) { return b.pct - a.pct; });
+                arAreas.forEach(function(a) { a.rank = arSorted.findIndex(function(s) { return s.nombre === a.nombre; }) + 1; });
+                areaResData.push({ nombre: arfr.nombre, areas: arAreas });
+            }
+        }
+        if (areaResData.length > 0) {
+            h += '<div class="sec-h" style="page-break-before:always;">3. Resumen Comparativo por &Aacute;rea</div><div class="sec-b">';
+            for (var ardi = 0; ardi < areaResData.length; ardi++) {
+                var arData = areaResData[ardi];
+                var arChH = Math.max(160, arData.areas.length * 36 + 50);
+                h += '<div style="margin-bottom:24px;page-break-inside:avoid;break-inside:avoid;">';
+                h += '<div class="sub-t">&#127959; ' + esc(arData.nombre) + '</div>';
+                h += '<table class="t-res"><thead><tr>'
+                    + '<th style="text-align:left;">&Aacute;rea</th><th>Total</th>'
+                    + '<th style="color:#16a34a;">&#10004; Cumple</th>'
+                    + '<th style="color:#dc2626;">&#10008; No Cumple</th>'
+                    + '<th style="color:#6b7280;">&#9633; Sin Cal.</th>'
+                    + '<th>% Cumplimiento</th><th>Ranking</th>'
+                    + '</tr></thead><tbody>';
+                for (var arri = 0; arri < arData.areas.length; arri++) {
+                    var ara = arData.areas[arri];
+                    var arBg = ara.pct >= 70 ? '#dcfce7' : ara.pct >= 50 ? '#fff7ed' : '#fee2e2';
+                    var arTx = ara.pct >= 70 ? '#166534' : ara.pct >= 50 ? '#92400e' : '#991b1b';
+                    var arMedal = ara.rank === 1 ? '&#129351;' : ara.rank === 2 ? '&#129352;' : ara.rank === 3 ? '&#129353;' : ara.rank + '&ordm;';
+                    h += '<tr>'
+                        + '<td style="font-weight:600;font-size:8.5pt;">' + esc(ara.nombre) + '</td>'
+                        + '<td style="text-align:center;">' + ara.tot + '</td>'
+                        + '<td style="text-align:center;color:#166534;font-weight:700;">' + ara.c + '</td>'
+                        + '<td style="text-align:center;color:#991b1b;font-weight:700;">' + ara.n + '</td>'
+                        + '<td style="text-align:center;color:#6b7280;">' + ara.s + '</td>'
+                        + '<td style="text-align:center;"><span class="e-badge" style="background:' + arBg + ';color:' + arTx + ';">' + ara.pct + '%</span></td>'
+                        + '<td style="text-align:center;font-size:11pt;">' + arMedal + '</td>'
+                        + '</tr>';
+                }
+                h += '</tbody></table>';
+                h += '<div style="position:relative;height:' + arChH + 'px;margin-top:10px;">'
+                    + '<canvas id="areares_chart_' + ardi + '"></canvas></div>';
+                h += '</div>';
+            }
+            h += '</div>';
+            var arJson = JSON.stringify(areaResData);
+            h += '<script>window.addEventListener("load",function(){'
+                + 'if(typeof Chart==="undefined")return;'
+                + 'var d=' + arJson + ';'
+                + 'd.forEach(function(frData,ardi){'
+                + 'var el=document.getElementById("areares_chart_"+ardi);if(!el)return;'
+                + 'var labels=frData.areas.map(function(a){return a.nombre;});'
+                + 'var pcts=frData.areas.map(function(a){return a.pct;});'
+                + 'var colors=pcts.map(function(p){return p>=70?"#16a34a":p>=50?"#f59e0b":"#dc2626";});'
+                + 'new Chart(el,{type:"bar",data:{labels:labels,datasets:[{'
+                + 'label:"%",data:pcts,backgroundColor:colors,barThickness:18,borderRadius:4'
+                + '}]},options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,'
+                + 'plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.parsed.x.toFixed(1)+"%";}}}},'
+                + 'scales:{x:{min:0,max:100,ticks:{callback:function(v){return v+"%";},font:{family:"Calibri,Arial,sans-serif",size:9}}},'
+                + 'y:{ticks:{font:{family:"Calibri,Arial,sans-serif",size:8}}}}'
+                + '}});'
+                + '});'
+                + '});<\/script>';
         }
 
         // Comparación semanal (HTML pre-construido por generarInformeConComparacion)
