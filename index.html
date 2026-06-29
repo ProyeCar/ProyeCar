@@ -729,7 +729,7 @@ if ('serviceWorker' in navigator) {
 </nav>
 
 <script>
-    const APP_VERSION = "1.5.41";
+    const APP_VERSION = "1.5.42";
     console.log('🚀 ProyeCar v' + APP_VERSION + ' cargado');
 
     const PLANTILLAS_AUTO = [
@@ -1027,29 +1027,33 @@ if ('serviceWorker' in navigator) {
             inspector: document.getElementById("inspector").value
         };
     }
+    function extractCustomItems(frentesData) {
+        var result = {};
+        frentesData.forEach(function(fr) {
+            fr.categorias.forEach(function(cat) {
+                var base = CATEGORIAS_BASE.find(function(cb) { return cb.id === cat.id; });
+                var idsBase = base ? base.items.map(function(i) { return i.id; }) : [];
+                var custom = cat.items.filter(function(it) { return !idsBase.includes(it.id); });
+                if (custom.length > 0) {
+                    if (!result[cat.id]) result[cat.id] = [];
+                    custom.forEach(function(it) {
+                        if (!result[cat.id].find(function(x) { return x.id === it.id; })) {
+                            result[cat.id].push({ id: it.id, texto: it.texto, tipoVerificacion: it.tipoVerificacion || "foto" });
+                        }
+                    });
+                }
+            });
+        });
+        return result;
+    }
+
     function saveToLocal() {
         const form = getFormValues();
+        var itemsPersonalizados = extractCustomItems(frentes);
         try {
             const data = { frentes, ...form };
             localStorage.setItem("inspectorFrentesData", JSON.stringify(data));
             showSavedMessage();
-            // Guardar ítems personalizados por categoría en clave separada
-            var itemsPersonalizados = {};
-            frentes.forEach(function(fr) {
-                fr.categorias.forEach(function(cat) {
-                    var base = CATEGORIAS_BASE.find(function(cb) { return cb.id === cat.id; });
-                    var idsBase = base ? base.items.map(function(i) { return i.id; }) : [];
-                    var custom = cat.items.filter(function(it) { return !idsBase.includes(it.id); });
-                    if (custom.length > 0) {
-                        if (!itemsPersonalizados[cat.id]) itemsPersonalizados[cat.id] = [];
-                        custom.forEach(function(it) {
-                            if (!itemsPersonalizados[cat.id].find(function(x) { return x.id === it.id; })) {
-                                itemsPersonalizados[cat.id].push({ id: it.id, texto: it.texto, tipoVerificacion: it.tipoVerificacion || "foto" });
-                            }
-                        });
-                    }
-                });
-            });
             try { localStorage.setItem("proyecar_items_custom", JSON.stringify(itemsPersonalizados)); } catch(e) {}
             return true;
         } catch(e) {
@@ -1057,9 +1061,9 @@ if ('serviceWorker' in navigator) {
                 const dataNoFotos = { frentes: frentes.map(f => ({...f, fotos:[]})), ...form };
                 localStorage.setItem("inspectorFrentesData", JSON.stringify(dataNoFotos));
                 showSavedMessage();
+                try { localStorage.setItem("proyecar_items_custom", JSON.stringify(itemsPersonalizados)); } catch(e2) {}
             } catch(e2) {
                 console.warn("Storage full — datos guardados sin fotos");
-                // frentes en memoria siguen intactos, el PDF los usará directamente
             }
             return true;
         }
@@ -2748,7 +2752,22 @@ if ('serviceWorker' in navigator) {
     }
 
     btnResetGlobal.onclick = () => {
-        if (confirm("⚠️ Reiniciar borrará todos los datos. ¿Continuar?")) {
+        if (confirm("⚠️ Reiniciar borrará todos los datos de inspección. Los ítems personalizados se conservan.\n¿Continuar?")) {
+            // Extraer ítems custom de frentes en memoria ANTES de resetear (fuente más confiable)
+            var customSnapshot = extractCustomItems(frentes);
+            // Completar con lo que haya en localStorage por si hay más ítems guardados
+            try {
+                var lsCustom = JSON.parse(localStorage.getItem("proyecar_items_custom") || "{}");
+                Object.keys(lsCustom).forEach(function(catId) {
+                    if (!customSnapshot[catId]) customSnapshot[catId] = [];
+                    lsCustom[catId].forEach(function(ci) {
+                        if (!customSnapshot[catId].find(function(x) { return x.id === ci.id; })) {
+                            customSnapshot[catId].push(ci);
+                        }
+                    });
+                });
+            } catch(e) {}
+
             localStorage.removeItem("inspectorFrentesData");
             frentes = [
                 { nombre: "Frente 1 - Arroyo Ají Molido", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" },
@@ -2758,26 +2777,22 @@ if ('serviceWorker' in navigator) {
             fechaInput.valueAsDate = new Date();
             ubicacionInput.value = "Jurisdicción CARDIQUE";
             inspectorInput.value = "";
-            // Restaurar ítems personalizados guardados
-            try {
-                var savedCustom = localStorage.getItem("proyecar_items_custom");
-                if (savedCustom) {
-                    var customData = JSON.parse(savedCustom);
-                    frentes.forEach(function(fr) {
-                        fr.categorias.forEach(function(cat) {
-                            var customItems = customData[cat.id];
-                            if (customItems && customItems.length > 0) {
-                                var idsExistentes = cat.items.map(function(i) { return i.id; });
-                                customItems.forEach(function(ci) {
-                                    if (!idsExistentes.includes(ci.id)) {
-                                        cat.items.push({ id: ci.id, texto: ci.texto, cumple: null, obs: "", tipoVerificacion: ci.tipoVerificacion || "foto" });
-                                    }
-                                });
+            // Re-aplicar ítems custom sobre los frentes recién reseteados
+            frentes.forEach(function(fr) {
+                fr.categorias.forEach(function(cat) {
+                    var customItems = customSnapshot[cat.id];
+                    if (customItems && customItems.length > 0) {
+                        var idsExistentes = cat.items.map(function(i) { return i.id; });
+                        customItems.forEach(function(ci) {
+                            if (!idsExistentes.includes(ci.id)) {
+                                cat.items.push({ id: ci.id, texto: ci.texto, cumple: null, obs: "", tipoVerificacion: ci.tipoVerificacion || "foto" });
                             }
                         });
-                    });
-                }
-            } catch(e) {}
+                    }
+                });
+            });
+            // Garantizar que proyecar_items_custom nunca sea borrado por el reset
+            try { localStorage.setItem("proyecar_items_custom", JSON.stringify(customSnapshot)); } catch(e) {}
             renderFrentes();
             saveToLocal();
         }
