@@ -3482,16 +3482,21 @@ if ('serviceWorker' in navigator) {
 
                 var chartId = 'cpdf-' + pendientes.length;
 
-                // ── Power BI: colores variación ──
-                var varColor  = diff > 0 ? '#15803d' : diff < 0 ? '#b91c1c' : '#6b7280';
-                var varBg     = diff > 0 ? '#dcfce7'  : diff < 0 ? '#fee2e2'  : '#f3f4f6';
-                var varBorder = diff > 0 ? '#16a34a'  : diff < 0 ? '#dc2626'  : '#d1d5db';
+                // ── Colores Power BI ──
+                var C_ANT  = '#BA7517';   // naranja Anterior (cumple)
+                var C_REC  = '#27500A';   // verde Reciente (cumple)
+                var C_NC_A = 'rgba(163,45,45,0.45)'; // rojo transp. NoCumple Anterior
+                var C_NC_R = '#A32D2D';   // rojo NoCumple Reciente
+                var varColor  = diff > 0 ? '#27500A' : diff < 0 ? '#A32D2D' : '#6b7280';
+                var varBg     = diff > 0 ? '#e9f5e0'  : diff < 0 ? '#fce8e8'  : '#f3f4f6';
+                var varBorder = diff > 0 ? '#27500A'  : diff < 0 ? '#A32D2D'  : '#d1d5db';
                 var varText   = diff > 0 ? ('↑ +' + diff + ' pp') : diff === 0 ? '= Sin cambio' : ('↓ ' + diff + ' pp');
 
+                // ── Wrapper UI ──
                 var wrapper = document.createElement('div');
                 wrapper.style.cssText = 'margin-bottom:12px;padding:10px;border:1px solid #e2e8f0;border-radius:10px;background:#fff;';
 
-                // Cabecera: nombre área + badge variación
+                // Cabecera
                 var hdrRow = document.createElement('div');
                 hdrRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;';
                 var areaSpan = document.createElement('span');
@@ -3506,17 +3511,17 @@ if ('serviceWorker' in navigator) {
                 }
                 wrapper.appendChild(hdrRow);
 
-                // KPI cards: Anterior | Reciente | Variación
+                // 3 KPI cards: Anterior | Reciente | Variación
                 var kpiRow = document.createElement('div');
                 kpiRow.style.cssText = 'display:flex;gap:6px;margin-bottom:8px;';
                 kpiRow.innerHTML =
-                    '<div style="flex:1;background:#fff7ed;border:1.5px solid #f59e0b;border-radius:8px;padding:6px 4px;text-align:center;">'
-                    +   '<div style="font-size:0.5rem;font-weight:700;color:#b45309;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;">Anterior</div>'
-                    +   '<div style="font-size:20px;font-weight:700;color:#b45309;line-height:1.1;">' + pA + '%</div>'
+                    '<div style="flex:1;background:#fdf3e0;border:1.5px solid ' + C_ANT + ';border-radius:8px;padding:6px 4px;text-align:center;">'
+                    +   '<div style="font-size:0.5rem;font-weight:700;color:' + C_ANT + ';text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;">Anterior</div>'
+                    +   '<div style="font-size:20px;font-weight:700;color:' + C_ANT + ';line-height:1.1;">' + pA + '%</div>'
                     + '</div>'
-                    + '<div style="flex:1;background:#f0fdf4;border:1.5px solid #16a34a;border-radius:8px;padding:6px 4px;text-align:center;">'
-                    +   '<div style="font-size:0.5rem;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;">Reciente</div>'
-                    +   '<div style="font-size:20px;font-weight:700;color:#15803d;line-height:1.1;">' + pR + '%</div>'
+                    + '<div style="flex:1;background:#eaf3e0;border:1.5px solid ' + C_REC + ';border-radius:8px;padding:6px 4px;text-align:center;">'
+                    +   '<div style="font-size:0.5rem;font-weight:700;color:' + C_REC + ';text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;">Reciente</div>'
+                    +   '<div style="font-size:20px;font-weight:700;color:' + C_REC + ';line-height:1.1;">' + pR + '%</div>'
                     + '</div>'
                     + '<div style="flex:1;background:' + varBg + ';border:1.5px solid ' + varBorder + ';border-radius:8px;padding:6px 4px;text-align:center;">'
                     +   '<div style="font-size:0.5rem;font-weight:700;color:' + varColor + ';text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;">Variación</div>'
@@ -3524,50 +3529,53 @@ if ('serviceWorker' in navigator) {
                     + '</div>';
                 wrapper.appendChild(kpiRow);
 
-                // Canvas inline (700×300 px internos → UI y PDF usan el mismo elemento)
-                var chartDiv = document.createElement('div');
-                chartDiv.style.cssText = 'position:relative;height:160px;margin-bottom:8px;';
+                // Área para gráfica (marcador de posición en UI; la imagen real viene del canvas off-screen)
+                var chartPreviewDiv = document.createElement('div');
+                chartPreviewDiv.id = chartId + '-preview';
+                chartPreviewDiv.style.cssText = 'height:170px;background:#f8fafc;border-radius:6px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;';
+                chartPreviewDiv.innerHTML = '<span style="font-size:0.75rem;color:#94a3b8;">Generando gráfica…</span>';
+                wrapper.appendChild(chartPreviewDiv);
+
+                // 4 badges
+                var badgesRow = document.createElement('div');
+                badgesRow.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:4px;';
+                badgesRow.innerHTML =
+                    '<div style="background:#fdf3e0;border-radius:6px;padding:4px 6px;text-align:center;">'
+                    +   '<div style="font-size:0.5rem;color:' + C_ANT + ';font-weight:700;text-transform:uppercase;margin-bottom:1px;">Cumplía Anterior</div>'
+                    +   '<div style="font-size:15px;font-weight:700;color:' + C_ANT + ';">' + pA + '%</div>'
+                    + '</div>'
+                    + '<div style="background:#eaf3e0;border-radius:6px;padding:4px 6px;text-align:center;">'
+                    +   '<div style="font-size:0.5rem;color:' + C_REC + ';font-weight:700;text-transform:uppercase;margin-bottom:1px;">Cumple Reciente</div>'
+                    +   '<div style="font-size:15px;font-weight:700;color:' + C_REC + ';">' + pR + '%</div>'
+                    + '</div>'
+                    + '<div style="background:#fce8e8;border-radius:6px;padding:4px 6px;text-align:center;">'
+                    +   '<div style="font-size:0.5rem;color:#A32D2D;font-weight:700;text-transform:uppercase;margin-bottom:1px;">No Cumple Anterior</div>'
+                    +   '<div style="font-size:15px;font-weight:700;color:#A32D2D;">' + (100 - pA) + '%</div>'
+                    + '</div>'
+                    + '<div style="background:#fce8e8;border-radius:6px;padding:4px 6px;text-align:center;">'
+                    +   '<div style="font-size:0.5rem;color:#A32D2D;font-weight:700;text-transform:uppercase;margin-bottom:1px;">No Cumple Reciente</div>'
+                    +   '<div style="font-size:15px;font-weight:700;color:#A32D2D;">' + (100 - pR) + '%</div>'
+                    + '</div>';
+                wrapper.appendChild(badgesRow);
+                contenedor.appendChild(wrapper);
+
+                // ── Canvas off-screen 700×300 para PDF (calidad de impresión) ──
+                var tempDiv = document.createElement('div');
+                tempDiv.style.cssText = 'position:absolute;left:-9999px;top:0;width:700px;';
+                document.body.appendChild(tempDiv);
                 var canvas = document.createElement('canvas');
                 canvas.id = chartId;
                 canvas.width = 700;
                 canvas.height = 300;
-                canvas.style.width = '100%';
-                canvas.style.height = '100%';
-                chartDiv.appendChild(canvas);
-                wrapper.appendChild(chartDiv);
+                tempDiv.appendChild(canvas);
 
-                // 4 badges: Cumplía anterior | Cumple reciente | No cumple anterior | No cumple reciente
-                var badgesRow = document.createElement('div');
-                badgesRow.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:4px;';
-                badgesRow.innerHTML =
-                    '<div style="background:#fff7ed;border-radius:6px;padding:4px 6px;text-align:center;">'
-                    +   '<div style="font-size:0.5rem;color:#b45309;font-weight:700;text-transform:uppercase;margin-bottom:1px;">Cumplía Anterior</div>'
-                    +   '<div style="font-size:15px;font-weight:700;color:#b45309;">' + pA + '%</div>'
-                    + '</div>'
-                    + '<div style="background:#f0fdf4;border-radius:6px;padding:4px 6px;text-align:center;">'
-                    +   '<div style="font-size:0.5rem;color:#15803d;font-weight:700;text-transform:uppercase;margin-bottom:1px;">Cumple Reciente</div>'
-                    +   '<div style="font-size:15px;font-weight:700;color:#15803d;">' + pR + '%</div>'
-                    + '</div>'
-                    + '<div style="background:#fef2f2;border-radius:6px;padding:4px 6px;text-align:center;">'
-                    +   '<div style="font-size:0.5rem;color:#b91c1c;font-weight:700;text-transform:uppercase;margin-bottom:1px;">No Cumple Anterior</div>'
-                    +   '<div style="font-size:15px;font-weight:700;color:#b91c1c;">' + (100 - pA) + '%</div>'
-                    + '</div>'
-                    + '<div style="background:#fff1f2;border-radius:6px;padding:4px 6px;text-align:center;">'
-                    +   '<div style="font-size:0.5rem;color:#9f1239;font-weight:700;text-transform:uppercase;margin-bottom:1px;">No Cumple Reciente</div>'
-                    +   '<div style="font-size:15px;font-weight:700;color:#9f1239;">' + (100 - pR) + '%</div>'
-                    + '</div>';
-                wrapper.appendChild(badgesRow);
-
-                // El wrapper debe estar en el DOM antes de que Chart.js renderice
-                contenedor.appendChild(wrapper);
-
-                // Plugin: etiquetas % en bold 12px blanco, centradas en cada barra (solo si ≥8%)
+                // Plugin: % bold 12px blanco centrado en barra (solo barras ≥8%)
                 var pctPlugin = {
                     id: 'pp_' + chartId,
                     afterDraw: function(chart) {
                         var ctx = chart.ctx;
                         chart.data.datasets.forEach(function(ds, di) {
-                            if (ds.type === 'line') return; // no etiquetar la línea de tendencia
+                            if (ds.type === 'line') return;
                             chart.getDatasetMeta(di).data.forEach(function(bar, bi) {
                                 var v = ds.data[bi];
                                 if (v === null || v === undefined || v < 8) return;
@@ -3583,10 +3591,6 @@ if ('serviceWorker' in navigator) {
                     }
                 };
 
-                // Barras agrupadas: Anterior izq (naranja cumple + rojo-transp noCumple)
-                //                   Reciente der (verde cumple + rojo noCumple)
-                // Línea punteada de tendencia sobre las barras conectando pA → pR
-                var trendColor = diff > 0 ? '#16a34a' : diff < 0 ? '#dc2626' : '#94a3b8';
                 pendientes.push({ chartId: chartId, frenteNombre: fNombre, areaNombre: areaNombre, pctR: pR, pctA: pA, diff: diff });
                 var captured = false;
                 var ch = new Chart(canvas, {
@@ -3597,33 +3601,31 @@ if ('serviceWorker' in navigator) {
                             {
                                 label: 'Cumple',
                                 data: [pA, pR],
-                                backgroundColor: ['#f59e0b', '#16a34a'],
+                                backgroundColor: [C_ANT, C_REC],
                                 borderRadius: 4,
                                 barPercentage: 0.5,
-                                categoryPercentage: 0.6,
                                 order: 2
                             },
                             {
                                 label: 'No cumple',
                                 data: [100 - pA, 100 - pR],
-                                backgroundColor: ['rgba(220,38,38,0.45)', '#dc2626'],
+                                backgroundColor: [C_NC_A, C_NC_R],
                                 borderRadius: 4,
                                 barPercentage: 0.5,
-                                categoryPercentage: 0.6,
                                 order: 2
                             },
                             {
                                 type: 'line',
                                 label: 'Tendencia',
                                 data: [pA, pR],
-                                borderColor: trendColor,
+                                borderColor: C_REC,
                                 backgroundColor: 'transparent',
-                                borderDash: [5, 5],
+                                borderDash: [6, 4],
                                 borderWidth: 2,
                                 tension: 0.3,
                                 fill: false,
-                                pointBackgroundColor: ['#f59e0b', '#16a34a'],
-                                pointRadius: 5,
+                                pointBackgroundColor: [C_ANT, C_REC],
+                                pointRadius: 6,
                                 pointBorderColor: '#fff',
                                 pointBorderWidth: 2,
                                 order: 1
@@ -3639,6 +3641,15 @@ if ('serviceWorker' in navigator) {
                                 if (captured) return;
                                 captured = true;
                                 var imgData = canvas.toDataURL('image/png');
+                                // Mostrar preview en la UI
+                                var prev = document.getElementById(chartId + '-preview');
+                                if (prev) {
+                                    prev.innerHTML = '';
+                                    var img = document.createElement('img');
+                                    img.src = imgData;
+                                    img.style.cssText = 'width:100%;height:100%;object-fit:contain;border-radius:4px;';
+                                    prev.appendChild(img);
+                                }
                                 window.graficasComparacionPDF.push({
                                     frenteNombre: fNombre,
                                     areaNombre:   areaNombre,
@@ -3650,6 +3661,7 @@ if ('serviceWorker' in navigator) {
                                 if (window.graficasComparacionPDF.length === pendientes.length) {
                                     document.getElementById('btn-listo-comparacion').style.display = '';
                                 }
+                                document.body.removeChild(tempDiv);
                             }
                         },
                         scales: {
