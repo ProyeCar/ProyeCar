@@ -729,7 +729,7 @@ if ('serviceWorker' in navigator) {
 </nav>
 
 <script>
-    const APP_VERSION = "1.5.52";
+    const APP_VERSION = "1.5.53";
     console.log('🚀 ProyeCar v' + APP_VERSION + ' cargado');
 
     const PLANTILLAS_AUTO = [
@@ -3128,6 +3128,7 @@ if ('serviceWorker' in navigator) {
         var reciente = fechaA >= fechaB ? inspA : inspB;
         var anterior  = fechaA >= fechaB ? inspB : inspA;
 
+        window._comparisonData = { reciente: reciente, anterior: anterior, idxReciente: fechaA >= fechaB ? parseInt(idxA) : parseInt(idxB), idxAnterior: fechaA >= fechaB ? parseInt(idxB) : parseInt(idxA) };
         var ORDEN_CAT = ['Ambiental', 'SST', 'Jurídica', 'Social', 'Técnica'];
 
         function pctItems(items) {
@@ -3196,17 +3197,17 @@ if ('serviceWorker' in navigator) {
             activeCharts = [];
             var html = '', chartQueue = [];
 
-            // Encabezado inspecciones
+            // Encabezado inspecciones (Power BI: Anterior izq naranja, Reciente der verde)
             html += '<div style="display:flex;gap:10px;margin-bottom:16px;">'
-                + '<div style="flex:1;background:#f0fdf4;border:2px solid #16a34a;border-radius:12px;padding:12px;">'
-                +   '<div style="font-size:0.65rem;font-weight:700;color:#16a34a;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px;">MÁS RECIENTE</div>'
-                +   '<div style="font-weight:700;font-size:0.9rem;color:#1e3a2f;">' + (reciente.proyecto || 'Sin nombre') + '</div>'
-                +   '<div style="font-size:0.78rem;color:#6b7280;">📅 ' + (reciente.fecha || '') + '</div>'
-                + '</div>'
-                + '<div style="flex:1;background:#fff7ed;border:2px solid #f59e0b;border-radius:12px;padding:12px;">'
-                +   '<div style="font-size:0.65rem;font-weight:700;color:#b45309;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px;">ANTERIOR</div>'
+                + '<div style="flex:1;background:#fff7ed;border:2px solid #BA7517;border-radius:12px;padding:12px;">'
+                +   '<div style="font-size:0.65rem;font-weight:700;color:#BA7517;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px;">ANTERIOR</div>'
                 +   '<div style="font-weight:700;font-size:0.9rem;color:#1e3a2f;">' + (anterior.proyecto || 'Sin nombre') + '</div>'
                 +   '<div style="font-size:0.78rem;color:#6b7280;">📅 ' + (anterior.fecha || '') + '</div>'
+                + '</div>'
+                + '<div style="flex:1;background:#f0fdf4;border:2px solid #27500A;border-radius:12px;padding:12px;">'
+                +   '<div style="font-size:0.65rem;font-weight:700;color:#27500A;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px;">MÁS RECIENTE</div>'
+                +   '<div style="font-weight:700;font-size:0.9rem;color:#1e3a2f;">' + (reciente.proyecto || 'Sin nombre') + '</div>'
+                +   '<div style="font-size:0.78rem;color:#6b7280;">📅 ' + (reciente.fecha || '') + '</div>'
                 + '</div></div>';
 
             // PASO 3: frentes de la inspección reciente
@@ -3245,29 +3246,37 @@ if ('serviceWorker' in navigator) {
                     var catA = catsA.find(function(c) { return c.nombre === catNombre; });
                     var sR = catR ? pctItems(catR.items) : null;
                     var sA = catA ? pctItems(catA.items) : null;
+                    var pA = sA ? sA.pct : 0;
+                    var pR = sR ? sR.pct : 0;
                     var chartId = 'chart_f' + fi + '_c' + ci;
 
                     var varLabel = '';
                     if (sR && sA) {
-                        var diff = sR.pct - sA.pct;
+                        var diff = pR - pA;
                         if (diff > 0)      varLabel = '<span style="background:#dcfce7;color:#15803d;font-size:0.7rem;font-weight:700;padding:2px 8px;border-radius:20px;">↑ Subió ' + diff + ' pp</span>';
                         else if (diff < 0) varLabel = '<span style="background:#fee2e2;color:#b91c1c;font-size:0.7rem;font-weight:700;padding:2px 8px;border-radius:20px;">↓ Bajó ' + Math.abs(diff) + ' pp</span>';
                         else               varLabel = '<span style="background:#f3f4f6;color:#6b7280;font-size:0.7rem;font-weight:700;padding:2px 8px;border-radius:20px;">= Sin cambio</span>';
                     }
 
-                    var colR = sR
-                        ? '<div style="font-size:28px;font-weight:700;color:#16a34a;">' + sR.pct + '%</div>'
-                        + '<div style="font-size:0.7rem;color:#6b7280;margin-top:2px;">✓ ' + sR.pct + '% cumple / ✗ ' + (100 - sR.pct) + '% no cumple</div>'
-                        + '<div style="font-size:0.7rem;color:#16a34a;font-weight:600;margin-top:2px;">Reciente</div>'
-                        : '<div style="font-size:0.8rem;color:#94a3b8;margin-top:8px;">Sin datos para comparar</div>'
-                        + '<div style="font-size:0.7rem;color:#16a34a;font-weight:600;margin-top:2px;">Reciente</div>';
+                    // KPI cards: Anterior (izq, naranja) | vs | Reciente (der, verde)
+                    var kpiA = sA
+                        ? '<div style="font-size:26px;font-weight:800;color:#BA7517;">' + pA + '%</div>'
+                        + '<div style="font-size:0.65rem;font-weight:700;color:#BA7517;text-transform:uppercase;letter-spacing:.04em;margin-top:2px;">ANTERIOR</div>'
+                        : '<div style="font-size:0.8rem;color:#94a3b8;margin-top:6px;">Sin datos</div>'
+                        + '<div style="font-size:0.65rem;font-weight:700;color:#BA7517;text-transform:uppercase;letter-spacing:.04em;margin-top:2px;">ANTERIOR</div>';
 
-                    var colA = sA
-                        ? '<div style="font-size:28px;font-weight:700;color:#b45309;">' + sA.pct + '%</div>'
-                        + '<div style="font-size:0.7rem;color:#6b7280;margin-top:2px;">✓ ' + sA.pct + '% cumple / ✗ ' + (100 - sA.pct) + '% no cumple</div>'
-                        + '<div style="font-size:0.7rem;color:#b45309;font-weight:600;margin-top:2px;">Anterior</div>'
-                        : '<div style="font-size:0.8rem;color:#94a3b8;margin-top:8px;">Sin datos para comparar</div>'
-                        + '<div style="font-size:0.7rem;color:#b45309;font-weight:600;margin-top:2px;">Anterior</div>';
+                    var kpiR = sR
+                        ? '<div style="font-size:26px;font-weight:800;color:#27500A;">' + pR + '%</div>'
+                        + '<div style="font-size:0.65rem;font-weight:700;color:#27500A;text-transform:uppercase;letter-spacing:.04em;margin-top:2px;">RECIENTE</div>'
+                        : '<div style="font-size:0.8rem;color:#94a3b8;margin-top:6px;">Sin datos</div>'
+                        + '<div style="font-size:0.65rem;font-weight:700;color:#27500A;text-transform:uppercase;letter-spacing:.04em;margin-top:2px;">RECIENTE</div>';
+
+                    var badges = (sA || sR) ? '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;justify-content:center;">'
+                        + (sA ? '<span style="background:#fff7ed;color:#BA7517;border:1px solid #BA7517;font-size:0.68rem;font-weight:700;padding:2px 8px;border-radius:20px;">✓ ' + pA + '% ant.</span>' : '')
+                        + (sA ? '<span style="background:#fff1f1;color:#A32D2D;border:1px solid rgba(163,45,45,0.5);font-size:0.68rem;font-weight:700;padding:2px 8px;border-radius:20px;">✗ ' + (100 - pA) + '% ant.</span>' : '')
+                        + (sR ? '<span style="background:#f0fdf4;color:#27500A;border:1px solid #27500A;font-size:0.68rem;font-weight:700;padding:2px 8px;border-radius:20px;">✓ ' + pR + '% rec.</span>' : '')
+                        + (sR ? '<span style="background:#fff1f1;color:#A32D2D;border:1px solid rgba(163,45,45,0.5);font-size:0.68rem;font-weight:700;padding:2px 8px;border-radius:20px;">✗ ' + (100 - pR) + '% rec.</span>' : '')
+                        + '</div>' : '';
 
                     // PASO 5: HTML tarjeta por categoría
                     html += '<div style="background:#fff;border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:12px 14px;margin-bottom:10px;">'
@@ -3275,47 +3284,54 @@ if ('serviceWorker' in navigator) {
                         +   '<span style="font-weight:700;font-size:0.85rem;color:#1e3a2f;">' + catNombre + '</span>'
                         +   varLabel
                         + '</div>'
-                        + '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;">'
-                        +   '<div style="text-align:center;flex:1;">' + colR + '</div>'
-                        +   '<div style="font-size:1.1rem;color:#94a3b8;padding:0 8px;align-self:center;">vs</div>'
-                        +   '<div style="text-align:center;flex:1;">' + colA + '</div>'
+                        + '<div style="display:flex;align-items:center;justify-content:center;gap:20px;margin-bottom:10px;">'
+                        +   '<div style="text-align:center;">' + kpiA + '</div>'
+                        +   '<div style="font-size:1rem;color:#94a3b8;font-weight:300;">vs</div>'
+                        +   '<div style="text-align:center;">' + kpiR + '</div>'
                         + '</div>'
                         + ((sR || sA)
-                            ? '<div style="position:relative;height:120px;"><canvas id="' + chartId + '"></canvas></div>'
+                            ? '<div style="position:relative;height:160px;"><canvas id="' + chartId + '"></canvas></div>'
                             : '<div style="color:#94a3b8;font-size:0.8rem;text-align:center;padding:10px 0;">Sin datos para comparar</div>'
                           )
+                        + badges
                         + '</div>';
 
-                    if (sR || sA) chartQueue.push({ id: chartId, sR: sR, sA: sA });
+                    if (sR || sA) chartQueue.push({ id: chartId, pA: pA, pR: pR });
                 });
             });
 
-            // PASO 6: guía de colores
+            // PASO 6: guía de colores (Power BI)
             html += '<div style="background:#f8fafc;border-radius:12px;padding:12px;margin-top:8px;">'
                 + '<div style="font-size:0.75rem;font-weight:700;color:#374151;margin-bottom:6px;">Guía de colores</div>'
                 + '<div style="display:flex;flex-direction:column;gap:4px;">'
-                +   '<div style="display:flex;align-items:center;gap:6px;font-size:0.75rem;"><div style="width:14px;height:14px;border-radius:3px;background:#16a34a;flex-shrink:0;"></div>Cumple en inspección reciente</div>'
-                +   '<div style="display:flex;align-items:center;gap:6px;font-size:0.75rem;"><div style="width:14px;height:14px;border-radius:3px;background:#dc2626;flex-shrink:0;"></div>No cumple (ambas inspecciones)</div>'
-                +   '<div style="display:flex;align-items:center;gap:6px;font-size:0.75rem;"><div style="width:14px;height:14px;border-radius:3px;background:#f59e0b;flex-shrink:0;"></div>Cumplía en inspección anterior</div>'
+                +   '<div style="display:flex;align-items:center;gap:6px;font-size:0.75rem;"><div style="width:14px;height:14px;border-radius:3px;background:#BA7517;flex-shrink:0;"></div>Cumple — inspección anterior</div>'
+                +   '<div style="display:flex;align-items:center;gap:6px;font-size:0.75rem;"><div style="width:14px;height:14px;border-radius:3px;background:#27500A;flex-shrink:0;"></div>Cumple — inspección reciente</div>'
+                +   '<div style="display:flex;align-items:center;gap:6px;font-size:0.75rem;"><div style="width:14px;height:14px;border-radius:3px;background:rgba(163,45,45,0.45);flex-shrink:0;"></div>No cumple — anterior</div>'
+                +   '<div style="display:flex;align-items:center;gap:6px;font-size:0.75rem;"><div style="width:14px;height:14px;border-radius:3px;background:#A32D2D;flex-shrink:0;"></div>No cumple — reciente</div>'
                 + '</div></div>';
 
             document.getElementById('comp-resultados-body').innerHTML = html;
 
-            // Renderizar gráficas Chart.js
+            // Renderizar gráficas Chart.js (diseño Power BI)
             setTimeout(function() {
                 if (typeof Chart === 'undefined') return;
-                var percentLabelsPlugin = {
-                    id: 'percentLabels',
+                var C_ANT  = '#BA7517';
+                var C_REC  = '#27500A';
+                var C_NC_A = 'rgba(163,45,45,0.45)';
+                var C_NC_R = '#A32D2D';
+                var pctPlugin = {
+                    id: 'pctPlugin',
                     afterDraw: function(chart) {
                         var ctx = chart.ctx;
-                        chart.data.datasets.forEach(function(dataset, di) {
+                        chart.data.datasets.forEach(function(ds, di) {
+                            if (ds.type === 'line') return;
                             var meta = chart.getDatasetMeta(di);
                             meta.data.forEach(function(bar, bi) {
-                                var value = dataset.data[bi];
+                                var value = ds.data[bi];
                                 if (!value || value < 8) return;
                                 ctx.save();
                                 ctx.fillStyle = '#fff';
-                                ctx.font = 'bold 11px sans-serif';
+                                ctx.font = 'bold 10px sans-serif';
                                 ctx.textAlign = 'center';
                                 ctx.textBaseline = 'middle';
                                 ctx.fillText(value + '%', bar.x, (bar.y + bar.base) / 2);
@@ -3329,25 +3345,15 @@ if ('serviceWorker' in navigator) {
                     if (!canvas) return;
                     var existing = Chart.getChart ? Chart.getChart(canvas) : null;
                     if (existing) existing.destroy();
-                    var cumpleReciente = item.sR ? item.sR.pct : null;
-                    var noCumpleReciente = item.sR ? (100 - item.sR.pct) : null;
-                    var cumpleAnterior = item.sA ? item.sA.pct : null;
-                    var noCumpleAnterior = item.sA ? (100 - item.sA.pct) : null;
-                    var menorReciente = cumpleReciente !== null ? Math.min(cumpleReciente, noCumpleReciente) : null;
-                    var mayorReciente = cumpleReciente !== null ? Math.max(cumpleReciente, noCumpleReciente) : null;
-                    var menorAnterior = cumpleAnterior !== null ? Math.min(cumpleAnterior, noCumpleAnterior) : null;
-                    var mayorAnterior = cumpleAnterior !== null ? Math.max(cumpleAnterior, noCumpleAnterior) : null;
-                    var colorMenorReciente = cumpleReciente < noCumpleReciente ? '#16a34a' : '#dc2626';
-                    var colorMayorReciente = cumpleReciente > noCumpleReciente ? '#16a34a' : '#dc2626';
-                    var colorMenorAnterior = cumpleAnterior < noCumpleAnterior ? '#f59e0b' : '#dc2626';
-                    var colorMayorAnterior = cumpleAnterior > noCumpleAnterior ? '#f59e0b' : '#dc2626';
+                    var pA = item.pA, pR = item.pR;
                     var newChart = new Chart(canvas, {
                         type: 'bar',
                         data: {
-                            labels: ['Reciente', 'Anterior'],
+                            labels: ['Anterior', 'Reciente'],
                             datasets: [
-                                { label: 'Menor', data: [menorReciente, menorAnterior], backgroundColor: [colorMenorReciente, colorMenorAnterior], borderRadius: 4, barPercentage: 0.6 },
-                                { label: 'Mayor', data: [mayorReciente, mayorAnterior], backgroundColor: [colorMayorReciente, colorMayorAnterior], borderRadius: 4, barPercentage: 0.6 }
+                                { label: 'Cumple', data: [pA, pR], backgroundColor: [C_ANT, C_REC], borderRadius: 4, barPercentage: 0.5, order: 2 },
+                                { label: 'No cumple', data: [100 - pA, 100 - pR], backgroundColor: [C_NC_A, C_NC_R], borderRadius: 4, barPercentage: 0.5, order: 2 },
+                                { type: 'line', label: 'Tendencia', data: [pA, pR], borderColor: C_REC, borderDash: [6, 4], borderWidth: 2, tension: 0.3, fill: false, pointBackgroundColor: [C_ANT, C_REC], pointRadius: 6, pointBorderColor: '#fff', pointBorderWidth: 2, order: 1 }
                             ]
                         },
                         options: {
@@ -3355,14 +3361,15 @@ if ('serviceWorker' in navigator) {
                             maintainAspectRatio: false,
                             plugins: { legend: { display: false } },
                             scales: {
-                                x: { stacked: true, grid: { display: false }, ticks: { font: { size: 11 } } },
+                                x: { stacked: false, grid: { display: false }, ticks: { font: { size: 11 } } },
                                 y: {
-                                    stacked: true, min: 0, max: 100,
-                                    ticks: { callback: function(v) { return v + '%'; }, font: { size: 10 } }
+                                    stacked: false, min: 0, max: 100,
+                                    ticks: { stepSize: 10, callback: function(v) { return v + '%'; }, font: { size: 10 } },
+                                    grid: { color: 'rgba(0,0,0,0.06)', borderDash: [4, 4] }
                                 }
                             }
                         },
-                        plugins: [percentLabelsPlugin]
+                        plugins: [pctPlugin]
                     });
                     activeCharts.push(newChart);
                 });
@@ -3865,14 +3872,24 @@ if ('serviceWorker' in navigator) {
         var s2 = document.getElementById('comp-inspeccion-2');
         if (s1) s1.innerHTML = opts;
         if (s2) s2.innerHTML = opts;
-        var _cA = parseInt((document.getElementById('comp-sel-a') || {}).value);
-        var _cB = parseInt((document.getElementById('comp-sel-b') || {}).value);
-        window.comparacionSemanal = {
-            inspeccion1: !isNaN(_cA) ? historial[_cA] : null,
-            inspeccion2: !isNaN(_cB) ? historial[_cB] : null
-        };
-        if (s1 && !isNaN(_cA)) s1.value = _cA;
-        if (s2 && !isNaN(_cB)) s2.value = _cB;
+        if (window._comparisonData) {
+            window.comparacionSemanal = {
+                inspeccion1: window._comparisonData.anterior,
+                inspeccion2: window._comparisonData.reciente
+            };
+            var _idxA = window._comparisonData.idxAnterior, _idxR = window._comparisonData.idxReciente;
+            if (s1 && _idxA !== undefined) s1.value = _idxA;
+            if (s2 && _idxR !== undefined) s2.value = _idxR;
+        } else {
+            var _cA = parseInt((document.getElementById('comp-sel-a') || {}).value);
+            var _cB = parseInt((document.getElementById('comp-sel-b') || {}).value);
+            window.comparacionSemanal = {
+                inspeccion1: !isNaN(_cA) ? historial[_cA] : null,
+                inspeccion2: !isNaN(_cB) ? historial[_cB] : null
+            };
+            if (s1 && !isNaN(_cA)) s1.value = _cA;
+            if (s2 && !isNaN(_cB)) s2.value = _cB;
+        }
         if (s1) s1.onchange = function() {
             var idx = parseInt(this.value);
             window.comparacionSemanal = { inspeccion1: isNaN(idx) ? null : historial[idx], inspeccion2: window.comparacionSemanal ? window.comparacionSemanal.inspeccion2 : null };
