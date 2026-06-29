@@ -729,7 +729,7 @@ if ('serviceWorker' in navigator) {
 </nav>
 
 <script>
-    const APP_VERSION = "1.5.50";
+    const APP_VERSION = "1.5.51";
     console.log('🚀 ProyeCar v' + APP_VERSION + ' cargado');
 
     const PLANTILLAS_AUTO = [
@@ -1182,10 +1182,10 @@ if ('serviceWorker' in navigator) {
             contratInput.type = "text";
             contratInput.placeholder = "Nombre del contratista";
             contratInput.value = frente.contratista || "";
-            contratInput.style.cssText = "width:55%;font-size:0.85rem;margin-left:6px;padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;transition:width 0.2s;";
+            contratInput.style.cssText = "font-size:0.85rem;margin-left:6px;padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;min-height:40px;resize:none;overflow:hidden;width:100%;box-sizing:border-box;";
+            contratInput.setAttribute('oninput', "this.style.height='auto';this.style.height=this.scrollHeight+'px'");
+            contratInput.setAttribute('onfocus', "this.style.height='auto';this.style.height=this.scrollHeight+'px'");
             contratInput.addEventListener("change", (e) => { frentes[idx].contratista = e.target.value; saveToLocal(); });
-            contratInput.addEventListener("focus", () => { contratInput.style.width = "78%"; });
-            contratInput.addEventListener("blur", () => { contratInput.style.width = "55%"; });
             tituloDiv.appendChild(contratLabel);
             tituloDiv.appendChild(contratInput);
             const btnEliminar = document.createElement("button");
@@ -1293,9 +1293,10 @@ if ('serviceWorker' in navigator) {
                     const obsDiv = document.createElement("div"); obsDiv.className = "item-obs";
                     const obsInput = document.createElement("textarea"); obsInput.placeholder = "Observación del ítem (auto-completa al marcar No cumple)"; obsInput.value = item.obs || "";
                     obsInput.id = "obs-item-" + idx + "-" + cat.id + "-" + item.id;
-                    obsInput.rows = 2; obsInput.style.cssText = "min-height:44px;resize:none;";
-                    obsInput.oninput = (e) => { item.obs = e.target.value; saveToLocal(); };
-                    autoResizeEl(obsInput);
+                    obsInput.style.cssText = "min-height:40px;resize:none;overflow:hidden;width:100%;box-sizing:border-box;";
+                    obsInput.setAttribute('oninput', "this.style.height='auto';this.style.height=this.scrollHeight+'px'");
+                    obsInput.setAttribute('onfocus', "this.style.height='auto';this.style.height=this.scrollHeight+'px'");
+                    obsInput.addEventListener('input', (e) => { item.obs = e.target.value; saveToLocal(); });
 
                     btnSi.onclick = (e) => {
                         e.preventDefault(); e.stopPropagation();
@@ -1387,10 +1388,10 @@ if ('serviceWorker' in navigator) {
                     obsDiv.appendChild(obsInput);
                     if (item.tipoVerificacion === "verbal") {
                         const vvInput = document.createElement("input"); vvInput.placeholder = "Verificado con (nombre/cargo) el (fecha)..."; vvInput.value = item.verificacionVerbal || "";
-                        vvInput.style.transition = "width 0.2s";
-                        vvInput.oninput = (e) => { item.verificacionVerbal = e.target.value; saveToLocal(); };
-                        vvInput.addEventListener("focus", () => { vvInput.style.width = "100%"; });
-                        vvInput.addEventListener("blur", () => { vvInput.style.width = ""; });
+                        vvInput.style.cssText = "min-height:40px;resize:none;overflow:hidden;width:100%;box-sizing:border-box;";
+                        vvInput.setAttribute('oninput', "this.style.height='auto';this.style.height=this.scrollHeight+'px'");
+                        vvInput.setAttribute('onfocus', "this.style.height='auto';this.style.height=this.scrollHeight+'px'");
+                        vvInput.addEventListener('input', (e) => { item.verificacionVerbal = e.target.value; saveToLocal(); });
                         obsDiv.appendChild(vvInput);
                     }
                     itemCard.appendChild(row); itemCard.appendChild(obsDiv);
@@ -1593,11 +1594,12 @@ if ('serviceWorker' in navigator) {
             obsTituloRow.appendChild(btnGenResumen);
             obsEspecificasDiv.appendChild(obsTituloRow);
             const obsTextarea = document.createElement("textarea");
-            obsTextarea.rows = 2;
+            obsTextarea.style.cssText = "min-height:40px;resize:none;overflow:hidden;width:100%;box-sizing:border-box;";
+            obsTextarea.setAttribute('oninput', "this.style.height='auto';this.style.height=this.scrollHeight+'px'");
+            obsTextarea.setAttribute('onfocus', "this.style.height='auto';this.style.height=this.scrollHeight+'px'");
             obsTextarea.placeholder = "Observaciones particulares...";
             obsTextarea.value = frente.observaciones || "";
             obsTextarea.addEventListener("input", (e) => { frentes[idx].observaciones = e.target.value; saveToLocal(); });
-            autoResizeEl(obsTextarea);
             obsEspecificasDiv.appendChild(obsTextarea);
 
             frenteBody.appendChild(obsEspecificasDiv);
@@ -1617,11 +1619,12 @@ if ('serviceWorker' in navigator) {
             recTituloRow.appendChild(btnGenRecom);
             recomendacionesDiv.appendChild(recTituloRow);
             const recTextarea = document.createElement("textarea");
-            recTextarea.rows = 2;
+            recTextarea.style.cssText = "min-height:40px;resize:none;overflow:hidden;width:100%;box-sizing:border-box;";
+            recTextarea.setAttribute('oninput', "this.style.height='auto';this.style.height=this.scrollHeight+'px'");
+            recTextarea.setAttribute('onfocus', "this.style.height='auto';this.style.height=this.scrollHeight+'px'");
             recTextarea.placeholder = "Recomendaciones específicas...";
             recTextarea.value = frente.recomendaciones || "";
             recTextarea.addEventListener("input", (e) => { frentes[idx].recomendaciones = e.target.value; saveToLocal(); });
-            autoResizeEl(recTextarea);
             recomendacionesDiv.appendChild(recTextarea);
 
             frenteBody.appendChild(recomendacionesDiv);
