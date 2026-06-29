@@ -729,7 +729,7 @@ if ('serviceWorker' in navigator) {
 </nav>
 
 <script>
-    const APP_VERSION = "1.5.48";
+    const APP_VERSION = "1.5.49";
     console.log('🚀 ProyeCar v' + APP_VERSION + ' cargado');
 
     const PLANTILLAS_AUTO = [
@@ -1046,6 +1046,12 @@ if ('serviceWorker' in navigator) {
         });
         return result;
     }
+    function loadUiState() {
+        try { return JSON.parse(localStorage.getItem("cardique_ui_state") || "{}"); } catch(e) { return {}; }
+    }
+    function saveUiState(st) {
+        try { localStorage.setItem("cardique_ui_state", JSON.stringify(st)); } catch(e) {}
+    }
 
     function saveToLocal() {
         const form = getFormValues();
@@ -1152,7 +1158,7 @@ if ('serviceWorker' in navigator) {
             headerDiv.className = "frente-header";
             // Toggle arrow
             const toggleArrow = document.createElement("span");
-            toggleArrow.className = "frente-toggle open";
+            toggleArrow.className = "frente-toggle";
             toggleArrow.innerText = "▶";
             const tituloDiv = document.createElement("div");
             tituloDiv.className = "frente-titulo";
@@ -1186,18 +1192,25 @@ if ('serviceWorker' in navigator) {
             // Body wrapper for collapse
             const frenteBody = document.createElement("div");
             frenteBody.className = "frente-body";
+            // Restaurar estado UI (por defecto: colapsado)
+            var _uiSt = loadUiState();
+            var _fSt = _uiSt[frente.nombre] || {};
+            if (_fSt.open === true) { toggleArrow.classList.add("open"); } else { frenteBody.classList.add("collapsed"); }
 
             headerDiv.addEventListener("click", (e) => {
                 if (e.target.tagName === "INPUT" || e.target.tagName === "BUTTON") return;
-                const isOpen = !frenteBody.classList.contains("collapsed");
                 frenteBody.classList.toggle("collapsed");
                 toggleArrow.classList.toggle("open");
+                var st = loadUiState();
+                if (!st[frente.nombre]) st[frente.nombre] = {};
+                st[frente.nombre].open = !frenteBody.classList.contains("collapsed");
+                saveUiState(st);
             });
 
             frente.categorias.forEach((cat, catIdx) => {
                 const catDiv = document.createElement("div"); catDiv.className = "categoria";
                 const catTitulo = document.createElement("div"); catTitulo.className = "cat-titulo";
-                const catToggle = document.createElement("span"); catToggle.className = "cat-toggle open"; catToggle.innerText = "▶";
+                const catToggle = document.createElement("span"); catToggle.className = "cat-toggle"; catToggle.innerText = "▶";
                 const catNombre = document.createElement("span"); catNombre.innerText = cat.nombre;
                 catTitulo.appendChild(catNombre); catTitulo.appendChild(catToggle);
 
@@ -1237,9 +1250,16 @@ if ('serviceWorker' in navigator) {
 
                 catDiv.appendChild(catTitulo);
                 const catBody = document.createElement("div"); catBody.className = "cat-body"; catBody.style.cssText = "padding-top:8px;";
+                // Restaurar estado UI del área (por defecto: colapsada)
+                var _catOpen = ((_fSt.cats || {})[cat.id] === true);
+                if (_catOpen) { catToggle.classList.add("open"); } else { catBody.classList.add("collapsed"); }
                 catTitulo.addEventListener("click", () => {
-                    const open = !catBody.classList.contains("collapsed");
                     catBody.classList.toggle("collapsed"); catToggle.classList.toggle("open");
+                    var st = loadUiState();
+                    if (!st[frente.nombre]) st[frente.nombre] = {};
+                    if (!st[frente.nombre].cats) st[frente.nombre].cats = {};
+                    st[frente.nombre].cats[cat.id] = !catBody.classList.contains("collapsed");
+                    saveUiState(st);
                 });
                 const itemsDiv = document.createElement("div"); itemsDiv.className = "items-grid";
                 cat.items.forEach((item, itemIdx) => {
@@ -2814,6 +2834,7 @@ if ('serviceWorker' in navigator) {
             } catch(e) {}
 
             localStorage.removeItem("inspectorFrentesData");
+            localStorage.removeItem("cardique_ui_state");
             frentes = [
                 { nombre: "Frente 1 - Arroyo Ají Molido", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" },
                 { nombre: "Frente 2 - Box Matagente", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" }
