@@ -729,7 +729,7 @@ if ('serviceWorker' in navigator) {
 </nav>
 
 <script>
-    const APP_VERSION = "1.5.51";
+    const APP_VERSION = "1.5.52";
     console.log('🚀 ProyeCar v' + APP_VERSION + ' cargado');
 
     const PLANTILLAS_AUTO = [
@@ -1293,10 +1293,9 @@ if ('serviceWorker' in navigator) {
                     const obsDiv = document.createElement("div"); obsDiv.className = "item-obs";
                     const obsInput = document.createElement("textarea"); obsInput.placeholder = "Observación del ítem (auto-completa al marcar No cumple)"; obsInput.value = item.obs || "";
                     obsInput.id = "obs-item-" + idx + "-" + cat.id + "-" + item.id;
-                    obsInput.style.cssText = "min-height:40px;resize:none;overflow:hidden;width:100%;box-sizing:border-box;";
-                    obsInput.setAttribute('oninput', "this.style.height='auto';this.style.height=this.scrollHeight+'px'");
-                    obsInput.setAttribute('onfocus', "this.style.height='auto';this.style.height=this.scrollHeight+'px'");
-                    obsInput.addEventListener('input', (e) => { item.obs = e.target.value; saveToLocal(); });
+                    obsInput.style.cssText = "min-height:60px;resize:none;overflow:hidden;width:100%;box-sizing:border-box;";
+                    obsInput.addEventListener('focus', (e) => { e.target.style.height='auto'; e.target.style.height=e.target.scrollHeight+'px'; });
+                    obsInput.addEventListener('input', (e) => { e.target.style.height='auto'; e.target.style.height=e.target.scrollHeight+'px'; item.obs = e.target.value; saveToLocal(); });
 
                     btnSi.onclick = (e) => {
                         e.preventDefault(); e.stopPropagation();
@@ -1594,12 +1593,11 @@ if ('serviceWorker' in navigator) {
             obsTituloRow.appendChild(btnGenResumen);
             obsEspecificasDiv.appendChild(obsTituloRow);
             const obsTextarea = document.createElement("textarea");
-            obsTextarea.style.cssText = "min-height:40px;resize:none;overflow:hidden;width:100%;box-sizing:border-box;";
-            obsTextarea.setAttribute('oninput', "this.style.height='auto';this.style.height=this.scrollHeight+'px'");
-            obsTextarea.setAttribute('onfocus', "this.style.height='auto';this.style.height=this.scrollHeight+'px'");
+            obsTextarea.style.cssText = "min-height:60px;resize:none;overflow:hidden;width:100%;box-sizing:border-box;";
             obsTextarea.placeholder = "Observaciones particulares...";
             obsTextarea.value = frente.observaciones || "";
-            obsTextarea.addEventListener("input", (e) => { frentes[idx].observaciones = e.target.value; saveToLocal(); });
+            obsTextarea.addEventListener('focus', (e) => { e.target.style.height='auto'; e.target.style.height=e.target.scrollHeight+'px'; });
+            obsTextarea.addEventListener("input", (e) => { e.target.style.height='auto'; e.target.style.height=e.target.scrollHeight+'px'; frentes[idx].observaciones = e.target.value; saveToLocal(); });
             obsEspecificasDiv.appendChild(obsTextarea);
 
             frenteBody.appendChild(obsEspecificasDiv);
@@ -1619,12 +1617,11 @@ if ('serviceWorker' in navigator) {
             recTituloRow.appendChild(btnGenRecom);
             recomendacionesDiv.appendChild(recTituloRow);
             const recTextarea = document.createElement("textarea");
-            recTextarea.style.cssText = "min-height:40px;resize:none;overflow:hidden;width:100%;box-sizing:border-box;";
-            recTextarea.setAttribute('oninput', "this.style.height='auto';this.style.height=this.scrollHeight+'px'");
-            recTextarea.setAttribute('onfocus', "this.style.height='auto';this.style.height=this.scrollHeight+'px'");
+            recTextarea.style.cssText = "min-height:60px;resize:none;overflow:hidden;width:100%;box-sizing:border-box;";
             recTextarea.placeholder = "Recomendaciones específicas...";
             recTextarea.value = frente.recomendaciones || "";
-            recTextarea.addEventListener("input", (e) => { frentes[idx].recomendaciones = e.target.value; saveToLocal(); });
+            recTextarea.addEventListener('focus', (e) => { e.target.style.height='auto'; e.target.style.height=e.target.scrollHeight+'px'; });
+            recTextarea.addEventListener("input", (e) => { e.target.style.height='auto'; e.target.style.height=e.target.scrollHeight+'px'; frentes[idx].recomendaciones = e.target.value; saveToLocal(); });
             recomendacionesDiv.appendChild(recTextarea);
 
             frenteBody.appendChild(recomendacionesDiv);
