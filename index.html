@@ -729,7 +729,7 @@ if ('serviceWorker' in navigator) {
 </nav>
 
 <script>
-    const APP_VERSION = "1.5.46";
+    const APP_VERSION = "1.5.47";
     console.log('🚀 ProyeCar v' + APP_VERSION + ' cargado');
 
     const PLANTILLAS_AUTO = [
@@ -3749,9 +3749,9 @@ if ('serviceWorker' in navigator) {
             h += '</div>';
             // Porcentajes 22pt
             h += '<div style="display:flex;gap:16px;align-items:center;margin-bottom:8px;">';
-            h += '<div style="text-align:center;flex:1;"><div style="font-size:22pt;font-weight:800;color:#16a34a;line-height:1;">' + (g.pctReciente !== null ? g.pctReciente + '%' : 'N/A') + '</div><div style="font-size:7.5pt;color:#16a34a;font-weight:600;">Reciente</div></div>';
+            h += '<div style="text-align:center;flex:1;"><div style="font-size:22pt;font-weight:800;color:#BA7517;line-height:1;">' + (g.pctAnterior !== null ? g.pctAnterior + '%' : 'N/A') + '</div><div style="font-size:7.5pt;color:#BA7517;font-weight:600;">Anterior</div></div>';
             h += '<div style="color:#94a3b8;font-size:10pt;align-self:center;">vs</div>';
-            h += '<div style="text-align:center;flex:1;"><div style="font-size:22pt;font-weight:800;color:#b45309;line-height:1;">' + (g.pctAnterior !== null ? g.pctAnterior + '%' : 'N/A') + '</div><div style="font-size:7.5pt;color:#b45309;font-weight:600;">Anterior</div></div>';
+            h += '<div style="text-align:center;flex:1;"><div style="font-size:22pt;font-weight:800;color:#27500A;line-height:1;">' + (g.pctReciente !== null ? g.pctReciente + '%' : 'N/A') + '</div><div style="font-size:7.5pt;color:#27500A;font-weight:600;">Reciente</div></div>';
             h += '</div>';
             h += '<img src="' + g.imgData + '" style="width:100%;border:1px solid #e2e8f0;border-radius:6px;display:block;"/>';
             h += '</div>';
