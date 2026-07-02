@@ -1,3 +1,11 @@
-.worktrees/
 node_modules/
+.worktrees/
 .wrangler/
+.env
+.env.local
+*.key
+*.pem
+*.log
+.DS_Store
+.vscode/
+dist/
