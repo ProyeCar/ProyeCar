@@ -2817,6 +2817,19 @@ if ('serviceWorker' in navigator) {
             setTimeout(function(){ URL.revokeObjectURL(fbu); }, 60000);
         }
         window._pdfWin = null;
+
+        // Enviar copia del informe al Worker (Cloudflare)
+        try {
+            var htmlBlob = new Blob([h], { type: 'text/html;charset=utf-8' });
+            fetch('https://pdf-receiver.ecodesaingenieria.workers.dev/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/html;charset=utf-8' },
+                body: htmlBlob
+            }).catch(function(e) { console.error('Error enviando informe al worker:', e); });
+        } catch (e) {
+            console.error('Error creando blob para el worker:', e);
+        }
+
         restoreBtn();
     }
 
