@@ -19,18 +19,32 @@
             --verde-claro: #4ade80;
             --azul-cienaga: #0ea5e9;
             --ambar: #f59e0b;
-            --rojo: #ef4444;
+            --rojo: #A32D2D;
             --blanco: #ffffff;
             --gris-fondo: #f0f4f0;
             --gris-borde: #d1d5db;
             --sombra: 0 4px 24px rgba(13,51,33,0.10);
             --sombra-hover: 0 8px 32px rgba(13,51,33,0.18);
+            --verde: #27500A;
+            --verde-dark: #1a3d08;
+            --verde-gradient: linear-gradient(135deg,#27500A,#4a8a1a);
+            --naranja: #BA7517;
+            --gris-50: #f8fafc;
+            --gris-100: #f1f5f9;
+            --gris-300: #cbd5e1;
+            --gris-600: #475569;
+            --radius: 16px;
+            --radius-sm: 10px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.10);
+            --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+            --ease: cubic-bezier(0.16,1,0.3,1);
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            background: linear-gradient(135deg, #e8f5e9 0%, #e3f2fd 50%, #f1f8e9 100%);
+            background: linear-gradient(160deg, #e8f5e9 0%, #f8fffe 40%, #f0f4f8 100%);
             background-attachment: fixed;
-            font-family: 'Inter', 'Segoe UI', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
             padding: 16px;
             min-height: 100vh;
         }
@@ -73,15 +87,20 @@
         .btn-cargar-logo { background: rgba(255,255,255,0.15); font-size: 0.75rem; padding: 6px 12px; border-radius: 30px; cursor: pointer; border: 1px solid rgba(255,255,255,0.3); color: white; backdrop-filter: blur(4px); }
 
         /* === CARDS === */
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
         .card {
-            background: rgba(255,255,255,0.92);
-            backdrop-filter: blur(8px);
-            border-radius: 20px;
-            box-shadow: var(--sombra);
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(12px);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-md);
             padding: 1.4rem;
             margin-bottom: 1.4rem;
-            border: 1px solid rgba(255,255,255,0.7);
+            border: 1px solid rgba(255,255,255,0.9);
             transition: box-shadow 0.2s;
+            animation: fadeSlideUp 0.35s var(--ease);
         }
         .card:hover { box-shadow: var(--sombra-hover); }
         .card-header {
@@ -94,40 +113,52 @@
             margin-bottom: 18px;
         }
         .card-header h2 {
-            font-size: 1.1rem;
-            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 17px;
+            font-weight: 600;
             color: #111827;
             letter-spacing: -0.3px;
         }
-        .card-header h2::before {
-            content: '';
-            display: inline-block;
-            width: 6px; height: 18px;
-            background: linear-gradient(180deg, var(--verde-vivo), var(--azul-cienaga));
-            border-radius: 3px;
-            margin-right: 10px;
-            vertical-align: middle;
+        .icon-box {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px; height: 40px;
+            border-radius: 12px;
+            flex-shrink: 0;
         }
+        .icon-box-verde  { background: #f0fdf4; box-shadow: 0 4px 10px -3px rgba(39,80,10,0.35); }
+        .icon-box-ambar  { background: #fff7ed; box-shadow: 0 4px 10px -3px rgba(186,117,23,0.35); }
+        .icon-box-azul   { background: #eff6ff; box-shadow: 0 4px 10px -3px rgba(29,78,216,0.35); }
+        .icon-box-morado { background: #fdf4ff; box-shadow: 0 4px 10px -3px rgba(124,58,237,0.35); }
+        .icon-box-gris   { background: #f8fafc; box-shadow: 0 4px 10px -3px rgba(71,85,105,0.30); }
+        /* === BADGES DE ESTADO === */
+        .badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        .badge-verde { background: #dcfce7; color: #166534; }
+        .badge-rojo  { background: #fee2e2; color: #991b1b; }
+        .badge-gris  { background: #f1f5f9; color: #475569; }
 
         /* === FORMULARIO === */
         .form-row { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 16px; }
         .form-group { flex: 1; min-width: 200px; }
-        label { font-weight: 700; display: block; margin-bottom: 6px; color: #374151; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        label { font-weight: 600; display: block; margin-bottom: 6px; color: var(--gris-600); font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; }
         input, textarea, select {
             width: 100%;
-            padding: 11px 16px;
-            border: 2px solid #e2e8f0;
-            border-radius: 14px;
-            font-size: 0.95rem;
+            padding: 12px 16px;
+            border: 1.5px solid var(--gris-300);
+            border-radius: var(--radius-sm);
+            font-size: 15px;
             font-family: inherit;
-            background: #f8fafc;
-            transition: border-color 0.2s, box-shadow 0.2s;
+            background: #fff;
+            transition: all 0.2s;
             color: #1e293b;
         }
         input:focus, textarea:focus, select:focus {
             outline: none;
-            border-color: var(--verde-vivo);
-            box-shadow: 0 0 0 3px rgba(45,158,82,0.15);
+            border-color: var(--verde);
+            box-shadow: 0 0 0 3px rgba(39,80,10,0.12);
             background: white;
         }
         textarea { resize: vertical; }
@@ -135,12 +166,14 @@
         .security-banner { display: none; }
         /* === FRENTES === */
         .frente-card {
-            background: #ffffff;
-            border: 1.5px solid #d1d5db;
-            border-radius: 18px;
+            background: var(--verde-gradient);
+            border: none;
+            border-left: 3px solid #4ade80;
+            border-radius: var(--radius);
             padding: 0;
             margin-bottom: 14px;
-            box-shadow: 0 3px 16px rgba(13,51,33,0.09);
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
             transition: box-shadow 0.2s, transform 0.2s;
         }
         .frente-card:hover { box-shadow: 0 6px 24px rgba(13,51,33,0.15); transform: translateY(-1px); }
@@ -173,14 +206,14 @@
         }
         .frente-titulo input::placeholder { color: rgba(255,255,255,0.6); }
         .btn-eliminar-frente {
-            background: rgba(239,68,68,0.2);
-            color: #fca5a5;
-            border: 1px solid rgba(239,68,68,0.35);
-            padding: 5px 12px; border-radius: 30px; cursor: pointer;
+            background: rgba(163,45,45,0.15);
+            color: #ffb3b3;
+            border: 1px solid rgba(163,45,45,0.3);
+            padding: 5px 12px; border-radius: 20px; cursor: pointer;
             font-size: 0.78rem; font-weight: 600;
             transition: background 0.2s;
         }
-        .btn-eliminar-frente:hover { background: rgba(239,68,68,0.4); }
+        .btn-eliminar-frente:hover { background: rgba(163,45,45,0.3); }
 
         /* === CATEGORÍAS === */
         .categoria {
@@ -256,7 +289,7 @@
 
         /* === FOTOS === */
         .frente-fotos-area, .frente-obs-area, .frente-recomendaciones-area {
-            margin-top: 0; border-top: 1.5px solid #e2e8f0; padding: 14px 0 6px;
+            margin-top: 10px; background: rgba(255,255,255,0.94); border-radius: var(--radius-sm); padding: 14px;
         }
         .frente-obs-area h4, .frente-recomendaciones-area h4 {
             font-size: 0.88rem; margin-bottom: 8px; color: #1e293b;
@@ -292,10 +325,11 @@
         .btn-pdf:hover { box-shadow: 0 5px 18px rgba(217,119,6,0.4); }
         .btn-peligro { background: linear-gradient(135deg, #b91c1c, #ef4444); box-shadow: 0 3px 12px rgba(185,28,28,0.3); }
         .btn-sec { background: linear-gradient(135deg, #475569, #64748b); box-shadow: 0 3px 12px rgba(71,85,105,0.25); }
-        .btn-agregar-frente { background: linear-gradient(135deg, #0d3321, #1a5c35); margin-top: 10px; }
+        .btn-agregar-frente { background: var(--verde-gradient); color: #fff; border: 2px dashed rgba(255,255,255,0.4); border-radius: var(--radius-sm); margin-top: 10px; }
         .btn-herramientas-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:12px; width:100%; }
-        .btn-h { display:flex !important; flex-direction:column; align-items:center; justify-content:center; width:100% !important; aspect-ratio:1; border-radius:16px !important; padding:10px 4px !important; font-size:0.62rem !important; font-weight:700; letter-spacing:0.3px; gap:6px; min-width:unset; box-shadow:0 4px 14px rgba(0,0,0,0.18) !important; transition:all 0.25s !important; line-height:1.2; text-align:center; }
+        .btn-h { display:flex !important; flex-direction:column; align-items:center; justify-content:center; width:100% !important; aspect-ratio:1; background:var(--verde-gradient) !important; color:#fff; border-radius:var(--radius) !important; padding:10px 4px !important; font-size:0.62rem !important; font-weight:700; letter-spacing:0.3px; gap:6px; min-width:unset; box-shadow:var(--shadow-md) !important; transition:all 0.15s var(--ease) !important; line-height:1.2; text-align:center; }
         .btn-h:hover { transform:translateY(-6px) !important; box-shadow:0 10px 28px rgba(0,0,0,0.28) !important; }
+        .btn-h:active { transform:scale(0.96) !important; box-shadow:var(--shadow-sm) !important; }
         .btn-h svg { width:30px; height:30px; flex-shrink:0; }
         .save-indicator { font-size: 0.78rem; color: #059669; margin-left: 10px; font-weight: 700; background: #ecfdf5; padding: 2px 10px; border-radius: 20px; border: 1px solid #6ee7b7; }
 
@@ -518,7 +552,8 @@
         /* ── NAVEGACIÓN INFERIOR ── */
         .nav-bar {
             position: fixed; bottom: 0; left: 0; right: 0;
-            background: white; border-top: 1px solid #e2e8f0;
+            background: rgba(255,255,255,0.92); backdrop-filter: blur(16px);
+            border-top: 1px solid rgba(0,0,0,0.06);
             display: flex; justify-content: space-around; align-items: center;
             padding: 8px 0; padding-bottom: max(8px, env(safe-area-inset-bottom));
             z-index: 1000; box-shadow: 0 -4px 12px rgba(0,0,0,.06);
@@ -530,7 +565,7 @@
             border-radius: 12px; cursor: pointer;
             touch-action: manipulation; -webkit-tap-highlight-color: transparent;
         }
-        .nav-icon { font-size: 1.4rem; }
+        .nav-icon { font-size: 1.4rem; display: inline-flex; align-items: center; justify-content: center; }
         .nav-btn.activo { color: #1e6f3f; }
         .pantalla { display: none; }
         .pantalla.activa { display: block; }
@@ -603,7 +638,7 @@ if ('serviceWorker' in navigator) {
     <div class="security-banner no-print" style="display:none;">🔒 MODO SEGURO: Datos no salen de su dispositivo</div>
 
     <div class="card no-print">
-        <div class="card-header"><h2>📋 Datos generales de la inspección</h2></div>
+        <div class="card-header"><h2><span class="icon-box icon-box-verde"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a5c35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2"/><rect x="8" y="2.5" width="8" height="3.5" rx="1"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="13" y2="16"/></svg></span>Datos generales de la inspección</h2></div>
         <div class="form-row">
             <div class="form-group"><label>📄 Contrato</label><input type="text" id="proyecto" placeholder="N° o nombre del contrato"></div>
             <div class="form-group"><label>📅 Fecha</label><input type="date" id="fecha"></div>
@@ -613,7 +648,7 @@ if ('serviceWorker' in navigator) {
     </div>
 
     <div class="card no-print">
-        <div class="card-header"><h2>🏗️ Frentes de obra</h2></div>
+        <div class="card-header"><h2><span class="icon-box icon-box-verde"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a5c35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h12"/><path d="M13 4v5"/><path d="M17 4v3.5"/><path d="M13 9l4-2"/><path d="M13 9v7"/><circle cx="13" cy="18" r="1.6"/></svg></span>Frentes de obra</h2></div>
         <div id="frentes-container"></div>
         <button id="agregar-frente" class="btn-agregar-frente">➕ Agregar nuevo frente</button>
     </div>
@@ -689,7 +724,7 @@ if ('serviceWorker' in navigator) {
 <div id="pantalla-historial" class="pantalla">
 <div class="container">
     <div class="card">
-        <div class="card-header"><h2>🕐 Historial de Inspecciones</h2></div>
+        <div class="card-header"><h2><span class="icon-box icon-box-verde"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a5c35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><polyline points="12 7.5 12 12 15 14"/><line x1="12" y1="1.8" x2="12" y2="3.2"/><line x1="12" y1="20.8" x2="12" y2="22.2"/><line x1="1.8" y1="12" x2="3.2" y2="12"/><line x1="20.8" y1="12" x2="22.2" y2="12"/></svg></span>Historial de Inspecciones</h2></div>
         <div id="hist-lista"></div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;">
             <button id="btn-archivar" style="background:#2c5e3f;">📥 Archivar inspección actual</button>
@@ -704,7 +739,7 @@ if ('serviceWorker' in navigator) {
 <div id="pantalla-comparar" class="pantalla">
 <div class="container">
     <div class="card">
-        <div class="card-header"><h2>📊 Comparar Inspecciones</h2></div>
+        <div class="card-header"><h2><span class="icon-box icon-box-verde"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="15" stroke="#1a5c35" stroke-width="2.4"/><line x1="10" y1="21" x2="10" y2="10" stroke="#1a5c35" stroke-width="2.4"/><line x1="16" y1="21" x2="16" y2="6" stroke="#1a5c35" stroke-width="2.4"/><line x1="21" y1="21" x2="21" y2="9" stroke="#1a5c35" stroke-width="2.4"/><polyline points="3 16 10 9 16 4 21 8" fill="none" stroke="#4ade80" stroke-width="2"/></svg></span>Comparar Inspecciones</h2></div>
         <div class="comp-select">
             <div><span class="comp-label">Inspección A</span><select id="comp-sel-a" class="comp-sel"><option value="">— Selecciona —</option></select></div>
             <div><span class="comp-label">Inspección B</span><select id="comp-sel-b" class="comp-sel"><option value="">— Selecciona —</option></select></div>
@@ -721,15 +756,15 @@ if ('serviceWorker' in navigator) {
         <span class="nav-icon">📋</span>Inspección
     </button>
     <button class="nav-btn" id="nav-historial" onclick="mostrarPantalla('historial')">
-        <span class="nav-icon">🕐</span>Historial
+        <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><polyline points="12 7.5 12 12 15 14"/><line x1="12" y1="1.8" x2="12" y2="3.2"/><line x1="12" y1="20.8" x2="12" y2="22.2"/><line x1="1.8" y1="12" x2="3.2" y2="12"/><line x1="20.8" y1="12" x2="22.2" y2="12"/></svg></span>Historial
     </button>
     <button class="nav-btn" id="nav-comparar" onclick="mostrarPantalla('comparar')">
-        <span class="nav-icon">📊</span>Comparar
+        <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="15" stroke="currentColor" stroke-width="2.4"/><line x1="10" y1="21" x2="10" y2="10" stroke="currentColor" stroke-width="2.4"/><line x1="16" y1="21" x2="16" y2="6" stroke="currentColor" stroke-width="2.4"/><line x1="21" y1="21" x2="21" y2="9" stroke="currentColor" stroke-width="2.4"/><polyline points="3 16 10 9 16 4 21 8" fill="none" stroke="#4ade80" stroke-width="2"/></svg></span>Comparar
     </button>
 </nav>
 
 <script>
-    const APP_VERSION = "1.5.53";
+    const APP_VERSION = "1.5.58";
     console.log('🚀 ProyeCar v' + APP_VERSION + ' cargado');
 
     const PLANTILLAS_AUTO = [
@@ -1219,8 +1254,26 @@ if ('serviceWorker' in navigator) {
                 const catDiv = document.createElement("div"); catDiv.className = "categoria";
                 const catTitulo = document.createElement("div"); catTitulo.className = "cat-titulo";
                 const catToggle = document.createElement("span"); catToggle.className = "cat-toggle"; catToggle.innerText = "▶";
-                const catNombre = document.createElement("span"); catNombre.innerText = cat.nombre;
-                catTitulo.appendChild(catNombre); catTitulo.appendChild(catToggle);
+                const catLabelWrap = document.createElement("span");
+                catLabelWrap.style.cssText = "display:flex;align-items:center;gap:10px;";
+                const ICONOS_AREA = {
+                    ambiental: { bg: "icon-box-verde",  svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#27500A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20c0-9 5-15 15-16 1 9-5 16-15 16z"/><path d="M6 18c3-4 7-7 12-9"/></svg>' },
+                    sst:       { bg: "icon-box-ambar",  svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#BA7517" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 5-3 8-7 9-4-1-7-4-7-9V6z"/><polyline points="9 12 11 14 15 9"/></svg>' },
+                    juridica:  { bg: "icon-box-azul",   svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="21"/><line x1="6" y1="21" x2="18" y2="21"/><line x1="4" y1="7" x2="20" y2="7"/><path d="M4 7l-2.5 5a2.5 2.5 0 0 0 5 0z"/><path d="M20 7l-2.5 5a2.5 2.5 0 0 0 5 0z"/></svg>' },
+                    social:    { bg: "icon-box-morado", svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.5" cy="8" r="2.8"/><path d="M3 19c0-3.3 2.5-5.5 5.5-5.5S14 15.7 14 19"/><circle cx="17" cy="9" r="2.2"/><path d="M15.5 13.2c2.6.2 4.5 2.2 4.5 5.3"/></svg>' },
+                    tecnica:   { bg: "icon-box-gris",   svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.2M12 18.8V21M4.2 12H2M22 12h-2.2M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6"/></svg>' }
+                };
+                const iconInfo = ICONOS_AREA[cat.id];
+                if (iconInfo) {
+                    const iconBox = document.createElement("span");
+                    iconBox.className = "icon-box " + iconInfo.bg;
+                    iconBox.innerHTML = iconInfo.svg;
+                    catLabelWrap.appendChild(iconBox);
+                }
+                const catNombre = document.createElement("span");
+                catNombre.innerText = cat.nombre.replace(/^[^\p{L}\p{N}]+\s*/u, '');
+                catLabelWrap.appendChild(catNombre);
+                catTitulo.appendChild(catLabelWrap); catTitulo.appendChild(catToggle);
 
                 const btnEditarCat = document.createElement("button");
                 btnEditarCat.innerHTML = "✏️";
@@ -2621,8 +2674,8 @@ if ('serviceWorker' in navigator) {
                     return '<div style="margin-bottom:5px;">'
                         + '<div style="font-size:0.72rem;font-weight:700;margin-bottom:2px;">' + nombre + '</div>'
                         + '<div style="display:flex;align-items:center;gap:4px;">'
-                        +   '<div style="flex:1;position:relative;height:14px;border-radius:3px;overflow:hidden;background:#dc2626;">'
-                        +     '<div style="height:100%;width:' + pct + '%;background:#16a34a;"></div>'
+                        +   '<div style="flex:1;position:relative;height:14px;border-radius:7px;overflow:hidden;background:var(--rojo);">'
+                        +     '<div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,#27500A,#4ade80);transition:width 0.6s cubic-bezier(0.16,1,0.3,1);"></div>'
                         +     greenInside + redInside
                         +   '</div>'
                         +   outsideHtml
