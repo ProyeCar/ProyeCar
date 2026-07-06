@@ -97,8 +97,12 @@ export async function marcarError(pdfId) {
  * Flujo completo: genera-PDF -> registra pendiente -> sube al Worker -> confirma/marca error.
  * `blobPdf` es el PDF ya generado (p.ej. por jsPDF). `workerUploadUrl` es el endpoint
  * del Worker de Cloudflare que sube el archivo a R2.
+ *
+ * Si se pasa `pdfId` (de un reintento previo), se reutiliza esa fila en vez de
+ * insertar una nueva: sin esto, cada reintento de un informe que sigue fallando
+ * dejaba una fila 'error' huérfana distinta por intento.
  */
-export async function subirPdfYSincronizar({ nombreArchivo, blobPdf, fotosUrls, workerUploadUrl }) {
+export async function subirPdfYSincronizar({ nombreArchivo, blobPdf, fotosUrls, workerUploadUrl, pdfId }) {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error('No hay sesión activa: llama a iniciarSesion() primero.');
 
@@ -107,7 +111,9 @@ export async function subirPdfYSincronizar({ nombreArchivo, blobPdf, fotosUrls, 
   // como conocemos nuestro propio user_id, podemos predecir esa misma key aquí.
   const urlR2 = `${base}/pdfs/${session.user.id}/${nombreArchivo}`;
 
-  const fila = await registrarPdfPendiente({ nombreArchivo, urlR2, fotosUrls });
+  const fila = pdfId
+    ? { id: pdfId }
+    : await registrarPdfPendiente({ nombreArchivo, urlR2, fotosUrls });
 
   try {
     const respuesta = await fetch(`${base}/${nombreArchivo}`, {
@@ -124,6 +130,9 @@ export async function subirPdfYSincronizar({ nombreArchivo, blobPdf, fotosUrls, 
     await confirmarSincronizacion(fila.id);
   } catch (err) {
     await marcarError(fila.id);
+    // El llamador necesita el id (aunque haya fallado) para que el próximo
+    // reintento actualice esta misma fila en vez de crear otra.
+    err.pdfId = fila.id;
     throw err;
   }
 

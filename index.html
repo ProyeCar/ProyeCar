@@ -1008,11 +1008,12 @@ if ('serviceWorker' in navigator) {
         actualizarBadge(items.length);
     }
 
-    async function encolarLocal(nombreArchivo, htmlBlob) {
+    async function encolarLocal(nombreArchivo, htmlBlob, pdfId) {
         await colaGuardar({
             id: 'cola_' + Date.now() + '_' + Math.random().toString(36).slice(2),
             nombreArchivo: nombreArchivo,
             htmlBlob: htmlBlob,
+            pdfId: pdfId || null,
             creadoEn: new Date().toISOString(),
         });
         await refrescarBadge();
@@ -1032,7 +1033,7 @@ if ('serviceWorker' in navigator) {
             });
         } catch (e) {
             console.error('Sync de informe falló, se encola:', e);
-            await encolarLocal(nombreArchivo, htmlBlob);
+            await encolarLocal(nombreArchivo, htmlBlob, e.pdfId);
         }
     }
 
@@ -1046,10 +1047,16 @@ if ('serviceWorker' in navigator) {
                     blobPdf: item.htmlBlob,
                     fotosUrls: [],
                     workerUploadUrl: WORKER_URL,
+                    pdfId: item.pdfId,
                 });
                 await colaEliminar(item.id);
             } catch (e) {
                 console.error('Reintento de cola falló para', item.nombreArchivo, e);
+                // Guarda el pdfId (si esta fue la primera fila creada) para que
+                // el próximo reintento actualice esta misma fila en vez de duplicarla.
+                if (e.pdfId && e.pdfId !== item.pdfId) {
+                    await colaGuardar(Object.assign({}, item, { pdfId: e.pdfId }));
+                }
             }
         }
         await refrescarBadge();
