@@ -84,6 +84,7 @@
         }
         .logo-area { display: flex; align-items: center; gap: 12px; position: relative; z-index: 1; }
         .logo-img { height: 64px; max-width: 190px; object-fit: contain; border-radius: 12px; }
+        .badge-cola { position: fixed; top: 10px; right: 10px; background: var(--ambar); color: var(--verde-oscuro); font-weight: 700; font-size: 0.8rem; padding: 6px 14px; border-radius: 30px; box-shadow: var(--shadow-md); z-index: 500; }
         .btn-cargar-logo { background: rgba(255,255,255,0.15); font-size: 0.75rem; padding: 6px 12px; border-radius: 30px; cursor: pointer; border: 1px solid rgba(255,255,255,0.3); color: white; backdrop-filter: blur(4px); }
 
         /* === CARDS === */
@@ -615,6 +616,15 @@ if ('serviceWorker' in navigator) {
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 </head>
 <body>
+<div id="modal-login" style="display:none; position:fixed; inset:0; background:rgba(13,51,33,0.85); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:var(--blanco); border-radius:var(--radius); padding:32px; width:min(90vw,360px); box-shadow:var(--shadow-lg);">
+        <h2 style="margin-bottom:16px; color:var(--verde-oscuro);">Iniciar sesión</h2>
+        <input type="email" id="login-email" placeholder="Email" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid var(--gris-borde); border-radius:var(--radius-sm); box-sizing:border-box;">
+        <input type="password" id="login-password" placeholder="Contraseña" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid var(--gris-borde); border-radius:var(--radius-sm); box-sizing:border-box;">
+        <div id="login-error" style="color:var(--rojo); font-size:0.85rem; margin-bottom:10px; display:none;"></div>
+        <button id="login-submit" style="width:100%; padding:12px; background:var(--verde-gradient); color:white; border:none; border-radius:var(--radius-sm); font-weight:600; cursor:pointer;">Entrar</button>
+    </div>
+</div>
 <div id="pantalla-inspeccion" class="pantalla activa"><div class="container">
     <div class="header-cardique no-print">
         <div class="logo-area">
@@ -763,6 +773,9 @@ if ('serviceWorker' in navigator) {
     </button>
 </nav>
 
+<div id="badge-cola" class="badge-cola" style="display:none;"></div>
+
+<script type="module" src="supabase-pdfs.js"></script>
 <script>
     const APP_VERSION = "1.5.59";
     console.log('🚀 ProyeCar v' + APP_VERSION + ' cargado');
@@ -874,7 +887,8 @@ if ('serviceWorker' in navigator) {
     // ============================================================
     const IDB_NAME = 'cardique_fotos';
     const IDB_STORE = 'fotos';
-    const IDB_VERSION = 1;
+    const IDB_STORE_COLA = 'colaInformes';
+    const IDB_VERSION = 2;
 
     function abrirIDB() {
         return new Promise((res, rej) => {
@@ -883,6 +897,9 @@ if ('serviceWorker' in navigator) {
                 const db = e.target.result;
                 if (!db.objectStoreNames.contains(IDB_STORE)) {
                     db.createObjectStore(IDB_STORE, { keyPath: 'id' });
+                }
+                if (!db.objectStoreNames.contains(IDB_STORE_COLA)) {
+                    db.createObjectStore(IDB_STORE_COLA, { keyPath: 'id' });
                 }
             };
             req.onsuccess = e => res(e.target.result);
@@ -938,6 +955,136 @@ if ('serviceWorker' in navigator) {
             req.onerror   = e => rej(e.target.error);
         });
     }
+
+    // ── Cola de informes pendientes de sincronizar (offline-first) ──
+
+    async function colaGuardar(item) {
+        const db = await abrirIDB();
+        return new Promise((res, rej) => {
+            const tx = db.transaction(IDB_STORE_COLA, 'readwrite');
+            tx.objectStore(IDB_STORE_COLA).put(item);
+            tx.oncomplete = () => res();
+            tx.onerror    = e => rej(e.target.error);
+        });
+    }
+
+    async function colaLeerTodas() {
+        const db = await abrirIDB();
+        return new Promise((res, rej) => {
+            const tx  = db.transaction(IDB_STORE_COLA, 'readonly');
+            const req = tx.objectStore(IDB_STORE_COLA).getAll();
+            req.onsuccess = e => res(e.target.result || []);
+            req.onerror   = e => rej(e.target.error);
+        });
+    }
+
+    async function colaEliminar(id) {
+        const db = await abrirIDB();
+        return new Promise((res, rej) => {
+            const tx = db.transaction(IDB_STORE_COLA, 'readwrite');
+            tx.objectStore(IDB_STORE_COLA).delete(id);
+            tx.oncomplete = () => res();
+            tx.onerror    = e => rej(e.target.error);
+        });
+    }
+
+    // ── Motor de sincronización offline-first ──
+
+    const WORKER_URL = 'https://proyecar-pdfs-worker-production.ecodesaingenieria.workers.dev';
+
+    function actualizarBadge(n) {
+        const el = document.getElementById('badge-cola');
+        if (!el) return;
+        if (n > 0) {
+            el.textContent = n + (n === 1 ? ' informe pendiente' : ' informes pendientes');
+            el.style.display = 'block';
+        } else {
+            el.style.display = 'none';
+        }
+    }
+
+    async function refrescarBadge() {
+        const items = await colaLeerTodas();
+        actualizarBadge(items.length);
+    }
+
+    async function encolarLocal(nombreArchivo, htmlBlob) {
+        await colaGuardar({
+            id: 'cola_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+            nombreArchivo: nombreArchivo,
+            htmlBlob: htmlBlob,
+            creadoEn: new Date().toISOString(),
+        });
+        await refrescarBadge();
+    }
+
+    async function sincronizarInforme(nombreArchivo, htmlBlob) {
+        if (!navigator.onLine) {
+            await encolarLocal(nombreArchivo, htmlBlob);
+            return;
+        }
+        try {
+            await window.ProyeCarSupabase.subirPdfYSincronizar({
+                nombreArchivo: nombreArchivo,
+                blobPdf: htmlBlob,
+                fotosUrls: [],
+                workerUploadUrl: WORKER_URL,
+            });
+        } catch (e) {
+            console.error('Sync de informe falló, se encola:', e);
+            await encolarLocal(nombreArchivo, htmlBlob);
+        }
+    }
+
+    async function reintentarCola() {
+        if (!navigator.onLine) return;
+        const items = await colaLeerTodas();
+        for (const item of items) {
+            try {
+                await window.ProyeCarSupabase.subirPdfYSincronizar({
+                    nombreArchivo: item.nombreArchivo,
+                    blobPdf: item.htmlBlob,
+                    fotosUrls: [],
+                    workerUploadUrl: WORKER_URL,
+                });
+                await colaEliminar(item.id);
+            } catch (e) {
+                console.error('Reintento de cola falló para', item.nombreArchivo, e);
+            }
+        }
+        await refrescarBadge();
+    }
+
+    window.addEventListener('online', reintentarCola);
+    window.addEventListener('load', function() {
+        refrescarBadge();
+        reintentarCola();
+    });
+
+    // ── Login gate ──
+
+    async function mostrarLoginSiHaceFalta() {
+        const modal = document.getElementById('modal-login');
+        const { data: { session } } = await window.ProyeCarSupabase.supabase.auth.getSession();
+        modal.style.display = session ? 'none' : 'flex';
+    }
+
+    document.getElementById('login-submit').addEventListener('click', async function() {
+        const email = document.getElementById('login-email').value.trim();
+        const password = document.getElementById('login-password').value;
+        const errorEl = document.getElementById('login-error');
+        errorEl.style.display = 'none';
+        try {
+            await window.ProyeCarSupabase.iniciarSesion(email, password);
+            document.getElementById('modal-login').style.display = 'none';
+            reintentarCola();
+        } catch (e) {
+            errorEl.textContent = 'No se pudo iniciar sesión: ' + (e.message || e);
+            errorEl.style.display = 'block';
+        }
+    });
+
+    window.addEventListener('load', mostrarLoginSiHaceFalta);
 
     // Genera un ID único por foto
     function fotoId(frenteIdx, timestamp) {
@@ -2480,16 +2627,13 @@ if ('serviceWorker' in navigator) {
         }
         window._pdfWin = null;
 
-        // Enviar copia del informe al Worker (Cloudflare)
+        // Sincronizar informe con Supabase + R2 (offline-first, ver sincronizarInforme)
         try {
             var htmlBlob = new Blob([h], { type: 'text/html;charset=utf-8' });
-            fetch('https://pdf-receiver.ecodesaingenieria.workers.dev/', {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/html;charset=utf-8' },
-                body: htmlBlob
-            }).catch(function(e) { console.error('Error enviando informe al worker:', e); });
+            var nombreArchivo = 'informe_' + (proyectoInput.value || 'sin-nombre').replace(/[^a-z0-9]+/gi, '-') + '_' + (fechaInput.value || new Date().toISOString().slice(0,10)) + '_' + Date.now() + '.html';
+            sincronizarInforme(nombreArchivo, htmlBlob).catch(function(e) { console.error('Error sincronizando informe:', e); });
         } catch (e) {
-            console.error('Error creando blob para el worker:', e);
+            console.error('Error creando blob para sincronización:', e);
         }
 
         restoreBtn();

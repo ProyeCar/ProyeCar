@@ -113,7 +113,7 @@ export async function subirPdfYSincronizar({ nombreArchivo, blobPdf, fotosUrls, 
     const respuesta = await fetch(`${base}/${nombreArchivo}`, {
       method: 'PUT',
       headers: {
-        'Content-Type': 'application/pdf',
+        'Content-Type': 'text/html;charset=utf-8',
         Authorization: `Bearer ${session.access_token}`,
       },
       body: blobPdf,
@@ -129,3 +129,12 @@ export async function subirPdfYSincronizar({ nombreArchivo, blobPdf, fotosUrls, 
 
   return fila;
 }
+
+window.ProyeCarSupabase = {
+  supabase,
+  iniciarSesion,
+  registrarPdfPendiente,
+  confirmarSincronizacion,
+  marcarError,
+  subirPdfYSincronizar,
+};
