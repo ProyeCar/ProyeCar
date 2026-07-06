@@ -84,6 +84,7 @@
         }
         .logo-area { display: flex; align-items: center; gap: 12px; position: relative; z-index: 1; }
         .logo-img { height: 64px; max-width: 190px; object-fit: contain; border-radius: 12px; }
+        .badge-cola { position: fixed; top: 10px; right: 10px; background: var(--ambar); color: var(--verde-oscuro); font-weight: 700; font-size: 0.8rem; padding: 6px 14px; border-radius: 30px; box-shadow: var(--shadow-md); z-index: 500; }
         .btn-cargar-logo { background: rgba(255,255,255,0.15); font-size: 0.75rem; padding: 6px 12px; border-radius: 30px; cursor: pointer; border: 1px solid rgba(255,255,255,0.3); color: white; backdrop-filter: blur(4px); }
 
         /* === CARDS === */
@@ -763,6 +764,9 @@ if ('serviceWorker' in navigator) {
     </button>
 </nav>
 
+<div id="badge-cola" class="badge-cola" style="display:none;"></div>
+
+<script type="module" src="supabase-pdfs.js"></script>
 <script>
     const APP_VERSION = "1.5.59";
     console.log('🚀 ProyeCar v' + APP_VERSION + ' cargado');
@@ -974,6 +978,79 @@ if ('serviceWorker' in navigator) {
             tx.onerror    = e => rej(e.target.error);
         });
     }
+
+    // ── Motor de sincronización offline-first ──
+
+    const WORKER_URL = 'https://proyecar-pdfs-worker-production.ecodesaingenieria.workers.dev';
+
+    function actualizarBadge(n) {
+        const el = document.getElementById('badge-cola');
+        if (!el) return;
+        if (n > 0) {
+            el.textContent = n + (n === 1 ? ' informe pendiente' : ' informes pendientes');
+            el.style.display = 'block';
+        } else {
+            el.style.display = 'none';
+        }
+    }
+
+    async function refrescarBadge() {
+        const items = await colaLeerTodas();
+        actualizarBadge(items.length);
+    }
+
+    async function encolarLocal(nombreArchivo, htmlBlob) {
+        await colaGuardar({
+            id: 'cola_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+            nombreArchivo: nombreArchivo,
+            htmlBlob: htmlBlob,
+            creadoEn: new Date().toISOString(),
+        });
+        await refrescarBadge();
+    }
+
+    async function sincronizarInforme(nombreArchivo, htmlBlob) {
+        if (!navigator.onLine) {
+            await encolarLocal(nombreArchivo, htmlBlob);
+            return;
+        }
+        try {
+            await window.ProyeCarSupabase.subirPdfYSincronizar({
+                nombreArchivo: nombreArchivo,
+                blobPdf: htmlBlob,
+                fotosUrls: [],
+                workerUploadUrl: WORKER_URL,
+            });
+        } catch (e) {
+            console.error('Sync de informe falló, se encola:', e);
+            await encolarLocal(nombreArchivo, htmlBlob);
+        }
+    }
+
+    async function reintentarCola() {
+        if (!navigator.onLine) return;
+        const items = await colaLeerTodas();
+        for (const item of items) {
+            try {
+                await window.ProyeCarSupabase.subirPdfYSincronizar({
+                    nombreArchivo: item.nombreArchivo,
+                    blobPdf: item.htmlBlob,
+                    fotosUrls: [],
+                    workerUploadUrl: WORKER_URL,
+                });
+                await colaEliminar(item.id);
+            } catch (e) {
+                console.error('Reintento de cola falló para', item.nombreArchivo, e);
+            }
+        }
+        await refrescarBadge();
+    }
+
+    window.addEventListener('online', reintentarCola);
+    window.addEventListener('load', function() {
+        refrescarBadge();
+        reintentarCola();
+    });
 
     // Genera un ID único por foto
     function fotoId(frenteIdx, timestamp) {
@@ -2516,16 +2593,13 @@ if ('serviceWorker' in navigator) {
         }
         window._pdfWin = null;
 
-        // Enviar copia del informe al Worker (Cloudflare)
+        // Sincronizar informe con Supabase + R2 (offline-first, ver sincronizarInforme)
         try {
             var htmlBlob = new Blob([h], { type: 'text/html;charset=utf-8' });
-            fetch('https://pdf-receiver.ecodesaingenieria.workers.dev/', {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/html;charset=utf-8' },
-                body: htmlBlob
-            }).catch(function(e) { console.error('Error enviando informe al worker:', e); });
+            var nombreArchivo = 'informe_' + (proyectoInput.value || 'sin-nombre').replace(/[^a-z0-9]+/gi, '-') + '_' + (fechaInput.value || new Date().toISOString().slice(0,10)) + '_' + Date.now() + '.html';
+            sincronizarInforme(nombreArchivo, htmlBlob).catch(function(e) { console.error('Error sincronizando informe:', e); });
         } catch (e) {
-            console.error('Error creando blob para el worker:', e);
+            console.error('Error creando blob para sincronización:', e);
         }
 
         restoreBtn();
