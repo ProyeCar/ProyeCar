@@ -30,7 +30,7 @@ export default {
     const key = 'pdfs/' + user.id + '/' + nombreArchivo;
 
     await env.PDFS_BUCKET.put(key, request.body, {
-      httpMetadata: { contentType: 'application/pdf' },
+      httpMetadata: { contentType: 'text/html;charset=utf-8' },
     });
 
     return Response.json({ key: key, url: new URL(request.url).origin + '/' + key });
