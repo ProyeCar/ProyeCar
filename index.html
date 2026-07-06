@@ -569,15 +569,23 @@
             position: fixed; bottom: 0; left: 0; right: 0;
             background: rgba(255,255,255,0.92); backdrop-filter: blur(16px);
             border-top: 1px solid rgba(0,0,0,0.06);
-            display: flex; justify-content: space-around; align-items: center;
-            padding: 8px 0; padding-bottom: max(8px, env(safe-area-inset-bottom));
+            display: flex; justify-content: center; align-items: center; gap: 2px;
+            padding: 8px 10px; padding-bottom: max(8px, env(safe-area-inset-bottom));
             z-index: 1000; box-shadow: 0 -4px 12px rgba(0,0,0,.06);
+            overflow-x: auto; overflow-y: hidden;
+            scroll-snap-type: x proximity;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none; -ms-overflow-style: none;
+            mask-image: linear-gradient(90deg, transparent 0, black 20px, black calc(100% - 20px), transparent 100%);
+            -webkit-mask-image: linear-gradient(90deg, transparent 0, black 20px, black calc(100% - 20px), transparent 100%);
         }
+        .nav-bar::-webkit-scrollbar { display: none; }
         .nav-btn {
             display: flex; flex-direction: column; align-items: center; gap: 3px;
             background: none; border: none; color: #94a3b8;
-            font-size: 0.7rem; font-weight: 600; padding: 6px 20px;
+            font-size: 0.7rem; font-weight: 600; padding: 6px 16px;
             border-radius: 12px; cursor: pointer;
+            flex: 0 0 auto; scroll-snap-align: center;
             touch-action: manipulation; -webkit-tap-highlight-color: transparent;
             position: relative;
             transition: color 0.25s, transform 0.15s;
@@ -2930,12 +2938,14 @@ if ('serviceWorker' in navigator) {
 
     // ── Swipe horizontal entre tabs ──
     (function initSwipe() {
-        let startX = 0, startY = 0;
+        let startX = 0, startY = 0, startedInNav = false;
         document.addEventListener('touchstart', e => {
             startX = e.touches[0].clientX;
             startY = e.touches[0].clientY;
+            startedInNav = !!e.target.closest('.nav-bar');
         }, { passive: true });
         document.addEventListener('touchend', e => {
+            if (startedInNav) return; // no interferir con el scroll horizontal del propio nav-bar
             const dx = e.changedTouches[0].clientX - startX;
             const dy = e.changedTouches[0].clientY - startY;
             if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
