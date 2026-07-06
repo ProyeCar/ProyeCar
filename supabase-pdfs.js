@@ -99,15 +99,23 @@ export async function marcarError(pdfId) {
  * del Worker de Cloudflare que sube el archivo a R2.
  */
 export async function subirPdfYSincronizar({ nombreArchivo, blobPdf, fotosUrls, workerUploadUrl }) {
-  // La key de R2 se decide en el cliente para poder registrar la fila antes de subir.
-  const urlR2 = `${workerUploadUrl.replace(/\/$/, '')}/${nombreArchivo}`;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('No hay sesión activa: llama a iniciarSesion() primero.');
+
+  const base = workerUploadUrl.replace(/\/$/, '');
+  // El Worker verifica el token y siempre guarda bajo pdfs/{user_id}/{archivo};
+  // como conocemos nuestro propio user_id, podemos predecir esa misma key aquí.
+  const urlR2 = `${base}/pdfs/${session.user.id}/${nombreArchivo}`;
 
   const fila = await registrarPdfPendiente({ nombreArchivo, urlR2, fotosUrls });
 
   try {
-    const respuesta = await fetch(urlR2, {
+    const respuesta = await fetch(`${base}/${nombreArchivo}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/pdf' },
+      headers: {
+        'Content-Type': 'application/pdf',
+        Authorization: `Bearer ${session.access_token}`,
+      },
       body: blobPdf,
     });
 

@@ -1,0 +1,25 @@
+name = "proyecar-pdfs-worker"
+main = "src/index.js"
+compatibility_date = "2026-07-01"
+
+# Si tu cuenta de Cloudflare tiene más de un account_id, descomenta y fija el correcto:
+# account_id = "TU_ACCOUNT_ID"
+
+[vars]
+SUPABASE_URL = "https://isncjtomlvxyvcaohcpx.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "sb_publishable_SWknGu_-WzXjE1mQUXPdfQ_bIbTaDWO"
+
+[[r2_buckets]]
+binding = "PDFS_BUCKET"
+bucket_name = "proyecar-pdfs"
+
+[env.production]
+name = "proyecar-pdfs-worker-production"
+
+[env.production.vars]
+SUPABASE_URL = "https://isncjtomlvxyvcaohcpx.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "sb_publishable_SWknGu_-WzXjE1mQUXPdfQ_bIbTaDWO"
+
+[[env.production.r2_buckets]]
+binding = "PDFS_BUCKET"
+bucket_name = "proyecar-pdfs"
