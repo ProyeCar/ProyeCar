@@ -1,5 +1,5 @@
 name = "proyecar-pdfs-worker"
-main = "src/index.js"
+main = "index.js"
 compatibility_date = "2026-07-01"
 
 # Si tu cuenta de Cloudflare tiene más de un account_id, descomenta y fija el correcto:
