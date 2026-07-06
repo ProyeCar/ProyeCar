@@ -874,7 +874,8 @@ if ('serviceWorker' in navigator) {
     // ============================================================
     const IDB_NAME = 'cardique_fotos';
     const IDB_STORE = 'fotos';
-    const IDB_VERSION = 1;
+    const IDB_STORE_COLA = 'colaInformes';
+    const IDB_VERSION = 2;
 
     function abrirIDB() {
         return new Promise((res, rej) => {
@@ -883,6 +884,9 @@ if ('serviceWorker' in navigator) {
                 const db = e.target.result;
                 if (!db.objectStoreNames.contains(IDB_STORE)) {
                     db.createObjectStore(IDB_STORE, { keyPath: 'id' });
+                }
+                if (!db.objectStoreNames.contains(IDB_STORE_COLA)) {
+                    db.createObjectStore(IDB_STORE_COLA, { keyPath: 'id' });
                 }
             };
             req.onsuccess = e => res(e.target.result);
@@ -936,6 +940,38 @@ if ('serviceWorker' in navigator) {
             const req = tx.objectStore(IDB_STORE).getAll();
             req.onsuccess = e => res(e.target.result || []);
             req.onerror   = e => rej(e.target.error);
+        });
+    }
+
+    // ── Cola de informes pendientes de sincronizar (offline-first) ──
+
+    async function colaGuardar(item) {
+        const db = await abrirIDB();
+        return new Promise((res, rej) => {
+            const tx = db.transaction(IDB_STORE_COLA, 'readwrite');
+            tx.objectStore(IDB_STORE_COLA).put(item);
+            tx.oncomplete = () => res();
+            tx.onerror    = e => rej(e.target.error);
+        });
+    }
+
+    async function colaLeerTodas() {
+        const db = await abrirIDB();
+        return new Promise((res, rej) => {
+            const tx  = db.transaction(IDB_STORE_COLA, 'readonly');
+            const req = tx.objectStore(IDB_STORE_COLA).getAll();
+            req.onsuccess = e => res(e.target.result || []);
+            req.onerror   = e => rej(e.target.error);
+        });
+    }
+
+    async function colaEliminar(id) {
+        const db = await abrirIDB();
+        return new Promise((res, rej) => {
+            const tx = db.transaction(IDB_STORE_COLA, 'readwrite');
+            tx.objectStore(IDB_STORE_COLA).delete(id);
+            tx.oncomplete = () => res();
+            tx.onerror    = e => rej(e.target.error);
         });
     }
 
