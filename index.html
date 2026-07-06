@@ -83,7 +83,8 @@
             border-radius: 50%;
         }
         .logo-area { display: flex; align-items: center; gap: 12px; position: relative; z-index: 1; }
-        .logo-img { height: 64px; max-width: 190px; object-fit: contain; border-radius: 12px; }
+        .logo-img { height: 64px; max-width: 190px; object-fit: contain; border-radius: 12px; transition: transform 0.3s ease; }
+        .logo-img:hover { transform: perspective(600px) rotateY(-6deg) scale(1.04); }
         .badge-cola { position: fixed; top: 10px; right: 10px; background: var(--ambar); color: var(--verde-oscuro); font-weight: 700; font-size: 0.8rem; padding: 6px 14px; border-radius: 30px; box-shadow: var(--shadow-md); z-index: 500; }
         .btn-cargar-logo { background: rgba(255,255,255,0.15); font-size: 0.75rem; padding: 6px 12px; border-radius: 30px; cursor: pointer; border: 1px solid rgba(255,255,255,0.3); color: white; backdrop-filter: blur(4px); }
 
@@ -100,10 +101,23 @@
             padding: 1.4rem;
             margin-bottom: 1.4rem;
             border: 1px solid rgba(255,255,255,0.9);
-            transition: box-shadow 0.2s;
+            transition: box-shadow 0.2s, transform 0.15s;
             animation: fadeSlideUp 0.35s var(--ease);
+            position: relative;
+            overflow: hidden;
+        }
+        .card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 100% 0%, rgba(45,158,82,0.10), transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
         }
         .card:hover { box-shadow: var(--sombra-hover); }
+        .card:hover::before, .card:active::before { opacity: 1; }
+        .card:active { transform: scale(0.985); }
         .card-header {
             display: flex;
             align-items: center;
@@ -321,7 +335,7 @@
             transition: all 0.2s; box-shadow: 0 3px 12px rgba(26,92,53,0.25);
         }
         button:hover { transform: translateY(-1px); box-shadow: 0 5px 18px rgba(26,92,53,0.35); }
-        button:active { transform: translateY(0); }
+        button:active { transform: translateY(0) scale(0.97); }
         .btn-pdf { background: linear-gradient(135deg, #d97706, #f59e0b); box-shadow: 0 3px 12px rgba(217,119,6,0.3); }
         .btn-pdf:hover { box-shadow: 0 5px 18px rgba(217,119,6,0.4); }
         .btn-peligro { background: linear-gradient(135deg, #b91c1c, #ef4444); box-shadow: 0 3px 12px rgba(185,28,28,0.3); }
@@ -565,9 +579,22 @@
             font-size: 0.7rem; font-weight: 600; padding: 6px 20px;
             border-radius: 12px; cursor: pointer;
             touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+            position: relative;
+            transition: color 0.25s, transform 0.15s;
         }
+        .nav-btn:active { transform: scale(0.92); }
         .nav-icon { font-size: 1.4rem; display: inline-flex; align-items: center; justify-content: center; }
-        .nav-btn.activo { color: #1e6f3f; }
+        .nav-btn.activo { color: var(--verde-vivo); }
+        .nav-btn.activo::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            width: 24px;
+            height: 3px;
+            background: linear-gradient(90deg, var(--verde-vivo), var(--verde-claro));
+            border-radius: 0 0 3px 3px;
+            box-shadow: 0 2px 8px rgba(45,158,82,0.4);
+        }
         .pantalla { display: none; }
         .pantalla.activa { display: block; }
         body { padding-bottom: 80px !important; }
@@ -577,7 +604,11 @@
             background: white; border-radius: 20px; padding: 16px 18px;
             margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.05);
             cursor: pointer;
+            transition: box-shadow 0.2s, transform 0.15s, border-color 0.2s;
+            border: 1.5px solid transparent;
         }
+        .hist-item:hover { box-shadow: 0 8px 22px rgba(13,51,33,0.12); border-color: #bbf7d0; }
+        .hist-item:active { transform: scale(0.98); box-shadow: 0 2px 8px rgba(0,0,0,.05); }
         .hist-fecha { font-size: .8rem; color: #64748b; }
         .hist-proyecto { font-size: 1rem; font-weight: 700; color: #1e3a2f; margin-bottom: 4px; }
         .hist-inspector { font-size: .82rem; color: #64748b; }
@@ -592,7 +623,8 @@
         .comp-label { font-weight: 600; color: #1e3a2f; margin-bottom: 4px; display: block; }
         .comp-sel { width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 20px; font-size: .9rem; background: white; }
         .comp-resultado { margin-top: 16px; }
-        .comp-card { background: white; border-radius: 20px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,.05); }
+        .comp-card { background: white; border-radius: 20px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,.05); transition: box-shadow 0.2s; }
+        .comp-card:hover { box-shadow: 0 8px 22px rgba(13,51,33,0.10); }
         .comp-titulo { font-size: 1rem; font-weight: 700; color: #1e3a2f; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
         .comp-row { display: flex; gap: 10px; margin-bottom: 10px; }
         .comp-col { flex: 1; background: #f8fafc; border-radius: 14px; padding: 12px; }
