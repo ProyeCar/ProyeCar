@@ -3012,11 +3012,13 @@ if ('serviceWorker' in navigator) {
             activar: function(esInterno, alCerrar) {
                 setTimeout(function() {
                     handler = function(e) { if (!esInterno(e.target)) alCerrar(); };
-                    document.addEventListener('click', handler);
+                    // captura (no burbuja): así se cierra aunque el botón clickeado
+                    // detenga la propagación con stopPropagation() antes de llegar a document
+                    document.addEventListener('click', handler, true);
                 }, 10);
             },
             desactivar: function() {
-                if (handler) { document.removeEventListener('click', handler); handler = null; }
+                if (handler) { document.removeEventListener('click', handler, true); handler = null; }
             }
         };
     }
