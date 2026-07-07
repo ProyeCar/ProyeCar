@@ -164,7 +164,7 @@
             padding: 12px 16px;
             border: 1.5px solid var(--gris-300);
             border-radius: var(--radius-sm);
-            font-size: 15px;
+            font-size: 16px;
             font-family: inherit;
             background: #fff;
             transition: all 0.2s;
@@ -229,6 +229,18 @@
             transition: background 0.2s;
         }
         .btn-eliminar-frente:hover { background: rgba(163,45,45,0.3); }
+        .frente-acciones-carrusel {
+            display: flex; align-items: center; gap: 8px;
+            padding: 6px 10px; margin: 0 0 4px;
+            overflow-x: auto; overflow-y: hidden;
+            scroll-snap-type: x proximity;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none; -ms-overflow-style: none;
+            mask-image: linear-gradient(90deg, transparent 0, black 16px, black calc(100% - 16px), transparent 100%);
+            -webkit-mask-image: linear-gradient(90deg, transparent 0, black 16px, black calc(100% - 16px), transparent 100%);
+        }
+        .frente-acciones-carrusel::-webkit-scrollbar { display: none; }
+        .frente-acciones-carrusel > * { flex-shrink: 0; scroll-snap-align: start; }
 
         /* === CATEGORÍAS === */
         .categoria {
@@ -282,7 +294,12 @@
         .btn-cumple:not(.activo), .btn-nocumple:not(.activo) { background: #e2e8f0; color: #475569; }
         .btn-cumple:not(.activo):hover { background: #dcfce7; color: #16a34a; }
         .btn-nocumple:not(.activo):hover { background: #fee2e2; color: #dc2626; }
-        .btn-editar, .btn-eliminar { background: none; border: none; font-size: 1rem; cursor: pointer; padding: 4px 6px; }
+        .btn-editar, .btn-eliminar, .btn-color-cat { background: none; border: none; font-size: 1rem; cursor: pointer; padding: 4px 6px; min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+        .btn-color-cat .swatch-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
+        .paleta3d-panel { position: fixed; z-index: 10001; background: white; border-radius: 14px; padding: 14px; box-shadow: 0 8px 32px rgba(0,0,0,0.22); border: 1px solid #e5e7eb; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; min-width: 200px; }
+        .paleta3d-swatch { width: 36px; height: 36px; border-radius: 50%; cursor: pointer; border: 2px solid rgba(255,255,255,0.8); transform: perspective(400px) rotateX(0deg) rotateY(0deg); transition: transform 0.2s ease, box-shadow 0.2s ease; box-shadow: 0 2px 6px rgba(0,0,0,0.25), inset 0 2px 4px rgba(255,255,255,0.35), inset 0 -3px 6px rgba(0,0,0,0.25); }
+        .paleta3d-swatch:hover, .paleta3d-swatch.selected { transform: perspective(400px) rotateX(15deg) rotateY(15deg) scale(1.15); box-shadow: 0 6px 14px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.4), inset 0 -3px 6px rgba(0,0,0,0.3); }
+        .paleta3d-swatch.selected { border-color: #1a5c35; }
         .item-obs input {
             width: 100%; margin-top: 8px; padding: 7px 12px;
             border-radius: 10px; border: 1.5px solid #e2e8f0;
@@ -580,6 +597,15 @@
             -webkit-mask-image: linear-gradient(90deg, transparent 0, black 20px, black calc(100% - 20px), transparent 100%);
         }
         .nav-bar::-webkit-scrollbar { display: none; }
+        .wa-fab {
+            position: fixed; right: 16px;
+            bottom: calc(70px + env(safe-area-inset-bottom));
+            z-index: 1500;
+            width: 52px; height: 52px; border-radius: 50%;
+            background: #25D366; border: none; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+        }
         .nav-btn {
             display: flex; flex-direction: column; align-items: center; gap: 3px;
             background: none; border: none; color: #94a3b8;
@@ -861,17 +887,17 @@ if ('serviceWorker' in navigator) {
                 <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
                     <div style="flex:1;min-width:130px;">
                         <div style="font-size:0.65rem;font-weight:700;color:#64748b;letter-spacing:0.6px;text-transform:uppercase;margin-bottom:4px;">Anterior</div>
-                        <select id="cs-sel-ant" style="width:100%;padding:7px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:12px;background:white;color:#374151;"><option value="">— Sin comparación —</option></select>
+                        <select id="cs-sel-ant" style="width:100%;padding:7px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;background:white;color:#374151;"><option value="">— Sin comparación —</option></select>
                     </div>
                     <div style="flex:1;min-width:130px;">
                         <div style="font-size:0.65rem;font-weight:700;color:#16a34a;letter-spacing:0.6px;text-transform:uppercase;margin-bottom:4px;">Reciente</div>
-                        <select id="cs-sel-rec" style="width:100%;padding:7px 10px;border-radius:8px;border:1px solid #bbf7d0;font-size:12px;background:white;color:#374151;"><option value="">— Sin comparación —</option></select>
+                        <select id="cs-sel-rec" style="width:100%;padding:7px 10px;border-radius:8px;border:1px solid #bbf7d0;font-size:16px;background:white;color:#374151;"><option value="">— Sin comparación —</option></select>
                     </div>
                 </div>
                 <div id="filtros-comp-pdf" style="display:none;margin-bottom:8px;">
                     <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                        <select id="filtro-frente-pdf" style="flex:1;min-width:140px;padding:6px 10px;border-radius:8px;border:0.5px solid var(--color-border-tertiary);font-size:12px;background:var(--color-background-primary);color:var(--color-text-primary);"><option value="todos">Todos los frentes</option></select>
-                        <select id="filtro-area-pdf" style="flex:1;min-width:140px;padding:6px 10px;border-radius:8px;border:0.5px solid var(--color-border-tertiary);font-size:12px;background:var(--color-background-primary);color:var(--color-text-primary);"><option value="todas">Todas las áreas</option></select>
+                        <select id="filtro-frente-pdf" style="flex:1;min-width:140px;padding:6px 10px;border-radius:8px;border:0.5px solid var(--color-border-tertiary);font-size:16px;background:var(--color-background-primary);color:var(--color-text-primary);"><option value="todos">Todos los frentes</option></select>
+                        <select id="filtro-area-pdf" style="flex:1;min-width:140px;padding:6px 10px;border-radius:8px;border:0.5px solid var(--color-border-tertiary);font-size:16px;background:var(--color-background-primary);color:var(--color-text-primary);"><option value="todas">Todas las áreas</option></select>
                     </div>
                 </div>
                 <button onclick="csSemanalGenerar()" style="width:100%;background:linear-gradient(135deg,#1a5c35,#16a34a);color:white;border:none;border-radius:10px;padding:11px;font-size:0.85rem;font-weight:700;cursor:pointer;margin-bottom:4px;box-shadow:0 3px 10px rgba(22,163,74,0.25);">🔄 Generar comparación</button>
@@ -948,6 +974,9 @@ if ('serviceWorker' in navigator) {
     </button>
 </nav>
 
+<button id="wa-fab" class="wa-fab" style="display:none;" aria-label="Compartir por WhatsApp" title="Compartir por WhatsApp">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.5 2 2 6.5 2 12c0 1.9.5 3.7 1.5 5.3L2 22l4.9-1.4C8.4 21.5 10.1 22 12 22c5.5 0 10-4.5 10-10S17.5 2 12 2zm0 18.2c-1.6 0-3.2-.4-4.5-1.3l-.3-.2-3 .8.8-2.9-.2-.3C4 15 3.6 13.5 3.6 12c0-4.6 3.8-8.4 8.4-8.4s8.4 3.8 8.4 8.4-3.8 8.2-8.4 8.2zm4.6-6.1c-.3-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1-.2.3-.6.8-.8 1-.1.2-.3.2-.5.1-.3-.1-1.2-.4-2.2-1.4-.8-.7-1.4-1.6-1.5-1.9-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5.1-.1.2-.3.2-.4.1-.2 0-.4 0-.5-.1-.1-.6-1.5-.9-2-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.1s1 2.5 1.1 2.6c.1.2 1.9 2.9 4.6 4 .6.3 1.1.4 1.5.6.6.2 1.2.2 1.6.1.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2-.1-.1-.3-.2-.5-.3z"/></svg>
+</button>
 
 <div id="badge-cola" class="badge-cola" style="display:none;"></div>
 
@@ -1547,7 +1576,7 @@ if ('serviceWorker' in navigator) {
             contratInput.type = "text";
             contratInput.placeholder = "Nombre del contratista";
             contratInput.value = frente.contratista || "";
-            contratInput.style.cssText = "font-size:0.85rem;margin-left:6px;padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;min-height:40px;resize:none;overflow:hidden;width:100%;box-sizing:border-box;";
+            contratInput.style.cssText = "font-size:16px;margin-left:6px;padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;min-height:40px;resize:none;overflow:hidden;width:100%;box-sizing:border-box;";
             contratInput.setAttribute('oninput', "this.style.height='auto';this.style.height=this.scrollHeight+'px'");
             contratInput.setAttribute('onfocus', "this.style.height='auto';this.style.height=this.scrollHeight+'px'");
             contratInput.addEventListener("change", (e) => { frentes[idx].contratista = e.target.value; saveToLocal(); });
@@ -1559,8 +1588,11 @@ if ('serviceWorker' in navigator) {
             btnEliminar.onclick = () => { setTimeout(() => { if (confirm("¿Eliminar este frente?")) { frentes.splice(idx, 1); saveToLocal(); renderFrentes(); } }, 10); };
             tituloDiv.prepend(toggleArrow);
             headerDiv.appendChild(tituloDiv);
-            headerDiv.appendChild(btnEliminar);
             frenteDiv.appendChild(headerDiv);
+            const accionesCarrusel = document.createElement("div");
+            accionesCarrusel.className = "frente-acciones-carrusel";
+            accionesCarrusel.appendChild(btnEliminar);
+            frenteDiv.appendChild(accionesCarrusel);
 
             // Body wrapper for collapse
             const frenteBody = document.createElement("div");
@@ -1605,10 +1637,21 @@ if ('serviceWorker' in navigator) {
                 catLabelWrap.appendChild(catNombre);
                 catTitulo.appendChild(catLabelWrap); catTitulo.appendChild(catToggle);
 
+                const btnColorCat = document.createElement("button");
+                btnColorCat.className = "btn-color-cat";
+                btnColorCat.title = "Elegir color del área";
+                btnColorCat.setAttribute("aria-label", "Elegir color del área");
+                const swatchDot = document.createElement("span");
+                swatchDot.className = "swatch-dot";
+                swatchDot.style.background = cargarColoresCategoria()[cat.id] || "#e5e7eb";
+                btnColorCat.appendChild(swatchDot);
+                btnColorCat.onclick = (e) => { e.stopPropagation(); abrirPaleta3D(cat.id, e.currentTarget); };
+
                 const btnEditarCat = document.createElement("button");
                 btnEditarCat.innerHTML = "✏️";
                 btnEditarCat.className = "btn-editar";
                 btnEditarCat.title = "Editar nombre del área";
+                btnEditarCat.setAttribute("aria-label", "Editar nombre del área");
                 btnEditarCat.onclick = (e) => {
                     e.stopPropagation();
                     setTimeout(() => {
@@ -1625,6 +1668,7 @@ if ('serviceWorker' in navigator) {
                 btnEliminarCat.innerHTML = "🗑️";
                 btnEliminarCat.className = "btn-eliminar";
                 btnEliminarCat.title = "Eliminar área";
+                btnEliminarCat.setAttribute("aria-label", "Eliminar área");
                 btnEliminarCat.onclick = (e) => {
                     e.stopPropagation();
                     setTimeout(() => {
@@ -1636,8 +1680,11 @@ if ('serviceWorker' in navigator) {
                     }, 10);
                 };
 
+                catTitulo.appendChild(btnColorCat);
                 catTitulo.appendChild(btnEditarCat);
                 catTitulo.appendChild(btnEliminarCat);
+                const _colorCat = cargarColoresCategoria()[cat.id];
+                if (_colorCat) { catDiv.style.borderLeft = '4px solid ' + _colorCat; }
 
                 catDiv.appendChild(catTitulo);
                 const catBody = document.createElement("div"); catBody.className = "cat-body"; catBody.style.cssText = "padding-top:8px;";
@@ -1823,7 +1870,7 @@ if ('serviceWorker' in navigator) {
             const btnAgregarCat = document.createElement("button");
             btnAgregarCat.innerText = "➕ Agregar área nueva";
             btnAgregarCat.className = "btn-agregar-frente";
-            btnAgregarCat.style.cssText = "margin:8px 0 4px;font-size:0.82rem;padding:8px 16px;width:100%;";
+            btnAgregarCat.style.cssText = "margin:8px 0 4px;font-size:0.82rem;padding:8px 16px;white-space:nowrap;";
             btnAgregarCat.onclick = () => {
                 setTimeout(() => {
                     const nombre = prompt("Nombre del área nueva:");
@@ -1837,7 +1884,7 @@ if ('serviceWorker' in navigator) {
                     renderFrentes();
                 }, 10);
             };
-            frenteBody.appendChild(btnAgregarCat);
+            accionesCarrusel.appendChild(btnAgregarCat);
 
             const fotosDiv = document.createElement("div"); fotosDiv.className = "frente-fotos-area";
             const fotosTitulo = document.createElement("h4"); fotosTitulo.innerText = "📸 Evidencia fotográfica de este frente";
@@ -2012,6 +2059,7 @@ if ('serviceWorker' in navigator) {
             // Body is open by default - no maxHeight restriction needed
             frentesContainer.appendChild(frenteDiv);
         });
+        aplicarFiltroCategoria(localStorage.getItem('proyecar_categoria_activa') || 'todos');
         // Procesar importación pendiente si existe (modal HTML — evita confirm() bloqueado en iOS Safari)
         var pendingImport = sessionStorage.getItem('proyecar_import_pending');
         if (pendingImport) {
@@ -2895,7 +2943,29 @@ if ('serviceWorker' in navigator) {
         if (nombre === 'historial') renderHistorial();
         if (nombre === 'comparar') renderComparar();
         if (nombre === 'sync') renderSync();
+        const waFab = document.getElementById('wa-fab');
+        if (waFab) waFab.style.display = (nombre === 'frentes') ? 'flex' : 'none';
         window.scrollTo(0, 0);
+    }
+
+    function construirTextoCompartirFrente() {
+        const uiSt = loadUiState();
+        const abierto = frentes.find(f => (uiSt[f.nombre] || {}).open === true);
+        if (!abierto) {
+            return '📋 ProyeCar\n\n' + frentes.length + ' frente(s) registrados:\n' + frentes.map(f => '• ' + f.nombre).join('\n');
+        }
+        const totalItems = abierto.categorias.reduce((n, c) => n + c.items.length, 0);
+        return '📋 ProyeCar — ' + abierto.nombre + '\n' +
+            (abierto.contratista ? 'Contratista: ' + abierto.contratista + '\n' : '') +
+            abierto.categorias.length + ' área(s), ' + totalItems + ' ítem(s) registrados.';
+    }
+
+    const waFabBtn = document.getElementById('wa-fab');
+    if (waFabBtn) {
+        waFabBtn.onclick = () => {
+            const url = 'https://wa.me/?text=' + encodeURIComponent(construirTextoCompartirFrente());
+            window.open(url, '_blank');
+        };
     }
 
     const ORDEN_TABS = ['datos', 'frentes', 'herramientas', 'historial', 'comparar', 'sync'];
@@ -2924,17 +2994,64 @@ if ('serviceWorker' in navigator) {
         };
     }
 
-    // ── Chips de categoría (filtro rápido en tab Frentes) ──
-    document.querySelectorAll('#chips-categorias .chip').forEach(chip => {
-        chip.addEventListener('click', () => {
-            document.querySelectorAll('#chips-categorias .chip').forEach(c => c.classList.remove('active'));
-            chip.classList.add('active');
-            const catid = chip.dataset.catid;
-            document.querySelectorAll('#frentes-container .categoria').forEach(cat => {
-                cat.style.display = (catid === 'todos' || cat.dataset.catid === catid) ? '' : 'none';
+    // ── Paleta 3D: color por categoría ──
+    const PALETA3D_COLORES = ['#16a34a', '#f59e0b', '#2563eb', '#7c3aed', '#dc2626', '#0d9488', '#db2777', '#475569'];
+    function cargarColoresCategoria() {
+        try { return JSON.parse(localStorage.getItem('proyecar_colores_categoria') || '{}'); } catch (e) { return {}; }
+    }
+    function guardarColorCategoria(catid, color) {
+        const c = cargarColoresCategoria();
+        c[catid] = color;
+        localStorage.setItem('proyecar_colores_categoria', JSON.stringify(c));
+    }
+    var _paleta3DOff = null;
+    function cerrarPaleta3D() {
+        const p = document.getElementById('paleta3d-panel');
+        if (p) p.remove();
+        if (_paleta3DOff) { document.removeEventListener('click', _paleta3DOff); _paleta3DOff = null; }
+    }
+    function abrirPaleta3D(catid, anchor) {
+        cerrarPaleta3D();
+        const colorActual = cargarColoresCategoria()[catid];
+        const panel = document.createElement('div');
+        panel.id = 'paleta3d-panel';
+        panel.className = 'paleta3d-panel';
+        const rect = anchor.getBoundingClientRect();
+        panel.style.top = (rect.bottom + 6) + 'px';
+        panel.style.left = Math.max(8, rect.right - 200) + 'px';
+        PALETA3D_COLORES.forEach(color => {
+            const sw = document.createElement('div');
+            sw.className = 'paleta3d-swatch' + (color === colorActual ? ' selected' : '');
+            sw.style.background = color;
+            sw.title = color;
+            sw.addEventListener('click', () => {
+                guardarColorCategoria(catid, color);
+                cerrarPaleta3D();
+                renderFrentes();
             });
+            panel.appendChild(sw);
         });
+        document.body.appendChild(panel);
+        setTimeout(() => {
+            _paleta3DOff = function off(e) {
+                if (!panel.contains(e.target) && e.target !== anchor) { cerrarPaleta3D(); }
+            };
+            document.addEventListener('click', _paleta3DOff);
+        }, 10);
+    }
+
+    // ── Chips de categoría (filtro rápido en tab Frentes) ──
+    function aplicarFiltroCategoria(catid) {
+        document.querySelectorAll('#chips-categorias .chip').forEach(c => c.classList.toggle('active', c.dataset.catid === catid));
+        document.querySelectorAll('#frentes-container .categoria').forEach(cat => {
+            cat.style.display = (catid === 'todos' || cat.dataset.catid === catid) ? '' : 'none';
+        });
+        localStorage.setItem('proyecar_categoria_activa', catid);
+    }
+    document.querySelectorAll('#chips-categorias .chip').forEach(chip => {
+        chip.addEventListener('click', () => aplicarFiltroCategoria(chip.dataset.catid));
     });
+    aplicarFiltroCategoria(localStorage.getItem('proyecar_categoria_activa') || 'todos');
 
     // ── Swipe horizontal entre tabs ──
     (function initSwipe() {
@@ -2942,7 +3059,7 @@ if ('serviceWorker' in navigator) {
         document.addEventListener('touchstart', e => {
             startX = e.touches[0].clientX;
             startY = e.touches[0].clientY;
-            startedInNav = !!e.target.closest('.nav-bar');
+            startedInNav = !!e.target.closest('.nav-bar, .frente-acciones-carrusel');
         }, { passive: true });
         document.addEventListener('touchend', e => {
             if (startedInNav) return; // no interferir con el scroll horizontal del propio nav-bar
@@ -3983,9 +4100,11 @@ if ('serviceWorker' in navigator) {
             if (el) el.innerHTML = cardInfo(role === 'ant' ? window.comparacionSemanal.inspeccion1 : window.comparacionSemanal.inspeccion2);
         }
 
+        var _csPickerOff = null;
         function closePicker() {
             var p = document.getElementById('cs-picker');
             if (p) p.remove();
+            if (_csPickerOff) { document.removeEventListener('click', _csPickerOff); _csPickerOff = null; }
         }
 
         function showPicker(role, anchor) {
@@ -4022,9 +4141,10 @@ if ('serviceWorker' in navigator) {
             }
             document.body.appendChild(picker);
             setTimeout(function() {
-                document.addEventListener('click', function off(e) {
-                    if (!picker.contains(e.target) && e.target !== anchor) { closePicker(); document.removeEventListener('click', off); }
-                });
+                _csPickerOff = function off(e) {
+                    if (!picker.contains(e.target) && e.target !== anchor) { closePicker(); }
+                };
+                document.addEventListener('click', _csPickerOff);
             }, 10);
         }
 
@@ -4038,17 +4158,17 @@ if ('serviceWorker' in navigator) {
             '<div style="background:white;border-radius:20px;padding:24px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.25);">' +
               '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">' +
                 '<h3 style="font-size:1rem;font-weight:700;color:#1e3a2f;margin:0;">📊 Comparación Semanal</h3>' +
-                '<button id="cs-close" style="background:none;border:none;box-shadow:none;color:#6b7280;font-size:1.1rem;cursor:pointer;padding:4px 8px;line-height:1;">✕</button>' +
+                '<button id="cs-close" aria-label="Cerrar" style="background:none;border:none;box-shadow:none;color:#6b7280;font-size:1.1rem;cursor:pointer;padding:4px 8px;line-height:1;">✕</button>' +
               '</div>' +
               '<div style="display:flex;align-items:center;justify-content:space-between;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;margin-bottom:10px;">' +
                 '<div><div style="font-size:0.65rem;font-weight:700;color:#64748b;letter-spacing:0.6px;text-transform:uppercase;margin-bottom:4px;">Anterior</div>' +
                 '<div id="cs-info-ant">' + cardInfo(window.comparacionSemanal.inspeccion1) + '</div></div>' +
-                '<button id="cs-menu-ant" style="background:none;border:1px solid #d1d5db;border-radius:8px;box-shadow:none;color:#374151;font-size:1rem;padding:4px 10px;cursor:pointer;flex-shrink:0;">⋮</button>' +
+                '<button id="cs-menu-ant" aria-label="Seleccionar inspección anterior" style="background:none;border:1px solid #d1d5db;border-radius:8px;box-shadow:none;color:#374151;font-size:1rem;padding:4px 10px;cursor:pointer;flex-shrink:0;">⋮</button>' +
               '</div>' +
               '<div style="display:flex;align-items:center;justify-content:space-between;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:12px 14px;margin-bottom:16px;">' +
                 '<div><div style="font-size:0.65rem;font-weight:700;color:#16a34a;letter-spacing:0.6px;text-transform:uppercase;margin-bottom:4px;">Reciente</div>' +
                 '<div id="cs-info-rec">' + cardInfo(window.comparacionSemanal.inspeccion2) + '</div></div>' +
-                '<button id="cs-menu-rec" style="background:none;border:1px solid #bbf7d0;border-radius:8px;box-shadow:none;color:#16a34a;font-size:1rem;padding:4px 10px;cursor:pointer;flex-shrink:0;">⋮</button>' +
+                '<button id="cs-menu-rec" aria-label="Seleccionar inspección reciente" style="background:none;border:1px solid #bbf7d0;border-radius:8px;box-shadow:none;color:#16a34a;font-size:1rem;padding:4px 10px;cursor:pointer;flex-shrink:0;">⋮</button>' +
               '</div>' +
               '<div style="display:flex;gap:8px;margin-bottom:16px;">' +
                 '<select id="cs-filtro-frente" style="flex:1;padding:8px 10px;border-radius:10px;border:1px solid #d1d5db;font-size:0.78rem;background:white;color:#374151;"><option value="todos">Todos los frentes</option></select>' +
