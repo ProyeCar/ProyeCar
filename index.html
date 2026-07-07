@@ -296,7 +296,7 @@
         .btn-nocumple:not(.activo):hover { background: #fee2e2; color: #dc2626; }
         .btn-editar, .btn-eliminar, .btn-color-cat { background: none; border: none; font-size: 1rem; cursor: pointer; padding: 4px 6px; min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
         .btn-color-cat .swatch-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
-        .paleta3d-panel { position: fixed; z-index: 10001; background: white; border-radius: 14px; padding: 14px; box-shadow: 0 8px 32px rgba(0,0,0,0.22); border: 1px solid #e5e7eb; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; min-width: 200px; }
+        .paleta3d-panel { position: fixed; z-index: 10001; background: white; border-radius: 14px; padding: 14px; box-shadow: 0 8px 32px rgba(0,0,0,0.22); border: 1px solid #e5e7eb; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; min-width: 200px; max-height: 220px; overflow-y: auto; }
         .paleta3d-swatch { width: 36px; height: 36px; border-radius: 50%; cursor: pointer; border: 2px solid rgba(255,255,255,0.8); transform: perspective(400px) rotateX(0deg) rotateY(0deg); transition: transform 0.2s ease, box-shadow 0.2s ease; box-shadow: 0 2px 6px rgba(0,0,0,0.25), inset 0 2px 4px rgba(255,255,255,0.35), inset 0 -3px 6px rgba(0,0,0,0.25); }
         .paleta3d-swatch:hover, .paleta3d-swatch.selected { transform: perspective(400px) rotateX(15deg) rotateY(15deg) scale(1.15); box-shadow: 0 6px 14px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.4), inset 0 -3px 6px rgba(0,0,0,0.3); }
         .paleta3d-swatch.selected { border-color: #1a5c35; }
@@ -1440,12 +1440,8 @@ if ('serviceWorker' in navigator) {
         });
         return result;
     }
-    function loadUiState() {
-        try { return JSON.parse(localStorage.getItem("cardique_ui_state") || "{}"); } catch(e) { return {}; }
-    }
-    function saveUiState(st) {
-        try { localStorage.setItem("cardique_ui_state", JSON.stringify(st)); } catch(e) {}
-    }
+    function loadUiState() { return leerJSON("cardique_ui_state", {}); }
+    function saveUiState(st) { guardarJSON("cardique_ui_state", st); }
     function autoResizeEl(el) {
         function grow() { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
         el.addEventListener('focus', grow);
@@ -1551,6 +1547,7 @@ if ('serviceWorker' in navigator) {
     };
     function renderFrentes() {
         frentesContainer.innerHTML = "";
+        const coloresCat = cargarColoresCategoria();
         frentes.forEach((frente, idx) => {
             const frenteDiv = document.createElement("div");
             frenteDiv.className = "frente-card";
@@ -1597,6 +1594,9 @@ if ('serviceWorker' in navigator) {
             // Body wrapper for collapse
             const frenteBody = document.createElement("div");
             frenteBody.className = "frente-body";
+            const accionesCarruselBody = document.createElement("div");
+            accionesCarruselBody.className = "frente-acciones-carrusel";
+            frenteBody.appendChild(accionesCarruselBody);
             // Restaurar estado UI (por defecto: colapsado)
             var _uiSt = loadUiState();
             var _fSt = _uiSt[frente.nombre] || {};
@@ -1643,7 +1643,7 @@ if ('serviceWorker' in navigator) {
                 btnColorCat.setAttribute("aria-label", "Elegir color del área");
                 const swatchDot = document.createElement("span");
                 swatchDot.className = "swatch-dot";
-                swatchDot.style.background = cargarColoresCategoria()[cat.id] || "#e5e7eb";
+                swatchDot.style.background = coloresCat[cat.id] || "#e5e7eb";
                 btnColorCat.appendChild(swatchDot);
                 btnColorCat.onclick = (e) => { e.stopPropagation(); abrirPaleta3D(cat.id, e.currentTarget); };
 
@@ -1683,8 +1683,8 @@ if ('serviceWorker' in navigator) {
                 catTitulo.appendChild(btnColorCat);
                 catTitulo.appendChild(btnEditarCat);
                 catTitulo.appendChild(btnEliminarCat);
-                const _colorCat = cargarColoresCategoria()[cat.id];
-                if (_colorCat) { catDiv.style.borderLeft = '4px solid ' + _colorCat; }
+                const _colorCat = coloresCat[cat.id];
+                if (_colorCat) { catTitulo.style.borderLeft = '5px solid ' + _colorCat; }
 
                 catDiv.appendChild(catTitulo);
                 const catBody = document.createElement("div"); catBody.className = "cat-body"; catBody.style.cssText = "padding-top:8px;";
@@ -1884,7 +1884,7 @@ if ('serviceWorker' in navigator) {
                     renderFrentes();
                 }, 10);
             };
-            accionesCarrusel.appendChild(btnAgregarCat);
+            accionesCarruselBody.appendChild(btnAgregarCat);
 
             const fotosDiv = document.createElement("div"); fotosDiv.className = "frente-fotos-area";
             const fotosTitulo = document.createElement("h4"); fotosTitulo.innerText = "📸 Evidencia fotográfica de este frente";
@@ -2059,7 +2059,7 @@ if ('serviceWorker' in navigator) {
             // Body is open by default - no maxHeight restriction needed
             frentesContainer.appendChild(frenteDiv);
         });
-        aplicarFiltroCategoria(localStorage.getItem('proyecar_categoria_activa') || 'todos');
+        aplicarFiltroUI(localStorage.getItem('proyecar_categoria_activa') || 'todos');
         // Procesar importación pendiente si existe (modal HTML — evita confirm() bloqueado en iOS Safari)
         var pendingImport = sessionStorage.getItem('proyecar_import_pending');
         if (pendingImport) {
@@ -2936,6 +2936,8 @@ if ('serviceWorker' in navigator) {
     // ── FASE 2: HISTORIAL Y COMPARAR ──
 
     function mostrarPantalla(nombre) {
+        document.getElementById('paleta3d-panel')?.remove();
+        document.getElementById('cs-picker')?.remove();
         document.querySelectorAll('.pantalla').forEach(p => p.classList.remove('activa'));
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('activo'));
         document.getElementById('pantalla-' + nombre).classList.add('activa');
@@ -2950,7 +2952,8 @@ if ('serviceWorker' in navigator) {
 
     function construirTextoCompartirFrente() {
         const uiSt = loadUiState();
-        const abierto = frentes.find(f => (uiSt[f.nombre] || {}).open === true);
+        const abiertos = frentes.filter(f => (uiSt[f.nombre] || {}).open === true);
+        const abierto = abiertos.length === 1 ? abiertos[0] : null;
         if (!abierto) {
             return '📋 ProyeCar\n\n' + frentes.length + ' frente(s) registrados:\n' + frentes.map(f => '• ' + f.nombre).join('\n');
         }
@@ -2994,21 +2997,43 @@ if ('serviceWorker' in navigator) {
         };
     }
 
+    // ── Helpers genéricos de localStorage JSON ──
+    function leerJSON(key, def) {
+        try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(def)); } catch (e) { return def; }
+    }
+    function guardarJSON(key, obj) {
+        try { localStorage.setItem(key, JSON.stringify(obj)); } catch (e) {}
+    }
+
+    // ── Helper genérico: overlay anclado que se cierra con click fuera ──
+    function crearCierreExterno() {
+        var handler = null;
+        return {
+            activar: function(esInterno, alCerrar) {
+                setTimeout(function() {
+                    handler = function(e) { if (!esInterno(e.target)) alCerrar(); };
+                    document.addEventListener('click', handler);
+                }, 10);
+            },
+            desactivar: function() {
+                if (handler) { document.removeEventListener('click', handler); handler = null; }
+            }
+        };
+    }
+
     // ── Paleta 3D: color por categoría ──
     const PALETA3D_COLORES = ['#16a34a', '#f59e0b', '#2563eb', '#7c3aed', '#dc2626', '#0d9488', '#db2777', '#475569'];
-    function cargarColoresCategoria() {
-        try { return JSON.parse(localStorage.getItem('proyecar_colores_categoria') || '{}'); } catch (e) { return {}; }
-    }
+    function cargarColoresCategoria() { return leerJSON('proyecar_colores_categoria', {}); }
     function guardarColorCategoria(catid, color) {
         const c = cargarColoresCategoria();
         c[catid] = color;
-        localStorage.setItem('proyecar_colores_categoria', JSON.stringify(c));
+        guardarJSON('proyecar_colores_categoria', c);
     }
-    var _paleta3DOff = null;
+    const _paleta3DCierre = crearCierreExterno();
     function cerrarPaleta3D() {
         const p = document.getElementById('paleta3d-panel');
         if (p) p.remove();
-        if (_paleta3DOff) { document.removeEventListener('click', _paleta3DOff); _paleta3DOff = null; }
+        _paleta3DCierre.desactivar();
     }
     function abrirPaleta3D(catid, anchor) {
         cerrarPaleta3D();
@@ -3032,34 +3057,47 @@ if ('serviceWorker' in navigator) {
             panel.appendChild(sw);
         });
         document.body.appendChild(panel);
-        setTimeout(() => {
-            _paleta3DOff = function off(e) {
-                if (!panel.contains(e.target) && e.target !== anchor) { cerrarPaleta3D(); }
-            };
-            document.addEventListener('click', _paleta3DOff);
-        }, 10);
+        const panelRect = panel.getBoundingClientRect();
+        if (panelRect.bottom > window.innerHeight) {
+            panel.style.top = Math.max(8, window.innerHeight - panelRect.height - 8) + 'px';
+        }
+        _paleta3DCierre.activar(
+            (t) => panel.contains(t) || t === anchor,
+            cerrarPaleta3D
+        );
     }
 
     // ── Chips de categoría (filtro rápido en tab Frentes) ──
-    function aplicarFiltroCategoria(catid) {
+    function aplicarFiltroUI(catid) {
         document.querySelectorAll('#chips-categorias .chip').forEach(c => c.classList.toggle('active', c.dataset.catid === catid));
         document.querySelectorAll('#frentes-container .categoria').forEach(cat => {
             cat.style.display = (catid === 'todos' || cat.dataset.catid === catid) ? '' : 'none';
         });
-        localStorage.setItem('proyecar_categoria_activa', catid);
+    }
+    function aplicarFiltroCategoria(catid) {
+        aplicarFiltroUI(catid);
+        try { localStorage.setItem('proyecar_categoria_activa', catid); } catch (e) {}
     }
     document.querySelectorAll('#chips-categorias .chip').forEach(chip => {
         chip.addEventListener('click', () => aplicarFiltroCategoria(chip.dataset.catid));
     });
-    aplicarFiltroCategoria(localStorage.getItem('proyecar_categoria_activa') || 'todos');
+    aplicarFiltroUI(localStorage.getItem('proyecar_categoria_activa') || 'todos');
 
     // ── Swipe horizontal entre tabs ──
     (function initSwipe() {
+        function enZonaScrollHorizontal(el) {
+            while (el && el !== document.body) {
+                const ov = getComputedStyle(el).overflowX;
+                if (ov === 'auto' || ov === 'scroll') return true;
+                el = el.parentElement;
+            }
+            return false;
+        }
         let startX = 0, startY = 0, startedInNav = false;
         document.addEventListener('touchstart', e => {
             startX = e.touches[0].clientX;
             startY = e.touches[0].clientY;
-            startedInNav = !!e.target.closest('.nav-bar, .frente-acciones-carrusel');
+            startedInNav = enZonaScrollHorizontal(e.target);
         }, { passive: true });
         document.addEventListener('touchend', e => {
             if (startedInNav) return; // no interferir con el scroll horizontal del propio nav-bar
@@ -4100,11 +4138,11 @@ if ('serviceWorker' in navigator) {
             if (el) el.innerHTML = cardInfo(role === 'ant' ? window.comparacionSemanal.inspeccion1 : window.comparacionSemanal.inspeccion2);
         }
 
-        var _csPickerOff = null;
+        var _csPickerCierre = crearCierreExterno();
         function closePicker() {
             var p = document.getElementById('cs-picker');
             if (p) p.remove();
-            if (_csPickerOff) { document.removeEventListener('click', _csPickerOff); _csPickerOff = null; }
+            _csPickerCierre.desactivar();
         }
 
         function showPicker(role, anchor) {
@@ -4140,12 +4178,10 @@ if ('serviceWorker' in navigator) {
                 });
             }
             document.body.appendChild(picker);
-            setTimeout(function() {
-                _csPickerOff = function off(e) {
-                    if (!picker.contains(e.target) && e.target !== anchor) { closePicker(); }
-                };
-                document.addEventListener('click', _csPickerOff);
-            }, 10);
+            _csPickerCierre.activar(
+                function(t) { return picker.contains(t) || t === anchor; },
+                closePicker
+            );
         }
 
         var realFF = document.getElementById('filtro-frente-pdf');
