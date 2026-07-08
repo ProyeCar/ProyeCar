@@ -14,7 +14,7 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', e => {
   if (e.request.mode === 'navigate' || e.request.url.includes('index.html')) {
     e.respondWith(
-      fetch(e.request).then(res => {
+      fetch(e.request, { cache: 'no-store' }).then(res => {
         const resClone = res.clone();
         caches.open(CACHE_NAME).then(cache => cache.put(e.request, resClone));
         return res;
