@@ -778,11 +778,12 @@
     <script>
 if ('serviceWorker' in navigator) {
   const yaControlado = !!navigator.serviceWorker.controller;
-  navigator.serviceWorker.register('sw.js?v=' + Math.random()).then(reg => {
+  navigator.serviceWorker.register('sw.js?v=' + Math.random(), { updateViaCache: 'none' }).then(reg => {
     reg.update();
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') reg.update();
     });
+    window.addEventListener('pageshow', () => reg.update());
   }).catch(err => {});
   if (yaControlado) {
     let _swYaRecargo = false;
