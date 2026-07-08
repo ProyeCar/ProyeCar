@@ -2998,16 +2998,19 @@ function mostrarBannerActualizacionPWA() {
 
     // ── FASE 2: HISTORIAL Y COMPARAR ──
 
+    const SIN_BOTON_PROPIO = ['herramientas', 'historial', 'comparar'];
     function mostrarPantalla(nombre) {
         document.getElementById('paleta3d-panel')?.remove();
         document.getElementById('cs-picker')?.remove();
         document.querySelectorAll('.pantalla').forEach(p => p.classList.remove('activa'));
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('activo'));
         document.getElementById('pantalla-' + nombre).classList.add('activa');
-        document.getElementById('nav-' + nombre).classList.add('activo');
+        const navId = SIN_BOTON_PROPIO.includes(nombre) ? 'nav-mas' : ('nav-' + nombre);
+        document.getElementById(navId)?.classList.add('activo');
         if (nombre === 'historial') renderHistorial();
         if (nombre === 'comparar') renderComparar();
         if (nombre === 'sync') renderSync();
+        if (nombre === 'mas') renderMenuAreas();
         const waFab = document.getElementById('wa-fab');
         if (waFab) waFab.style.display = (nombre === 'frentes') ? 'flex' : 'none';
         window.scrollTo(0, 0);
@@ -3034,7 +3037,7 @@ function mostrarBannerActualizacionPWA() {
         };
     }
 
-    const ORDEN_TABS = ['datos', 'frentes', 'herramientas', 'historial', 'comparar', 'sync'];
+    const ORDEN_TABS = ['datos', 'frentes', 'herramientas', 'historial', 'comparar', 'sync', 'mas'];
 
     async function renderSync() {
         const cont = document.getElementById('sync-lista');
