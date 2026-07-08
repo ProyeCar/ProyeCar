@@ -48,7 +48,7 @@ Nuevas clases `.menu-lista` (columna de filas) y `.menu-item` (tarjeta tocable, 
   - **Fix de robustez (línea ~2974)**: cambiar `document.getElementById('nav-' + nombre).classList.add('activo')` a `document.getElementById('nav-' + nombre)?.classList.add('activo')`, porque ahora hay pantallas (`herramientas`/`historial`/`comparar`) sin botón propio en la barra — sin este fix, navegar a esas pantallas tira `TypeError`.
   - Agregar lógica: si `nombre` es `'herramientas'`, `'historial'` o `'comparar'`, marcar `nav-mas` como `.activo` en su lugar (ya que esas 3 no tienen botón propio).
   - Si `nombre === 'mas'`, llamar a `renderMenuAreas()` (ver siguiente punto) para refrescar la lista de áreas.
-- **Nueva función `renderMenuAreas()`**: lee `document.querySelectorAll('#chips-categorias .chip')`, y por cada chip crea un botón en `#areas-menu-lista` con el mismo ícono (`.chip-icon`) y nombre (`.chip-label`), con `onclick` que hace `mostrarPantalla('frentes')` seguido de `aplicarFiltroCategoria(chip.dataset.catid)`.
+- **Nueva función `renderMenuAreas()`**: lee `document.querySelectorAll('#chips-categorias .chip')`, **excluye el chip `data-catid="todos"`** (no es un área real, es el filtro "mostrar todas"), y por cada chip restante crea un botón en `#areas-menu-lista` con el mismo ícono (`.chip-icon`) y nombre (`.chip-label`), con `onclick` que hace `mostrarPantalla('frentes')` seguido de `aplicarFiltroCategoria(chip.dataset.catid)`. Confirmado en el HTML actual: los `data-catid` existentes son `ambiental`, `sst`, `juridica`, `social`, `tecnica`, `todos` — 5 áreas reales + el chip "todos" a excluir.
 
 ## Flujo de datos
 
