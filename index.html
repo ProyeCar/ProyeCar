@@ -3135,6 +3135,24 @@ function mostrarBannerActualizacionPWA() {
         );
     }
 
+    // ── Menú "Más": botones de área generados desde los chips existentes ──
+    function renderMenuAreas() {
+        const cont = document.getElementById('areas-menu-lista');
+        if (!cont) return;
+        cont.innerHTML = '';
+        document.querySelectorAll('#chips-categorias .chip').forEach(chip => {
+            const catid = chip.dataset.catid;
+            if (catid === 'todos') return;
+            const icono = chip.querySelector('.chip-icon').innerHTML;
+            const nombre = chip.querySelector('.chip-label').textContent;
+            const btn = document.createElement('button');
+            btn.className = 'menu-item';
+            btn.innerHTML = icono + nombre;
+            btn.onclick = () => { mostrarPantalla('frentes'); aplicarFiltroCategoria(catid); };
+            cont.appendChild(btn);
+        });
+    }
+
     // ── Chips de categoría (filtro rápido en tab Frentes) ──
     function aplicarFiltroUI(catid) {
         document.querySelectorAll('#chips-categorias .chip').forEach(c => c.classList.toggle('active', c.dataset.catid === catid));
