@@ -1,3 +1,4 @@
+// build: 2026-07-08-ui-fixes
 const CACHE_NAME = 'cardique-v' + Math.random();
 
 self.addEventListener('install', event => {
