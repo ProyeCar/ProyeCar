@@ -777,18 +777,21 @@
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
 if ('serviceWorker' in navigator) {
+  const yaControlado = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.register('sw.js?v=' + Math.random()).then(reg => {
     reg.update();
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') reg.update();
     });
   }).catch(err => {});
-  let _swYaRecargo = false;
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (_swYaRecargo) return;
-    _swYaRecargo = true;
-    window.location.reload();
-  });
+  if (yaControlado) {
+    let _swYaRecargo = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (_swYaRecargo) return;
+      _swYaRecargo = true;
+      window.location.reload();
+    });
+  }
 }
 </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
