@@ -1,4 +1,4 @@
-// build: 2026-07-08-ui-fixes
+// build: 2026-07-08-sin-animaciones
 const CACHE_NAME = 'cardique-v' + Math.random();
 
 self.addEventListener('install', event => {
