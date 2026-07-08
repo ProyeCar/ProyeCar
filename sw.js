@@ -1,4 +1,4 @@
-// build: 2026-07-08-ui-fixes
+// build: 2026-07-08-dialogos-planos
 const CACHE_NAME = 'cardique-v' + Math.random();
 
 self.addEventListener('install', event => {
