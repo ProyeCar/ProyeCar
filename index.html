@@ -241,6 +241,7 @@
         }
         .frente-acciones-carrusel::-webkit-scrollbar { display: none; }
         .frente-acciones-carrusel > * { flex-shrink: 0; scroll-snap-align: start; }
+        .zona-peligro-frente { margin-top: 16px; padding-top: 14px; border-top: 1.5px dashed #e2e8f0; }
 
         /* === CATEGORÍAS === */
         .categoria {
@@ -278,15 +279,24 @@
         .item-card:hover { border-color: #86efac; box-shadow: 0 2px 8px rgba(45,158,82,0.10); }
         .item-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; justify-content: space-between; }
         .item-desc { flex: 3; font-weight: 600; font-size: 0.88rem; color: #111827; line-height: 1.45; }
+        .item-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+        .item-actions-secundarias {
+            display: flex; gap: 2px;
+            margin-top: 2px; padding-top: 8px;
+            border-top: 1px dashed #e2e8f0;
+            opacity: 0.55;
+        }
+        .item-actions-secundarias:hover, .item-actions-secundarias:focus-within { opacity: 1; }
         .estado-btns {
             display: flex; gap: 6px;
             background: #f1f5f9;
-            padding: 4px 8px; border-radius: 40px;
+            padding: 5px 9px; border-radius: 40px;
         }
         .btn-cumple, .btn-nocumple {
             border: none; background: transparent;
-            padding: 5px 11px; border-radius: 30px;
-            font-weight: 700; cursor: pointer; font-size: 0.78rem;
+            padding: 10px 16px; border-radius: 30px;
+            font-weight: 700; cursor: pointer; font-size: 0.85rem;
+            min-height: 44px;
             transition: all 0.15s;
         }
         .btn-cumple.activo { background: linear-gradient(135deg, #16a34a, #22c55e); color: white; box-shadow: 0 2px 8px rgba(22,163,74,0.3); }
@@ -295,6 +305,7 @@
         .btn-cumple:not(.activo):hover { background: #dcfce7; color: #16a34a; }
         .btn-nocumple:not(.activo):hover { background: #fee2e2; color: #dc2626; }
         .btn-editar, .btn-eliminar, .btn-color-cat { background: none; border: none; font-size: 1rem; cursor: pointer; padding: 4px 6px; min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+        .cat-icon-actions { display: flex; align-items: center; margin-left: 12px; padding-left: 10px; border-left: 1.5px solid #cbd5e1; }
         .btn-color-cat .swatch-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
         .paleta3d-panel { position: fixed; z-index: 10001; background: white; border-radius: 14px; padding: 14px; box-shadow: 0 8px 32px rgba(0,0,0,0.22); border: 1px solid #e5e7eb; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; min-width: 200px; max-height: 220px; overflow-y: auto; }
         .paleta3d-swatch { width: 36px; height: 36px; border-radius: 50%; cursor: pointer; border: 2px solid rgba(255,255,255,0.8); transition: box-shadow 0.2s ease; box-shadow: 0 2px 6px rgba(0,0,0,0.25), inset 0 2px 4px rgba(255,255,255,0.35), inset 0 -3px 6px rgba(0,0,0,0.25); }
@@ -1649,10 +1660,6 @@ function mostrarBannerActualizacionPWA() {
             tituloDiv.prepend(toggleArrow);
             headerDiv.appendChild(tituloDiv);
             frenteDiv.appendChild(headerDiv);
-            const accionesCarrusel = document.createElement("div");
-            accionesCarrusel.className = "frente-acciones-carrusel";
-            accionesCarrusel.appendChild(btnEliminar);
-            frenteDiv.appendChild(accionesCarrusel);
 
             // Body wrapper for collapse
             const frenteBody = document.createElement("div");
@@ -1743,9 +1750,13 @@ function mostrarBannerActualizacionPWA() {
                     }, 10);
                 };
 
-                catTitulo.appendChild(btnColorCat);
-                catTitulo.appendChild(btnEditarCat);
-                catTitulo.appendChild(btnEliminarCat);
+                const catIconActions = document.createElement("span");
+                catIconActions.className = "cat-icon-actions";
+                catIconActions.onclick = (e) => { e.stopPropagation(); };
+                catIconActions.appendChild(btnColorCat);
+                catIconActions.appendChild(btnEditarCat);
+                catIconActions.appendChild(btnEliminarCat);
+                catTitulo.appendChild(catIconActions);
                 const _colorCat = coloresCat[cat.id];
                 if (_colorCat) { catTitulo.style.borderLeft = '5px solid ' + _colorCat; }
 
@@ -1875,7 +1886,10 @@ function mostrarBannerActualizacionPWA() {
                             }
                         }, 10);
                     };
-                    acciones.appendChild(estadoDiv); acciones.appendChild(editar); acciones.appendChild(eliminar);
+                    const itemAccionesSecundarias = document.createElement("div");
+                    itemAccionesSecundarias.className = "item-actions-secundarias";
+                    itemAccionesSecundarias.appendChild(editar); itemAccionesSecundarias.appendChild(eliminar);
+                    acciones.appendChild(estadoDiv); acciones.appendChild(itemAccionesSecundarias);
                     row.appendChild(desc); row.appendChild(acciones);
                     obsDiv.appendChild(obsInput);
                     if (item.tipoVerificacion === "verbal") {
@@ -2118,6 +2132,10 @@ function mostrarBannerActualizacionPWA() {
             recomendacionesDiv.appendChild(recTextarea);
 
             frenteBody.appendChild(recomendacionesDiv);
+            const zonaPeligroDiv = document.createElement("div");
+            zonaPeligroDiv.className = "zona-peligro-frente";
+            zonaPeligroDiv.appendChild(btnEliminar);
+            frenteBody.appendChild(zonaPeligroDiv);
             frenteDiv.appendChild(frenteBody);
             // Body is open by default - no maxHeight restriction needed
             frentesContainer.appendChild(frenteDiv);
