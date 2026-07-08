@@ -306,10 +306,6 @@
         .btn-nocumple:not(.activo):hover { background: #fee2e2; color: #dc2626; }
         .btn-editar, .btn-eliminar, .btn-color-cat { background: none; border: none; font-size: 1rem; cursor: pointer; padding: 4px 6px; min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
         .cat-icon-actions { display: flex; align-items: center; margin-left: 12px; padding-left: 10px; border-left: 1.5px solid #cbd5e1; }
-        .btn-color-cat .swatch-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #e5e7eb; }
-        .paleta3d-panel { position: fixed; z-index: 10001; background: white; border-radius: 14px; padding: 14px; box-shadow: 0 8px 32px rgba(0,0,0,0.22); border: 1px solid #e5e7eb; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; min-width: 200px; max-height: 220px; overflow-y: auto; }
-        .paleta3d-swatch { width: 36px; height: 36px; border-radius: 50%; cursor: pointer; border: 2px solid #e5e7eb; }
-        .paleta3d-swatch.selected { border-color: #1a5c35; border-width: 3px; }
         .item-obs input {
             width: 100%; margin-top: 8px; padding: 7px 12px;
             border-radius: 10px; border: 1.5px solid #e2e8f0;
@@ -1706,16 +1702,6 @@ function mostrarBannerActualizacionPWA() {
                 catLabelWrap.appendChild(catNombre);
                 catTitulo.appendChild(catLabelWrap); catTitulo.appendChild(catToggle);
 
-                const btnColorCat = document.createElement("button");
-                btnColorCat.className = "btn-color-cat";
-                btnColorCat.title = "Elegir color del área";
-                btnColorCat.setAttribute("aria-label", "Elegir color del área");
-                const swatchDot = document.createElement("span");
-                swatchDot.className = "swatch-dot";
-                swatchDot.style.background = coloresCat[cat.id] || "#e5e7eb";
-                btnColorCat.appendChild(swatchDot);
-                btnColorCat.onclick = (e) => { e.stopPropagation(); abrirPaleta3D(cat.id, e.currentTarget); };
-
                 const btnEditarCat = document.createElement("button");
                 btnEditarCat.innerHTML = "✏️";
                 btnEditarCat.className = "btn-editar";
@@ -1752,7 +1738,6 @@ function mostrarBannerActualizacionPWA() {
                 const catIconActions = document.createElement("span");
                 catIconActions.className = "cat-icon-actions";
                 catIconActions.onclick = (e) => { e.stopPropagation(); };
-                catIconActions.appendChild(btnColorCat);
                 catIconActions.appendChild(btnEditarCat);
                 catIconActions.appendChild(btnEliminarCat);
                 catTitulo.appendChild(catIconActions);
@@ -3017,7 +3002,6 @@ function mostrarBannerActualizacionPWA() {
 
     const SIN_BOTON_PROPIO = ['herramientas', 'historial', 'comparar'];
     function mostrarPantalla(nombre) {
-        document.getElementById('paleta3d-panel')?.remove();
         document.getElementById('cs-picker')?.remove();
         document.querySelectorAll('.pantalla').forEach(p => p.classList.remove('activa'));
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('activo'));
@@ -3106,51 +3090,8 @@ function mostrarBannerActualizacionPWA() {
         };
     }
 
-    // ── Paleta 3D: color por categoría ──
-    const PALETA3D_COLORES = ['#16a34a', '#f59e0b', '#2563eb', '#7c3aed', '#dc2626', '#0d9488', '#db2777', '#475569'];
+    // ── Color guardado por categoría (borde visual, sin selector) ──
     function cargarColoresCategoria() { return leerJSON('proyecar_colores_categoria', {}); }
-    function guardarColorCategoria(catid, color) {
-        const c = cargarColoresCategoria();
-        c[catid] = color;
-        guardarJSON('proyecar_colores_categoria', c);
-    }
-    const _paleta3DCierre = crearCierreExterno();
-    function cerrarPaleta3D() {
-        const p = document.getElementById('paleta3d-panel');
-        if (p) p.remove();
-        _paleta3DCierre.desactivar();
-    }
-    function abrirPaleta3D(catid, anchor) {
-        cerrarPaleta3D();
-        const colorActual = cargarColoresCategoria()[catid];
-        const panel = document.createElement('div');
-        panel.id = 'paleta3d-panel';
-        panel.className = 'paleta3d-panel';
-        const rect = anchor.getBoundingClientRect();
-        panel.style.top = (rect.bottom + 6) + 'px';
-        panel.style.left = Math.max(8, rect.right - 200) + 'px';
-        PALETA3D_COLORES.forEach(color => {
-            const sw = document.createElement('div');
-            sw.className = 'paleta3d-swatch' + (color === colorActual ? ' selected' : '');
-            sw.style.background = color;
-            sw.title = color;
-            sw.addEventListener('click', () => {
-                guardarColorCategoria(catid, color);
-                cerrarPaleta3D();
-                renderFrentes();
-            });
-            panel.appendChild(sw);
-        });
-        document.body.appendChild(panel);
-        const panelRect = panel.getBoundingClientRect();
-        if (panelRect.bottom > window.innerHeight) {
-            panel.style.top = Math.max(8, window.innerHeight - panelRect.height - 8) + 'px';
-        }
-        _paleta3DCierre.activar(
-            (t) => panel.contains(t) || t === anchor,
-            cerrarPaleta3D
-        );
-    }
 
     // ── Menú "Más": botones de área generados desde los chips existentes ──
     function renderMenuAreas() {
