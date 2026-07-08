@@ -799,7 +799,15 @@ function mostrarBannerActualizacionPWA() {
   const btn = document.createElement('button');
   btn.textContent = 'Actualizar ahora';
   btn.style.cssText = 'background:#fff;color:#1a5c35;border:none;border-radius:20px;padding:8px 16px;font-weight:700;font-size:0.85rem;cursor:pointer;flex-shrink:0;';
-  btn.onclick = () => window.location.reload();
+  btn.onclick = async () => {
+    try {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    } catch (e) {}
+    window.location.href = window.location.pathname + '?_=' + Date.now();
+  };
   b.appendChild(txt);
   b.appendChild(btn);
   document.body.appendChild(b);
