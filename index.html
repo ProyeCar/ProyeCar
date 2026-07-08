@@ -648,6 +648,23 @@
         .hist-inspector { font-size: .82rem; color: #64748b; }
         .hist-pct { font-size: 1.2rem; font-weight: 800; }
         .hist-frentes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+        .menu-titulo {
+            font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.6px; color: #64748b; margin: 20px 0 10px;
+        }
+        .menu-titulo:first-child { margin-top: 4px; }
+        .menu-lista { display: flex; flex-direction: column; gap: 10px; }
+        .menu-item {
+            display: flex; align-items: center; gap: 12px;
+            background: white; border-radius: 16px; padding: 14px 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.05);
+            border: 1.5px solid transparent;
+            font-size: 0.92rem; font-weight: 600; color: #1e3a2f;
+            cursor: pointer; width: 100%; text-align: left;
+            transition: box-shadow 0.2s, border-color 0.2s;
+        }
+        .menu-item:hover { box-shadow: 0 8px 22px rgba(13,51,33,0.12); border-color: #bbf7d0; }
+        .menu-item svg { flex-shrink: 0; color: #1a5c35; }
         .hist-tag { background: #f0fdf4; border: 1px solid #86efac; border-radius: 20px; padding: 3px 10px; font-size: .75rem; font-weight: 600; color: #166534; }
         .hist-empty { text-align: center; padding: 60px 20px; color: #94a3b8; font-size: 1rem; }
         .hist-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
