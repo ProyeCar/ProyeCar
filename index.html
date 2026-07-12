@@ -1340,7 +1340,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.87";
+const APP_VERSION = "1.5.88";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -3200,25 +3200,40 @@ document.addEventListener('DOMContentLoaded', function() {
                 input.onchange = async (e) => {
                     const files = Array.from(e.target.files).filter(function(f){ return f.type.startsWith("image/"); });
                     if (files.length === 0) return;
-                    // PASO 1: Selector visual de ítem — una sola vez para todo el lote
-                    var allItemsFlat = [];
-                    frentes[idx].categorias.forEach(function(cat) {
-                        cat.items.forEach(function(item) { allItemsFlat.push(item); });
-                    });
+                    // PASO 1: Selector visual de ítem — una sola vez para todo el lote (respeta filtro de áreas)
+                    var allItemsFlat = obtenerItemsFrenteSegunFiltro(idx);
+                    var filtroEtiqueta = etiquetasFiltroAreasActivas();
                     var itemId = await new Promise(function(resolveModal) {
                         var overlay = document.createElement('div');
+                        overlay.id = 'pc-modal-vincular-foto';
+                        overlay.dataset.frenteIdx = String(idx);
+                        overlay._resolveModal = resolveModal;
                         overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
                         var modal = document.createElement('div');
                         modal.style.cssText = 'background:#fff;border-radius:12px;padding:16px;max-width:480px;width:92%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.3);';
                         var title = document.createElement('p');
                         title.style.cssText = 'font-weight:600;font-size:1rem;margin:0 0 12px;color:#1e293b;';
-                        title.innerHTML = pcIconLabel('paperclip', 'Vincular foto a ítem', 14, '#1e3a2f');
+                        title.innerHTML = pcIconLabel('paperclip', 'Vincular foto a ítem' + (filtroEtiqueta ? ' (' + filtroEtiqueta + ')' : ''), 14, '#1e3a2f');
                         modal.appendChild(title);
+                        if (filtroEtiqueta) {
+                            var hint = document.createElement('p');
+                            hint.style.cssText = 'font-size:0.78rem;color:#64748b;margin:0 0 10px;line-height:1.4;';
+                            hint.textContent = 'Mostrando solo ítems de las áreas activas en el filtro de Frentes.';
+                            modal.appendChild(hint);
+                        }
                         var btnNone = document.createElement('button');
                         btnNone.style.cssText = 'display:block;width:100%;text-align:left;padding:10px 12px;margin-bottom:8px;border:1px dashed #cbd5e1;border-radius:8px;background:#f8fafc;cursor:pointer;font-size:0.85rem;color:#6b7280;';
                         btnNone.innerText = 'Sin vincular a ningún ítem';
-                        btnNone.onclick = function() { document.body.removeChild(overlay); resolveModal(null); };
+                        btnNone.onclick = function() { overlay._resolveModal = null; document.body.removeChild(overlay); resolveModal(null); };
                         modal.appendChild(btnNone);
+                        if (allItemsFlat.length === 0) {
+                            var vacio = document.createElement('p');
+                            vacio.style.cssText = 'font-size:0.82rem;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;margin-bottom:8px;';
+                            vacio.textContent = filtroEtiqueta
+                                ? 'No hay ítems en las áreas filtradas (' + filtroEtiqueta + '). Ajusta el filtro o usa "Sin vincular".'
+                                : 'No hay ítems disponibles en este frente.';
+                            modal.appendChild(vacio);
+                        }
                         allItemsFlat.forEach(function(item) {
                             var btn = document.createElement('button');
                             var fotoItemsActual = frentes[idx].fotoItems || {};
@@ -3227,13 +3242,13 @@ document.addEventListener('DOMContentLoaded', function() {
                                 ? 'display:block;width:100%;text-align:left;padding:10px 12px;margin-bottom:6px;border:1px solid #16a34a;border-radius:8px;background:#16a34a;cursor:pointer;font-size:0.85rem;color:#fff;'
                                 : 'display:block;width:100%;text-align:left;padding:10px 12px;margin-bottom:6px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;cursor:pointer;font-size:0.85rem;color:#1e293b;';
                             btn.innerText = item.id.toUpperCase() + ' — ' + item.texto;
-                            btn.onclick = function() { btn.style.background='#16a34a'; btn.style.color='#fff'; btn.style.borderColor='#16a34a'; setTimeout(function(){ document.body.removeChild(overlay); resolveModal(item.id); }, 200); };
+                            btn.onclick = function() { btn.style.background='#16a34a'; btn.style.color='#fff'; btn.style.borderColor='#16a34a'; setTimeout(function(){ overlay._resolveModal = null; document.body.removeChild(overlay); resolveModal(item.id); }, 200); };
                             modal.appendChild(btn);
                         });
                         var btnCancelar = document.createElement('button');
                         btnCancelar.style.cssText = 'display:block;width:100%;text-align:center;padding:9px 12px;margin-top:10px;border:1px solid #e2e8f0;border-radius:8px;background:#f1f5f9;cursor:pointer;font-size:0.85rem;color:#64748b;';
                         btnCancelar.innerText = '← Cancelar (no subir foto)';
-                        btnCancelar.onclick = function() { document.body.removeChild(overlay); resolveModal('__CANCELAR__'); };
+                        btnCancelar.onclick = function() { overlay._resolveModal = null; document.body.removeChild(overlay); resolveModal('__CANCELAR__'); };
                         modal.appendChild(btnCancelar);
                         overlay.appendChild(modal);
                         document.body.appendChild(overlay);
@@ -4403,6 +4418,31 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // ── Chips de categoría (filtro visual multi-selección en tab Frentes) ──
+    function obtenerCategoriasVisiblesSegunFiltro(categorias) {
+        var ids = obtenerFiltroCategoriasActivas();
+        if (!ids || ids.length === 0) return categorias || [];
+        return (categorias || []).filter(function(cat) {
+            return cat && ids.indexOf(cat.id) >= 0;
+        });
+    }
+    function obtenerItemsFrenteSegunFiltro(frenteIdx) {
+        var frente = frentes[frenteIdx];
+        if (!frente) return [];
+        var items = [];
+        obtenerCategoriasVisiblesSegunFiltro(frente.categorias).forEach(function(cat) {
+            (cat.items || []).forEach(function(item) { items.push(item); });
+        });
+        return items;
+    }
+    function etiquetasFiltroAreasActivas() {
+        var ids = obtenerFiltroCategoriasActivas();
+        if (!ids.length) return '';
+        return ids.map(function(id) {
+            if (FILTRO_AREA_LABELS[id]) return FILTRO_AREA_LABELS[id];
+            var custom = obtenerCategoriasCustom().filter(function(c) { return c.id === id; })[0];
+            return custom ? custom.nombre : id;
+        }).join(', ');
+    }
     function aplicarFiltroUI(activeIds) {
         var ids = Array.isArray(activeIds) ? activeIds.slice() : [];
         ids = ids.filter(function(id) { return id && id !== 'todos' && chipCategoriaExiste(id); });
@@ -4419,6 +4459,71 @@ document.addEventListener('DOMContentLoaded', function() {
 
         var btnLimpiar = document.getElementById('btn-limpiar-filtros-areas');
         if (btnLimpiar) btnLimpiar.style.display = todosActivo ? 'none' : 'inline-flex';
+        refrescarModalVincularFotoAbierto();
+    }
+    function refrescarModalVincularFotoAbierto() {
+        var overlay = document.getElementById('pc-modal-vincular-foto');
+        if (!overlay || !overlay.parentNode) return;
+        var frenteIdx = parseInt(overlay.dataset.frenteIdx, 10);
+        if (isNaN(frenteIdx)) return;
+        var modal = overlay.querySelector('div');
+        if (!modal) return;
+        var items = obtenerItemsFrenteSegunFiltro(frenteIdx);
+        var filtroEtiqueta = etiquetasFiltroAreasActivas();
+        modal.innerHTML = '';
+        var title = document.createElement('p');
+        title.style.cssText = 'font-weight:600;font-size:1rem;margin:0 0 12px;color:#1e293b;';
+        title.innerHTML = pcIconLabel('paperclip', 'Vincular foto a ítem' + (filtroEtiqueta ? ' (' + filtroEtiqueta + ')' : ''), 14, '#1e3a2f');
+        modal.appendChild(title);
+        if (filtroEtiqueta) {
+            var hint = document.createElement('p');
+            hint.style.cssText = 'font-size:0.78rem;color:#64748b;margin:0 0 10px;line-height:1.4;';
+            hint.textContent = 'Mostrando solo ítems de las áreas activas en el filtro de Frentes.';
+            modal.appendChild(hint);
+        }
+        var btnNone = document.createElement('button');
+        btnNone.style.cssText = 'display:block;width:100%;text-align:left;padding:10px 12px;margin-bottom:8px;border:1px dashed #cbd5e1;border-radius:8px;background:#f8fafc;cursor:pointer;font-size:0.85rem;color:#6b7280;';
+        btnNone.innerText = 'Sin vincular a ningún ítem';
+        btnNone.onclick = function() {
+            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            if (overlay._resolveModal) overlay._resolveModal(null);
+        };
+        modal.appendChild(btnNone);
+        if (items.length === 0) {
+            var vacio = document.createElement('p');
+            vacio.style.cssText = 'font-size:0.82rem;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;margin-bottom:8px;';
+            vacio.textContent = filtroEtiqueta
+                ? 'No hay ítems en las áreas filtradas (' + filtroEtiqueta + '). Ajusta el filtro o usa "Sin vincular".'
+                : 'No hay ítems disponibles en este frente.';
+            modal.appendChild(vacio);
+        }
+        items.forEach(function(item) {
+            var btn = document.createElement('button');
+            var fotoItemsActual = frentes[frenteIdx].fotoItems || {};
+            var yaVinculado = Object.values(fotoItemsActual).some(function(v) { return v === item.id; });
+            btn.style.cssText = yaVinculado
+                ? 'display:block;width:100%;text-align:left;padding:10px 12px;margin-bottom:6px;border:1px solid #16a34a;border-radius:8px;background:#16a34a;cursor:pointer;font-size:0.85rem;color:#fff;'
+                : 'display:block;width:100%;text-align:left;padding:10px 12px;margin-bottom:6px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;cursor:pointer;font-size:0.85rem;color:#1e293b;';
+            btn.innerText = item.id.toUpperCase() + ' — ' + item.texto;
+            btn.onclick = function() {
+                btn.style.background = '#16a34a';
+                btn.style.color = '#fff';
+                btn.style.borderColor = '#16a34a';
+                setTimeout(function() {
+                    if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+                    if (overlay._resolveModal) overlay._resolveModal(item.id);
+                }, 200);
+            };
+            modal.appendChild(btn);
+        });
+        var btnCancelar = document.createElement('button');
+        btnCancelar.style.cssText = 'display:block;width:100%;text-align:center;padding:9px 12px;margin-top:10px;border:1px solid #e2e8f0;border-radius:8px;background:#f1f5f9;cursor:pointer;font-size:0.85rem;color:#64748b;';
+        btnCancelar.innerText = '← Cancelar (no subir foto)';
+        btnCancelar.onclick = function() {
+            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            if (overlay._resolveModal) overlay._resolveModal('__CANCELAR__');
+        };
+        modal.appendChild(btnCancelar);
     }
     function toggleFiltroCategoria(catid) {
         if (catid === 'todos') { limpiarFiltrosAreas(); return; }
