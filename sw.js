@@ -1,5 +1,5 @@
-// build: 2026-07-12-logo-transparent-bg
-const APP_VERSION = '1.5.73';
+// build: 2026-07-12-logo-contrast-halo
+const APP_VERSION = '1.5.74';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {
