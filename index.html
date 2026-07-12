@@ -1201,7 +1201,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.83";
+const APP_VERSION = "1.5.84";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -1464,16 +1464,12 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
             <div id="cs-body" style="display:none;padding:12px 14px 14px;background:white;">
                 <div id="comparacion-box" style="display:none;"><select id="comp-inspeccion-1"></select><select id="comp-inspeccion-2"></select></div>
-                <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
-                    <div style="flex:1;min-width:130px;">
-                        <div style="font-size:0.65rem;font-weight:700;color:#64748b;letter-spacing:0.6px;text-transform:uppercase;margin-bottom:4px;">Anterior</div>
-                        <select id="cs-sel-ant" style="width:100%;padding:7px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;background:white;color:#374151;"><option value="">— Sin comparación —</option></select>
-                    </div>
-                    <div style="flex:1;min-width:130px;">
-                        <div style="font-size:0.65rem;font-weight:700;color:#16a34a;letter-spacing:0.6px;text-transform:uppercase;margin-bottom:4px;">Reciente</div>
-                        <select id="cs-sel-rec" style="width:100%;padding:7px 10px;border-radius:8px;border:1px solid #bbf7d0;font-size:16px;background:white;color:#374151;"><option value="">— Sin comparación —</option></select>
-                    </div>
+                <div id="cs-frente-wrap" style="display:none;margin-bottom:10px;">
+                    <div style="font-size:0.65rem;font-weight:700;color:#64748b;letter-spacing:0.6px;text-transform:uppercase;margin-bottom:4px;">Frente a comparar</div>
+                    <select id="cs-sel-frente" style="width:100%;padding:7px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:16px;background:white;color:#374151;"></select>
                 </div>
+                <div id="cs-auto-info" style="display:none;font-size:0.78rem;color:#475569;margin-bottom:10px;padding:8px 10px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;line-height:1.45;"></div>
+                <div id="cs-sin-historial" style="display:none;font-size:0.8rem;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;margin-bottom:10px;">No hay historial previo para este frente</div>
                 <div id="filtros-comp-pdf" style="display:none;margin-bottom:8px;">
                     <div style="display:flex;gap:8px;flex-wrap:wrap;">
                         <select id="filtro-frente-pdf" style="flex:1;min-width:140px;padding:6px 10px;border-radius:8px;border:0.5px solid var(--color-border-tertiary);font-size:16px;background:var(--color-background-primary);color:var(--color-text-primary);"><option value="todos">Todos los frentes</option></select>
@@ -2102,8 +2098,8 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.removeItem("inspectorFrentesData");
         localStorage.removeItem("cardique_ui_state");
         frentes = [
-            { nombre: "Frente 1 - Arroyo Ají Molido", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" },
-            { nombre: "Frente 2 - Box Matagente", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" }
+            { nombre: "Frente 1 - Arroyo Ají Molido", contratista: "", numeroContrato: "", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" },
+            { nombre: "Frente 2 - Box Matagente", contratista: "", numeroContrato: "", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" }
         ];
         proyectoInput.value = "";
         fechaInput.valueAsDate = new Date();
@@ -2351,6 +2347,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return {
             nombre: String(f.nombre || 'Frente sin nombre'),
             contratista: f.contratista || '',
+            numeroContrato: f.numeroContrato || '',
             categorias: cats,
             fotos: Array.isArray(f.fotos) ? f.fotos : [],
             observaciones: f.observaciones || '',
@@ -2578,19 +2575,28 @@ document.addEventListener('DOMContentLoaded', function() {
             nombreInput.style.fontWeight = "bold";
             nombreInput.addEventListener("change", (e) => { frentes[idx].nombre = e.target.value; saveToLocal(); });
             tituloDiv.appendChild(nombreInput);
-            const contratLabel = document.createElement("label");
-            contratLabel.innerHTML = pcIconLabel('building-2', 'Contratista:', 14, '#ffffff');
-            contratLabel.style.cssText = "font-size:0.82rem;color:#ffffff;margin-left:10px;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,0.4);";
-            const contratInput = document.createElement("input");
-            contratInput.type = "text";
-            contratInput.placeholder = "Nombre del contratista";
-            contratInput.value = frente.contratista || "";
-            contratInput.style.cssText = "font-size:16px;margin-left:6px;padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;min-height:40px;resize:none;overflow:hidden;width:100%;box-sizing:border-box;";
-            contratInput.setAttribute('oninput', "this.style.height='auto';this.style.height=this.scrollHeight+'px'");
-            contratInput.setAttribute('onfocus', "this.style.height='auto';this.style.height=this.scrollHeight+'px'");
-            contratInput.addEventListener("change", (e) => { frentes[idx].contratista = e.target.value; saveToLocal(); });
-            tituloDiv.appendChild(contratLabel);
-            tituloDiv.appendChild(contratInput);
+            const metaRow = document.createElement("div");
+            metaRow.style.cssText = "display:flex;flex-wrap:wrap;gap:8px 16px;width:100%;margin-top:8px;align-items:flex-end;";
+            function crearCampoFrente(icon, labelText, placeholder, valor, onSave) {
+                const grupo = document.createElement("div");
+                grupo.style.cssText = "flex:1;min-width:140px;";
+                const lbl = document.createElement("label");
+                lbl.innerHTML = pcIconLabel(icon, labelText, 14, '#ffffff');
+                lbl.style.cssText = "display:block;font-size:0.78rem;color:#ffffff;margin-bottom:4px;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,0.4);";
+                const inp = document.createElement("input");
+                inp.type = "text";
+                inp.placeholder = placeholder;
+                inp.value = valor || "";
+                inp.style.cssText = "font-size:16px;padding:4px 10px;border:1px solid #d1d5db;border-radius:6px;min-height:40px;width:100%;box-sizing:border-box;background:rgba(255,255,255,0.95);color:#1e3a2f;";
+                inp.addEventListener("change", (e) => { onSave(e.target.value); saveToLocal(); });
+                inp.addEventListener("input", (e) => { onSave(e.target.value); });
+                grupo.appendChild(lbl);
+                grupo.appendChild(inp);
+                return grupo;
+            }
+            metaRow.appendChild(crearCampoFrente('building-2', 'Contratista:', 'Nombre del contratista', frente.contratista, (v) => { frentes[idx].contratista = v; }));
+            metaRow.appendChild(crearCampoFrente('file-text', 'N° de Contrato:', 'Número de contrato', frente.numeroContrato, (v) => { frentes[idx].numeroContrato = v; }));
+            tituloDiv.appendChild(metaRow);
             const btnEliminar = document.createElement("button");
             btnEliminar.innerHTML = pcActionBtn('delete', 'Eliminar frente', 14);
             btnEliminar.className = "btn-eliminar-frente";
@@ -3281,6 +3287,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     return {
                         nombre: fr.nombre,
                         contratista: fr.contratista,
+                        numeroContrato: fr.numeroContrato || '',
                         obsGlobal: fr.obsGlobal,
                         recomendaciones: fr.recomendaciones,
                         categorias: fr.categorias.map(function(cat) {
@@ -3398,7 +3405,7 @@ document.addEventListener('DOMContentLoaded', function() {
     btnAgregarFrente.onclick = () => { setTimeout(() => {
         const nuevoNombre = prompt("Nombre del nuevo frente:", "Nuevo frente");
         if (nuevoNombre && nuevoNombre.trim() !== "") {
-            frentes.push({ nombre: nuevoNombre.trim(), categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" });
+            frentes.push({ nombre: nuevoNombre.trim(), contratista: "", numeroContrato: "", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" });
             // Inyectar ítems custom existentes en el nuevo frente
             var customExistente = extractCustomItems(frentes.slice(0, frentes.length - 1));
             var nuevoFrente = frentes[frentes.length - 1];
@@ -3531,7 +3538,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (it.cumple===true) c++; else if (it.cumple===false) n++; else s++;
                 }
             var tot=c+n+s, pct=tot>0?parseFloat((c/tot*100).toFixed(1)):0;
-            stats.push({nombre:fr.nombre,c:c,n:n,s:s,tot:tot,pct:pct,cont:fr.contratista||'No especificado'});
+            stats.push({nombre:fr.nombre,c:c,n:n,s:s,tot:tot,pct:pct,cont:fr.contratista||'No especificado',contrato:fr.numeroContrato||'No especificado'});
             gC+=c; gN+=n; gS+=s;
         }
         var gTot=gC+gN+gS, gPct=gTot>0?parseFloat((gC/gTot*100).toFixed(1)):0;
@@ -3647,10 +3654,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 + '<div style="font-size:8pt;color:#6b7280;margin-top:2px">'+st.c+' cumple &middot; '+st.n+' no cumple &middot; '+st.s+' sin calificar</div></div>';
         }
         h += '</td></tr></table>';
-        h += '<table class="t-res"><thead><tr><th>Frente</th><th>Contratista</th><th>Total</th><th>Cumple</th><th>No Cumple</th><th>Sin Cal.</th><th>%</th></tr></thead><tbody>';
+        h += '<table class="t-res"><thead><tr><th>Frente</th><th>Contratista</th><th>N° Contrato</th><th>Total</th><th>Cumple</th><th>No Cumple</th><th>Sin Cal.</th><th>%</th></tr></thead><tbody>';
         for(var si=0;si<stats.length;si++){
             var st=stats[si],rbc=st.pct>=80?'#f0fdf4':st.pct>=50?'#fffbeb':'#fff1f2',tbc=st.pct>=80?'#16a34a':st.pct>=50?'#d97706':'#dc2626';
             h += '<tr style="background:'+rbc+'"><td>'+esc(st.nombre)+'</td><td style="font-size:8.5pt;color:#475569">'+esc(st.cont)+'</td>'
+                +'<td style="font-size:8.5pt;color:#475569">'+esc(st.contrato)+'</td>'
                 +'<td style="text-align:center">'+st.tot+'</td>'
                 +'<td style="text-align:center;color:#166534;font-weight:700">'+st.c+'</td>'
                 +'<td style="text-align:center;color:#991b1b;font-weight:700">'+st.n+'</td>'
@@ -3665,7 +3673,9 @@ document.addEventListener('DOMContentLoaded', function() {
             h += '<div class="frente-pg">';
             h += '<div class="frente-banner"><h2>'+esc(fr.nombre)+'</h2>'
                 +'<p>Secci&oacute;n '+(fi+2)+' de '+(frentes.length+1)+' &nbsp;|&nbsp; Profesional: '+esc(inspector)
-                +' &nbsp;|&nbsp; Contratista: '+esc(fr.contratista||'No especificado')+' &nbsp;|&nbsp; Fecha: '+esc(fecha)+'</p></div>';
+                +' &nbsp;|&nbsp; Contratista: '+esc(fr.contratista||'No especificado')
+                +' &nbsp;|&nbsp; N° Contrato: '+esc(fr.numeroContrato||'No especificado')
+                +' &nbsp;|&nbsp; Fecha: '+esc(fecha)+'</p></div>';
             h += '<div class="mini-kpi-row">'
                 +'<div class="mini-kpi"><div class="num" style="color:#1e3a2f">'+st.tot+'</div><div class="lbl">Total</div></div>'
                 +'<div class="mini-kpi"><div class="num" style="color:#16a34a">'+st.c+'</div><div class="lbl">Cumple</div></div>'
@@ -4239,7 +4249,7 @@ document.addEventListener('DOMContentLoaded', function() {
             noCumple: stats.noCumple,
             sinCalif: stats.sinCalif,
             total: stats.total,
-            frentes: data.frentes.map(f => ({ nombre: f.nombre, fotos: [], observaciones: f.observaciones, recomendaciones: f.recomendaciones, categorias: f.categorias }))
+            frentes: data.frentes.map(f => ({ nombre: f.nombre, contratista: f.contratista || '', numeroContrato: f.numeroContrato || '', fotos: [], observaciones: f.observaciones, recomendaciones: f.recomendaciones, categorias: f.categorias }))
         };
         const hist = getHistorial();
         hist.unshift(registro);
@@ -4318,7 +4328,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 }).join('');
                 if (!catRows) return '';
                 return '<div style="' + (fi > 0 ? 'margin-top:6px;' : '') + '">'
-                    + '<div style="font-size:0.75rem;font-weight:700;color:#1a5c32;margin-bottom:3px;">' + (f.nombre || '') + '</div>'
+                    + '<div style="font-size:0.75rem;font-weight:700;color:#1a5c32;margin-bottom:3px;">' + (f.nombre || '')
+                    + (f.contratista ? ' <span style="font-weight:500;color:#64748b;">· ' + (f.contratista || '') + '</span>' : '')
+                    + (f.numeroContrato ? ' <span style="font-weight:500;color:#64748b;">· Contrato ' + (f.numeroContrato || '') + '</span>' : '')
+                    + '</div>'
                     + catRows
                     + '</div>';
             }).join('');
@@ -4712,17 +4725,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (s2) s2.innerHTML = opts;
     }
 
-    function generarGraficasComparacionPDF() {
+    function generarGraficasComparacionPDFConInspecciones(reciente, anterior) {
+        if (!reciente || !anterior) { alert('No hay datos suficientes para comparar.'); return; }
         document.getElementById('comparacion-box').style.maxHeight = 'none';
-        var hist = getHistorial();
-        var v1 = document.getElementById('comp-inspeccion-1').value;
-        var v2 = document.getElementById('comp-inspeccion-2').value;
-        if (v1 === '' || v2 === '') { alert('Selecciona dos inspecciones para comparar.'); return; }
-        if (v1 === v2) { alert('Selecciona dos inspecciones diferentes.'); return; }
-        var inspA = hist[parseInt(v1)], inspB = hist[parseInt(v2)];
-        var fechaA = new Date(inspA.fecha || 0), fechaB = new Date(inspB.fecha || 0);
-        var reciente = fechaA >= fechaB ? inspA : inspB;
-        var anterior  = fechaA >= fechaB ? inspB : inspA;
 
         // Frentes únicos (union)
         var allFrenteNames = [];
@@ -4761,7 +4766,8 @@ document.addEventListener('DOMContentLoaded', function() {
         var prevFrente = sff.value;
         sff.innerHTML = '<option value="todos">Todos los frentes</option>'
             + allFrenteNames.map(function(n) { return '<option value="' + n.replace(/&/g,'&amp;').replace(/"/g,'&quot;') + '">' + n.replace(/&/g,'&amp;') + '</option>'; }).join('');
-        if (prevFrente && prevFrente !== 'todos') { sff.value = prevFrente; }
+        if (allFrenteNames.length === 1) { sff.value = allFrenteNames[0]; }
+        else if (prevFrente && prevFrente !== 'todos') { sff.value = prevFrente; }
         var sfa = document.getElementById('filtro-area-pdf');
         var prevArea = sfa.value;
         sfa.innerHTML = '<option value="todas">Todas las áreas</option>' + selectorOpts;
@@ -4777,6 +4783,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         _renderizarCompPdf();
         document.getElementById('comparacion-box').style.maxHeight = '';
+    }
+
+    function generarGraficasComparacionPDF() {
+        var hist = getHistorial();
+        var v1 = document.getElementById('comp-inspeccion-1').value;
+        var v2 = document.getElementById('comp-inspeccion-2').value;
+        if (v1 === '' || v2 === '') { alert('Selecciona dos inspecciones para comparar.'); return; }
+        if (v1 === v2) { alert('Selecciona dos inspecciones diferentes.'); return; }
+        var inspA = hist[parseInt(v1)], inspB = hist[parseInt(v2)];
+        var fechaA = new Date(inspA.fecha || 0), fechaB = new Date(inspB.fecha || 0);
+        var reciente = fechaA >= fechaB ? inspA : inspB;
+        var anterior  = fechaA >= fechaB ? inspB : inspA;
+        generarGraficasComparacionPDFConInspecciones(reciente, anterior);
     }
 
     function _renderizarCompPdf() {
@@ -4856,7 +4875,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!frenteHdrCreado) {
                     var fHdr = document.createElement('div');
                     fHdr.style.cssText = 'font-size:0.8rem;font-weight:700;color:#1e3a2f;margin:12px 0 4px;padding:4px 8px;background:#e8f5e9;border-radius:6px;';
-                    fHdr.innerHTML = pcIcon('construction', 16, '#1e3a2f') + ' ' + fNombre;
+                    fHdr.innerHTML = pcIcon('construction', 16, '#1e3a2f') + ' ' + fNombre
+                        + ((fR && fR.contratista) || (fA && fA.contratista) ? ' · ' + ((fR && fR.contratista) || (fA && fA.contratista)) : '')
+                        + ((fR && fR.numeroContrato) || (fA && fA.numeroContrato) ? ' · Contrato ' + ((fR && fR.numeroContrato) || (fA && fA.numeroContrato)) : '');
                     contenedor.appendChild(fHdr);
                     frenteHdrCreado = true;
                 }
@@ -5334,17 +5355,123 @@ document.addEventListener('DOMContentLoaded', function() {
 // ── Comparación Semanal — sección inline ──
 var _csAbierto = false;
 
-function csPoblarSelectores() {
+function csNormStr(s) { return (s || '').trim().toLowerCase(); }
+
+function csFrenteMatch(f, nombre, contratista, numeroContrato) {
+    if (!f) return false;
+    return csNormStr(f.nombre) === csNormStr(nombre)
+        && csNormStr(f.contratista) === csNormStr(contratista)
+        && csNormStr(f.numeroContrato) === csNormStr(numeroContrato);
+}
+
+function csSnapshotActual() {
+    return {
+        proyecto: (document.getElementById('proyecto') || {}).value || '',
+        fecha: (document.getElementById('fecha') || {}).value || '',
+        ubicacion: (document.getElementById('ubicacion') || {}).value || '',
+        inspector: (document.getElementById('inspector') || {}).value || '',
+        frentes: typeof frentes !== 'undefined' ? frentes : []
+    };
+}
+
+function csBuscarHistorialCoincidente(nombre, contratista, numeroContrato) {
     var hist = JSON.parse(localStorage.getItem('cardique_historial') || '[]');
-    var opts = '<option value="">— Sin comparación —</option>'
-        + hist.map(function(r, i) {
-            return '<option value="' + i + '">' + (r.fecha || 'Sin fecha') + ' — ' + (r.proyecto || 'Sin nombre') + '</option>';
+    return hist.filter(function(reg) {
+        return (reg.frentes || []).some(function(f) {
+            return csFrenteMatch(f, nombre, contratista, numeroContrato);
+        });
+    }).sort(function(a, b) {
+        return new Date(b.fecha || 0) - new Date(a.fecha || 0);
+    });
+}
+
+function csFiltrarInspeccionPorFrente(insp, nombre, contratista, numeroContrato) {
+    var ff = (insp.frentes || []).filter(function(f) {
+        return csFrenteMatch(f, nombre, contratista, numeroContrato);
+    });
+    var copia = Object.assign({}, insp);
+    copia.frentes = ff.length ? ff : [{ nombre: nombre, contratista: contratista, numeroContrato: numeroContrato, categorias: [] }];
+    return copia;
+}
+
+function csEscHtml(s) {
+    return (s || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function csObtenerFrenteSeleccionado() {
+    var sel = document.getElementById('cs-sel-frente');
+    var idx = sel ? parseInt(sel.value, 10) : 0;
+    if (isNaN(idx) || idx < 0) idx = 0;
+    if (typeof frentes === 'undefined' || !frentes.length) return null;
+    return frentes[Math.min(idx, frentes.length - 1)];
+}
+
+function csResolverParComparacion(f) {
+    var matches = csBuscarHistorialCoincidente(f.nombre, f.contratista, f.numeroContrato);
+    if (matches.length === 0) return null;
+    var actual = csFiltrarInspeccionPorFrente(csSnapshotActual(), f.nombre, f.contratista, f.numeroContrato);
+    var reciente, anterior;
+    if (matches.length >= 2 && csNormStr(matches[0].fecha) === csNormStr(actual.fecha)) {
+        reciente = csFiltrarInspeccionPorFrente(matches[0], f.nombre, f.contratista, f.numeroContrato);
+        anterior = csFiltrarInspeccionPorFrente(matches[1], f.nombre, f.contratista, f.numeroContrato);
+    } else {
+        reciente = actual;
+        anterior = csFiltrarInspeccionPorFrente(matches[0], f.nombre, f.contratista, f.numeroContrato);
+    }
+    return { reciente: reciente, anterior: anterior, matches: matches };
+}
+
+function csActualizarInfoAuto() {
+    var info = document.getElementById('cs-auto-info');
+    var sinHist = document.getElementById('cs-sin-historial');
+    if (!info || !sinHist) return;
+    var f = csObtenerFrenteSeleccionado();
+    if (!f) {
+        info.style.display = 'none';
+        sinHist.style.display = 'none';
+        return;
+    }
+    var par = csResolverParComparacion(f);
+    if (!par) {
+        info.style.display = 'none';
+        sinHist.style.display = '';
+        return;
+    }
+    sinHist.style.display = 'none';
+    var contratoTxt = f.numeroContrato ? (' · Contrato ' + csEscHtml(f.numeroContrato)) : '';
+    var recLabel = par.reciente.fecha === par.matches[0].fecha && par.matches.length >= 2
+        ? (csEscHtml(par.reciente.fecha || 'Sin fecha') + ' — archivada')
+        : 'Inspección actual';
+    info.innerHTML = '<div style="font-weight:700;color:#1e3a2f;margin-bottom:4px;">Comparación automática</div>'
+        + '<div><span style="color:#16a34a;font-weight:600;">Reciente:</span> ' + recLabel
+        + ' — ' + csEscHtml(f.nombre) + contratoTxt + '</div>'
+        + '<div><span style="color:#b45309;font-weight:600;">Anterior:</span> '
+        + csEscHtml(par.anterior.fecha || 'Sin fecha') + ' — ' + csEscHtml(par.anterior.proyecto || 'Sin nombre') + '</div>';
+    info.style.display = '';
+}
+
+function csPoblarFrenteSelector() {
+    var wrap = document.getElementById('cs-frente-wrap');
+    var sel = document.getElementById('cs-sel-frente');
+    if (!wrap || !sel || typeof frentes === 'undefined') return;
+    if (frentes.length > 1) {
+        wrap.style.display = '';
+        sel.innerHTML = frentes.map(function(f, i) {
+            var label = f.nombre || ('Frente ' + (i + 1));
+            if (f.contratista) label += ' — ' + f.contratista;
+            if (f.numeroContrato) label += ' (' + f.numeroContrato + ')';
+            return '<option value="' + i + '">' + csEscHtml(label) + '</option>';
         }).join('');
-    var elAnt = document.getElementById('cs-sel-ant');
-    var elRec = document.getElementById('cs-sel-rec');
-    if (elAnt) elAnt.innerHTML = opts;
-    if (elRec) elRec.innerHTML = opts;
-    actualizarSelectoresCompPdf();
+    } else {
+        wrap.style.display = 'none';
+        sel.innerHTML = '<option value="0">' + csEscHtml(frentes[0] ? frentes[0].nombre : 'Frente') + '</option>';
+    }
+    csActualizarInfoAuto();
+}
+
+function csPoblarSelectores() {
+    csPoblarFrenteSelector();
+    if (typeof actualizarSelectoresCompPdf === 'function') actualizarSelectoresCompPdf();
 }
 
 function csToggle() {
@@ -5357,43 +5484,37 @@ function csToggle() {
         sw.style.background = '#16a34a';
         knob.style.transform = 'translateX(18px)';
         csPoblarSelectores();
-        var idxA = (document.getElementById('comp-sel-a') || {}).value;
-        var idxB = (document.getElementById('comp-sel-b') || {}).value;
-        if (idxA) { var sa = document.getElementById('cs-sel-ant'); if (sa) sa.value = idxA; }
-        if (idxB) { var sr = document.getElementById('cs-sel-rec'); if (sr) sr.value = idxB; }
     } else {
         body.style.display = 'none';
         sw.style.background = '#d1d5db';
         knob.style.transform = 'translateX(0)';
+        var sinHist = document.getElementById('cs-sin-historial');
+        if (sinHist) sinHist.style.display = 'none';
     }
 }
 
 function csSemanalGenerar() {
-    var idxAnt = document.getElementById('cs-sel-ant').value;
-    var idxRec = document.getElementById('cs-sel-rec').value;
-    if (idxAnt === '' || idxRec === '') { alert('Selecciona las dos inspecciones para comparar.'); return; }
-    if (idxAnt === idxRec) { alert('Selecciona dos inspecciones diferentes.'); return; }
-    actualizarSelectoresCompPdf();
-    var s1 = document.getElementById('comp-inspeccion-1');
-    var s2 = document.getElementById('comp-inspeccion-2');
-    if (s1) s1.value = idxAnt;
-    if (s2) s2.value = idxRec;
-    generarGraficasComparacionPDF();
+    var f = csObtenerFrenteSeleccionado();
+    if (!f) { alert('No hay frentes en la inspección actual.'); return; }
+
+    var par = csResolverParComparacion(f);
+    var sinHist = document.getElementById('cs-sin-historial');
+    if (!par) {
+        if (sinHist) sinHist.style.display = '';
+        var info = document.getElementById('cs-auto-info');
+        if (info) info.style.display = 'none';
+        return;
+    }
+    if (sinHist) sinHist.style.display = 'none';
+
+    if (typeof generarGraficasComparacionPDFConInspecciones === 'function') {
+        generarGraficasComparacionPDFConInspecciones(par.reciente, par.anterior);
+    }
 }
 
-// Sync: al comparar en pantalla Comparar, propagar selecciones a sección semanal
 (function() {
-    var btnCmp = document.getElementById('btn-comparar');
-    if (!btnCmp) return;
-    btnCmp.addEventListener('click', function() {
-        setTimeout(function() {
-            if (!_csAbierto) return;
-            var idxA = (document.getElementById('comp-sel-a') || {}).value;
-            var idxB = (document.getElementById('comp-sel-b') || {}).value;
-            if (idxA) { var sa = document.getElementById('cs-sel-ant'); if (sa) sa.value = idxA; }
-            if (idxB) { var sr = document.getElementById('cs-sel-rec'); if (sr) sr.value = idxB; }
-        }, 100);
-    });
+    var selF = document.getElementById('cs-sel-frente');
+    if (selF) selF.addEventListener('change', csActualizarInfoAuto);
 })();
 </script>
 </body>
