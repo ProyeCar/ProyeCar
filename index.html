@@ -168,6 +168,75 @@
         }
         textarea { resize: vertical; }
 
+        /* === DATOS GENERALES — tarjetas de campo === */
+        .datos-form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+        @media (max-width: 520px) {
+            .datos-form-grid { grid-template-columns: 1fr; }
+        }
+        .dato-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border: 1.5px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 14px 16px;
+            box-shadow: 0 2px 8px rgba(15,23,42,0.05);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .dato-card:hover {
+            border-color: #bbf7d0;
+            box-shadow: 0 4px 14px rgba(16,185,129,0.10);
+        }
+        .dato-card:focus-within {
+            border-color: var(--verde-vivo);
+            box-shadow: 0 0 0 3px rgba(45,158,82,0.14);
+            background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+        }
+        .dato-card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .dato-card .dato-label {
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            color: #64748b;
+            margin: 0;
+            display: block;
+        }
+        .dato-card input {
+            width: 100%;
+            border: none;
+            background: transparent;
+            padding: 0;
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: #1e293b;
+            font-family: inherit;
+            box-shadow: none;
+            border-radius: 0;
+        }
+        .dato-card input:focus {
+            outline: none;
+            border: none;
+            box-shadow: none;
+            background: transparent;
+        }
+        .dato-card input::placeholder {
+            color: #94a3b8;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+        .dato-card input[type="date"] {
+            color: #1e293b;
+            min-height: 28px;
+        }
+
         .security-banner { display: none; }
         /* === FRENTES === */
         .frente-card {
@@ -883,7 +952,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.68";
+const APP_VERSION = "1.5.69";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -1050,11 +1119,35 @@ if ('serviceWorker' in navigator) {
 <div id="pantalla-datos" class="pantalla activa"><div class="container">
     <div class="card no-print">
         <div class="card-header"><h2><span class="icon-box icon-box-verde"><span class="pc-icon-hydrate" data-i="clipboard-list" data-s="20" data-c="#1a5c35"></span></span>Datos generales de la inspección</h2></div>
-        <div class="form-row">
-            <div class="form-group"><label class="pc-icon-label"><span class="pc-icon-hydrate" data-i="file-text" data-s="14" data-c="#64748b"></span><span>Contrato</span></label><input type="text" id="proyecto" placeholder="N° o nombre del contrato"></div>
-            <div class="form-group"><label class="pc-icon-label"><span class="pc-icon-hydrate" data-i="calendar" data-s="14" data-c="#64748b"></span><span>Fecha</span></label><input type="date" id="fecha"></div>
-            <div class="form-group"><label class="pc-icon-label"><span class="pc-icon-hydrate" data-i="map-pin" data-s="14" data-c="#64748b"></span><span>Municipio</span></label><input type="text" id="ubicacion" value="Jurisdicción CARDIQUE"></div>
-            <div class="form-group"><label class="pc-icon-label"><span class="pc-icon-hydrate" data-i="user" data-s="14" data-c="#64748b"></span><span>Profesional</span></label><input type="text" id="inspector"></div>
+        <div class="datos-form-grid">
+            <div class="dato-card">
+                <div class="dato-card-header">
+                    <span class="icon-box icon-box-verde"><span class="pc-icon-hydrate" data-i="file-text" data-s="18" data-c="#1a5c35"></span></span>
+                    <label for="proyecto" class="dato-label">Contrato</label>
+                </div>
+                <input type="text" id="proyecto" placeholder="N° o nombre del contrato">
+            </div>
+            <div class="dato-card">
+                <div class="dato-card-header">
+                    <span class="icon-box icon-box-verde"><span class="pc-icon-hydrate" data-i="calendar" data-s="18" data-c="#1a5c35"></span></span>
+                    <label for="fecha" class="dato-label">Fecha</label>
+                </div>
+                <input type="date" id="fecha">
+            </div>
+            <div class="dato-card">
+                <div class="dato-card-header">
+                    <span class="icon-box icon-box-verde"><span class="pc-icon-hydrate" data-i="map-pin" data-s="18" data-c="#1a5c35"></span></span>
+                    <label for="ubicacion" class="dato-label">Municipio</label>
+                </div>
+                <input type="text" id="ubicacion" value="Jurisdicción CARDIQUE">
+            </div>
+            <div class="dato-card">
+                <div class="dato-card-header">
+                    <span class="icon-box icon-box-verde"><span class="pc-icon-hydrate" data-i="user" data-s="18" data-c="#1a5c35"></span></span>
+                    <label for="inspector" class="dato-label">Profesional</label>
+                </div>
+                <input type="text" id="inspector" placeholder="Nombre del profesional">
+            </div>
         </div>
     </div>
 </div></div>
