@@ -676,7 +676,7 @@
         @media (max-width: 760px) {
             .item-row { flex-direction: column; align-items: flex-start; }
             .estado-btns { align-self: flex-end; }
-            body { padding: 10px 10px 80px; }
+            body { padding: 10px 10px 88px; }
         }
 
         /* ========== ESTILOS PARA LA VISTA DE IMPRESIÓN (PDF) ========== */
@@ -854,11 +854,15 @@
         /* ── NAVEGACIÓN INFERIOR ── */
         .nav-bar {
             position: fixed; bottom: 0; left: 0; right: 0;
-            background: rgba(255,255,255,0.92); backdrop-filter: blur(16px);
-            border-top: 1px solid rgba(0,0,0,0.06);
-            display: flex; justify-content: center; align-items: center; gap: 2px;
-            padding: 8px 10px; padding-bottom: max(8px, env(safe-area-inset-bottom));
-            z-index: 1000; box-shadow: 0 -4px 12px rgba(0,0,0,.06);
+            background: rgba(255,255,255,0.96); backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border-top: 1px solid rgba(13,51,33,0.06);
+            display: flex; justify-content: center; align-items: center; gap: 6px;
+            padding: 10px 12px; padding-bottom: max(10px, env(safe-area-inset-bottom));
+            z-index: 1000;
+            box-shadow:
+                0 -6px 22px rgba(13,51,33,0.10),
+                0 -2px 8px rgba(0,0,0,0.05);
             overflow-x: auto; overflow-y: hidden;
             scroll-snap-type: x proximity;
             -webkit-overflow-scrolling: touch;
@@ -867,9 +871,26 @@
             -webkit-mask-image: linear-gradient(90deg, transparent 0, black 20px, black calc(100% - 20px), transparent 100%);
         }
         .nav-bar::-webkit-scrollbar { display: none; }
+        .nav-bar-indicator {
+            position: absolute;
+            top: 0; left: 0;
+            border-radius: 16px;
+            background: linear-gradient(145deg, rgba(232,245,233,0.98) 0%, rgba(209,250,229,0.92) 100%);
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,0.85),
+                0 2px 10px rgba(45,158,82,0.14);
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0;
+            transition:
+                transform 280ms cubic-bezier(0.16, 1, 0.3, 1),
+                width 280ms cubic-bezier(0.16, 1, 0.3, 1),
+                height 280ms cubic-bezier(0.16, 1, 0.3, 1),
+                opacity 200ms ease;
+        }
         .wa-fab {
             position: fixed; right: 16px;
-            bottom: calc(70px + env(safe-area-inset-bottom));
+            bottom: calc(78px + env(safe-area-inset-bottom));
             z-index: 1500;
             width: 52px; height: 52px; border-radius: 50%;
             background: #25D366; border: none; cursor: pointer;
@@ -877,29 +898,50 @@
             box-shadow: 0 4px 14px rgba(0,0,0,0.25);
         }
         .nav-btn {
-            display: flex; flex-direction: column; align-items: center; gap: 3px;
+            display: flex; flex-direction: column; align-items: center; gap: 5px;
             background: none; border: none; color: #94a3b8;
-            font-size: 0.7rem; font-weight: 600; padding: 6px 16px;
-            border-radius: 12px; cursor: pointer;
+            font-size: 0.8rem; font-weight: 600; padding: 9px 18px;
+            border-radius: 16px; cursor: pointer;
             flex: 0 0 auto; scroll-snap-align: center;
             touch-action: manipulation; -webkit-tap-highlight-color: transparent;
-            position: relative;
+            position: relative; z-index: 1;
+            overflow: hidden;
+            min-width: 68px;
+            transition: color 220ms cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .nav-icon { font-size: 1.4rem; display: inline-flex; align-items: center; justify-content: center; }
-        .nav-btn.activo { color: var(--verde-vivo); }
-        .nav-btn.activo::before {
-            content: '';
+        .nav-icon {
+            font-size: 1.58rem;
+            display: inline-flex; align-items: center; justify-content: center;
+            transition: transform 280ms cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .nav-btn.activo { color: var(--verde-medio); font-weight: 700; }
+        .nav-btn.activo .nav-icon { transform: scale(1.05); }
+        .nav-ripple {
             position: absolute;
-            top: 0;
-            width: 24px;
-            height: 3px;
-            background: linear-gradient(90deg, var(--verde-vivo), var(--verde-claro));
-            border-radius: 0 0 3px 3px;
-            box-shadow: 0 2px 8px rgba(45,158,82,0.4);
+            border-radius: 50%;
+            background: rgba(45,158,82,0.22);
+            transform: scale(0);
+            pointer-events: none;
+            animation: nav-ripple 420ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
+        @keyframes nav-ripple {
+            to { transform: scale(2.4); opacity: 0; }
+        }
+        @keyframes nav-icon-bounce {
+            0% { transform: scale(1); }
+            45% { transform: scale(1.14); }
+            100% { transform: scale(1.05); }
+        }
+        @keyframes nav-icon-bounce-inactive {
+            0% { transform: scale(1); }
+            45% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        .nav-btn.tap-bounce.activo .nav-icon { animation: nav-icon-bounce 300ms cubic-bezier(0.16, 1, 0.3, 1); }
+        .nav-btn.tap-bounce:not(.activo) .nav-icon { animation: nav-icon-bounce-inactive 300ms cubic-bezier(0.16, 1, 0.3, 1); }
         .pantalla { display: none; }
         .pantalla.activa { display: block; }
-        body { padding-bottom: 80px !important; }
+        body { padding-bottom: 88px !important; }
 
         /* ── HISTORIAL ── */
         .hist-item {
@@ -982,13 +1024,10 @@
         }
 
         .nav-btn:hover {
-            background: rgba(45,158,82,0.10);
-        }
-        .nav-btn.activo {
-            text-shadow: 0 0 14px rgba(74,222,128,0.45);
+            color: var(--verde-vivo);
         }
 
-        .frente-card{background:linear-gradient(135deg,#fff 0%,#f9fafb 100%)!important;border:1px solid #e2e8f0!important;box-shadow:0 2px 8px rgba(15,23,42,.04)!important}.categoria{border:1.5px solid #e2e8f0!important}.categoria:active{border-color:#10b981!important;background:linear-gradient(135deg,#f0fffe 0%,#eafbf8 100%)!important}.nav-btn.activo{color:#10b981!important}.nav-btn.activo::after{content:'';position:absolute;bottom:-14px;left:50%;transform:translateX(-50%);width:28px;height:4px;background:linear-gradient(90deg,#10b981 0%,#059669 100%)!important}
+        .frente-card{background:linear-gradient(135deg,#fff 0%,#f9fafb 100%)!important;border:1px solid #e2e8f0!important;box-shadow:0 2px 8px rgba(15,23,42,.04)!important}.categoria{border:1.5px solid #e2e8f0!important}.categoria:active{border-color:#10b981!important;background:linear-gradient(135deg,#f0fffe 0%,#eafbf8 100%)!important}.nav-btn.activo{color:var(--verde-medio)!important;font-weight:700!important}
 
         /* ===== FILTRO POR ÁREA (tab Frentes) ===== */
         .chips-grid {
@@ -1067,7 +1106,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.75";
+const APP_VERSION = "1.5.76";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -1416,17 +1455,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <!-- NAV BAR -->
 <nav class="nav-bar no-print">
+    <div class="nav-bar-indicator" aria-hidden="true"></div>
     <button class="nav-btn activo" id="nav-datos" onclick="mostrarPantalla('datos')">
-        <span class="nav-icon"><span class="pc-icon-hydrate" data-i="file-text" data-s="18" data-c="currentColor"></span></span>Datos
+        <span class="nav-icon"><span class="pc-icon-hydrate" data-i="file-text" data-s="21" data-c="currentColor"></span></span>Datos
     </button>
     <button class="nav-btn" id="nav-frentes" onclick="mostrarPantalla('frentes')">
-        <span class="nav-icon"><span class="pc-icon-hydrate" data-i="chart-line" data-s="18" data-c="currentColor"></span></span>Frentes
+        <span class="nav-icon"><span class="pc-icon-hydrate" data-i="chart-line" data-s="21" data-c="currentColor"></span></span>Frentes
     </button>
     <button class="nav-btn" id="nav-sync" onclick="mostrarPantalla('sync')">
-        <span class="nav-icon"><span class="pc-icon-hydrate" data-i="refresh-cw" data-s="18" data-c="currentColor"></span></span>Sync
+        <span class="nav-icon"><span class="pc-icon-hydrate" data-i="refresh-cw" data-s="21" data-c="currentColor"></span></span>Sync
     </button>
     <button class="nav-btn" id="nav-mas" onclick="mostrarPantalla('mas')">
-        <span class="nav-icon"><span class="pc-icon-hydrate" data-i="ellipsis" data-s="18" data-c="currentColor"></span></span>Más
+        <span class="nav-icon"><span class="pc-icon-hydrate" data-i="ellipsis" data-s="21" data-c="currentColor"></span></span>Más
     </button>
 </nav>
 
@@ -3786,6 +3826,67 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     renderChipsCategorias();
     aplicarFiltroUI(localStorage.getItem('proyecar_categoria_activa') || 'todos');
+
+    // ── Barra inferior: indicador deslizante, ripple y bounce ──
+    (function initNavBarModern() {
+        var bar = document.querySelector('.nav-bar');
+        if (!bar) return;
+        var indicator = bar.querySelector('.nav-bar-indicator');
+        var buttons = bar.querySelectorAll('.nav-btn');
+
+        function updateNavIndicator() {
+            if (!indicator) return;
+            var active = bar.querySelector('.nav-btn.activo');
+            if (!active) {
+                indicator.style.opacity = '0';
+                return;
+            }
+            var barRect = bar.getBoundingClientRect();
+            var btnRect = active.getBoundingClientRect();
+            indicator.style.width = btnRect.width + 'px';
+            indicator.style.height = btnRect.height + 'px';
+            indicator.style.transform = 'translate3d(' + (btnRect.left - barRect.left + bar.scrollLeft) + 'px,' + (btnRect.top - barRect.top) + 'px,0)';
+            indicator.style.opacity = '1';
+        }
+
+        function spawnNavRipple(btn, clientX, clientY) {
+            var rect = btn.getBoundingClientRect();
+            var size = Math.max(rect.width, rect.height) * 1.2;
+            var ripple = document.createElement('span');
+            ripple.className = 'nav-ripple';
+            ripple.style.width = size + 'px';
+            ripple.style.height = size + 'px';
+            ripple.style.left = (clientX - rect.left - size / 2) + 'px';
+            ripple.style.top = (clientY - rect.top - size / 2) + 'px';
+            btn.appendChild(ripple);
+            ripple.addEventListener('animationend', function() { ripple.remove(); });
+        }
+
+        buttons.forEach(function(btn) {
+            var obs = new MutationObserver(function() {
+                requestAnimationFrame(updateNavIndicator);
+            });
+            obs.observe(btn, { attributes: true, attributeFilter: ['class'] });
+        });
+
+        bar.addEventListener('click', function(e) {
+            var btn = e.target.closest('.nav-btn');
+            if (!btn) return;
+            spawnNavRipple(btn, e.clientX, e.clientY);
+            btn.classList.remove('tap-bounce');
+            void btn.offsetWidth;
+            btn.classList.add('tap-bounce');
+            window.setTimeout(function() { btn.classList.remove('tap-bounce'); }, 320);
+            requestAnimationFrame(updateNavIndicator);
+        });
+
+        window.addEventListener('resize', updateNavIndicator);
+        bar.addEventListener('scroll', updateNavIndicator, { passive: true });
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(updateNavIndicator);
+        }
+        requestAnimationFrame(updateNavIndicator);
+    })();
 
     // ── Swipe horizontal entre tabs ──
     (function initSwipe() {
