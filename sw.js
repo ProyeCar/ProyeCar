@@ -1,5 +1,5 @@
-// build: 2026-07-12-nav-bar-modern
-const APP_VERSION = '1.5.76';
+// build: 2026-07-12-datos-typography
+const APP_VERSION = '1.5.77';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {
