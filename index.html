@@ -735,7 +735,17 @@
             letter-spacing: 0.6px; color: #64748b; margin: 20px 0 10px;
         }
         .menu-titulo:first-child { margin-top: 4px; }
+        .menu-descripcion {
+            font-size: 0.82rem; color: #475569; line-height: 1.45;
+            margin: -4px 0 12px;
+        }
         .menu-lista { display: flex; flex-direction: column; gap: 10px; }
+        .menu-lista-areas {
+            display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;
+        }
+        @media (max-width: 400px) {
+            .menu-lista-areas { grid-template-columns: 1fr; }
+        }
         .menu-item {
             display: flex; align-items: center; gap: 12px;
             background: white; border-radius: 16px; padding: 14px 16px;
@@ -745,7 +755,29 @@
             cursor: pointer; width: 100%; text-align: left;
         }
         .menu-item:hover { box-shadow: 0 8px 22px rgba(13,51,33,0.12); border-color: #bbf7d0; }
-        .menu-item svg { flex-shrink: 0; color: #1a5c35; }
+        .menu-item svg, .menu-item .pc-icon { flex-shrink: 0; color: #1a5c35; }
+        .menu-item-area {
+            background: linear-gradient(135deg, #f8fafc 0%, #f0fdf4 100%) !important;
+            border: 1.5px solid #a7f3d0 !important;
+            border-radius: 14px !important;
+            padding: 12px 14px !important;
+            box-shadow: 0 2px 8px rgba(16,185,129,0.10) !important;
+            color: #0f172a !important;
+            font-size: 0.86rem !important;
+            min-height: 64px;
+        }
+        .menu-item-area:hover {
+            border-color: #34d399 !important;
+            box-shadow: 0 6px 18px rgba(16,185,129,0.22) !important;
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%) !important;
+        }
+        .menu-area-header {
+            display: flex; align-items: center; gap: 10px; width: 100%;
+        }
+        .menu-area-label {
+            font-weight: 700; color: #1e3a2f; flex: 1; line-height: 1.25;
+        }
+        .menu-area-chevron { margin-left: auto; opacity: 0.65; flex-shrink: 0; }
         .hist-tag { background: #f0fdf4; border: 1px solid #86efac; border-radius: 20px; padding: 3px 10px; font-size: .75rem; font-weight: 600; color: #166534; }
         .hist-empty { text-align: center; padding: 60px 20px; color: #94a3b8; font-size: 1rem; }
         .hist-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
@@ -852,7 +884,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.63";
+const APP_VERSION = "1.5.64";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -1169,8 +1201,9 @@ if ('serviceWorker' in navigator) {
                 Comparar inspecciones
             </button>
         </div>
-        <div class="menu-titulo">Áreas de inspección</div>
-        <div class="menu-lista" id="areas-menu-lista"></div>
+        <div class="menu-titulo">Filtrar por área</div>
+        <p class="menu-descripcion">Ir directo a Frentes filtrados por categoría</p>
+        <div class="menu-lista menu-lista-areas" id="areas-menu-lista"></div>
     </div>
 </div></div>
 
@@ -3340,19 +3373,30 @@ if ('serviceWorker' in navigator) {
     // ── Color guardado por categoría (borde visual, sin selector) ──
     function cargarColoresCategoria() { return leerJSON('proyecar_colores_categoria', {}); }
 
-    // ── Menú "Más": botones de área generados desde los chips existentes ──
+    // ── Menú "Más": un botón por cada chip en #chips-categorias (excepto "todos") ──
     function renderMenuAreas() {
         const cont = document.getElementById('areas-menu-lista');
         if (!cont) return;
         cont.innerHTML = '';
-        document.querySelectorAll('#chips-categorias .chip').forEach(chip => {
+        const chips = document.querySelectorAll('#chips-categorias .chip');
+        chips.forEach(chip => {
             const catid = chip.dataset.catid;
-            if (catid === 'todos') return;
-            const icono = pcIconCat(catid, 22);
-            const nombre = chip.querySelector('.chip-label').textContent;
+            if (!catid || catid === 'todos') return;
+            const labelEl = chip.querySelector('.chip-label');
+            const nombre = labelEl ? labelEl.textContent.trim() : catid;
+            const iconHtml = (typeof CAT_ICON_MAP !== 'undefined' && CAT_ICON_MAP[catid])
+                ? pcIconBox(catid)
+                : '<span class="icon-box icon-box-verde">' + pcIcon('clipboard-list', 20, '#1a5c35') + '</span>';
             const btn = document.createElement('button');
-            btn.className = 'menu-item';
-            btn.innerHTML = icono + nombre;
+            btn.className = 'menu-item menu-item-area';
+            btn.type = 'button';
+            btn.setAttribute('aria-label', 'Filtrar frentes por ' + nombre);
+            btn.innerHTML =
+                '<span class="menu-area-header">' +
+                    iconHtml +
+                    '<span class="menu-area-label">' + nombre + '</span>' +
+                    '<span class="menu-area-chevron">' + pcIcon('chevron-right', 16, '#64748b') + '</span>' +
+                '</span>';
             btn.onclick = () => { mostrarPantalla('frentes'); aplicarFiltroCategoria(catid); };
             cont.appendChild(btn);
         });
