@@ -1,5 +1,5 @@
-// build: 2026-07-12-numero-contrato-comparacion-semanal
-const APP_VERSION = '1.5.84';
+// build: 2026-07-12-frente-nombre-card-style
+const APP_VERSION = '1.5.85';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {
