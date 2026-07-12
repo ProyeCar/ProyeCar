@@ -1114,7 +1114,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.78";
+const APP_VERSION = "1.5.79";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -3702,7 +3702,12 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     }
 
-    const ORDEN_TABS = ['datos', 'frentes', 'herramientas', 'historial', 'comparar', 'sync', 'mas'];
+    const ORDEN_NAV_SWIPE = ['datos', 'frentes', 'sync', 'mas'];
+
+    function indiceSwipePantalla(nombre) {
+        if (SIN_BOTON_PROPIO.includes(nombre)) return ORDEN_NAV_SWIPE.indexOf('mas');
+        return ORDEN_NAV_SWIPE.indexOf(nombre);
+    }
 
     async function renderSync() {
         const cont = document.getElementById('sync-lista');
@@ -3920,10 +3925,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const activa = document.querySelector('.pantalla.activa');
             if (!activa) return;
             const actual = activa.id.replace('pantalla-', '');
-            const i = ORDEN_TABS.indexOf(actual);
+            const i = indiceSwipePantalla(actual);
             if (i === -1) return;
-            const next = dx < 0 ? ORDEN_TABS[i + 1] : ORDEN_TABS[i - 1];
-            if (next) mostrarPantalla(next);
+            const nextIdx = dx < 0 ? i + 1 : i - 1;
+            if (nextIdx < 0 || nextIdx >= ORDEN_NAV_SWIPE.length) return;
+            mostrarPantalla(ORDEN_NAV_SWIPE[nextIdx]);
         }, { passive: true });
     })();
 
