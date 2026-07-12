@@ -195,7 +195,7 @@
         .frente-body { display: block; padding: 0 14px 10px; }
         .frente-body.collapsed { display: none; }
         .frente-toggle { font-size:1rem; margin-right:8px; display:inline-block; color:#86efac; }
-        .frente-toggle.open { transform: rotate(90deg); }
+        .frente-toggle.open svg, .cat-toggle.open svg { transform: rotate(90deg); }
         .frente-summary { font-size:0.76rem; color:#86efac; margin-left:8px; }
         .frente-titulo { font-size: 1.1rem; font-weight: 800; color: white; flex: 1; letter-spacing: -0.2px; }
         .frente-titulo input {
@@ -248,7 +248,7 @@
         }
         .cat-titulo:hover { background: #f1f5f9; }
         .cat-toggle { font-size:0.85rem; display:inline-block; color: var(--verde-vivo); }
-        .cat-toggle.open { transform: rotate(90deg); }
+        .cat-toggle.open svg { transform: rotate(90deg); }
         .cat-body { display: block; }
         .cat-body.collapsed { display: none; }
 
@@ -347,7 +347,7 @@
         .btn-herramientas-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:12px; width:100%; }
         .btn-h { display:flex !important; flex-direction:column; align-items:center; justify-content:center; width:100% !important; aspect-ratio:1; background:var(--verde-gradient) !important; color:#fff; border-radius:var(--radius) !important; padding:10px 4px !important; font-size:0.62rem !important; font-weight:700; letter-spacing:0.3px; gap:6px; min-width:unset; box-shadow:var(--shadow-md) !important; line-height:1.2; text-align:center; }
         .btn-h:active { box-shadow:var(--shadow-sm) !important; }
-        .btn-h svg { width:30px; height:30px; flex-shrink:0; }
+        .btn-h svg, .btn-h .pc-icon { width:30px; height:30px; flex-shrink:0; }
         .save-indicator { font-size: 0.78rem; color: #059669; margin-left: 10px; font-weight: 700; background: #ecfdf5; padding: 2px 10px; border-radius: 20px; border: 1px solid #6ee7b7; }
 
         button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
@@ -738,12 +738,19 @@
         .sync-nombre { font-weight: 700; color: #1e293b; font-size: 0.9rem; }
         .sync-fecha { font-size: 0.76rem; color: #64748b; margin: 4px 0 6px; }
 
+        .pc-icon { display: inline-block; vertical-align: -0.15em; flex-shrink: 0; }
+        .pc-icon-btn, .pc-icon-label { display: inline-flex; align-items: center; gap: 6px; }
+        label.pc-icon-label { font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; font-size: 11px; color: var(--gris-600); }
+        button .pc-icon-btn, .btn-agregar-frente, .btn-foto, .agregar-item { display: inline-flex; align-items: center; gap: 6px; }
+        .nav-icon, .chip-icon { display: inline-flex; align-items: center; justify-content: center; }
+
     </style>
     <link rel="manifest" href="./manifest.json">
+    <script src="icons.js"></script>
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.60";
+const APP_VERSION = "1.5.61";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -811,7 +818,7 @@ function mostrarBannerActualizacionPWA(versionServidor) {
   b.id = 'pwa-update-banner';
   b.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99998;background:#1a5c35;color:#fff;padding:12px 16px;padding-bottom:calc(12px + env(safe-area-inset-bottom));display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:0.85rem;font-family:inherit;box-shadow:0 -2px 10px rgba(0,0,0,0.25);';
   const txt = document.createElement('span');
-  txt.textContent = '🔄 Hay una actualización disponible (v' + versionServidor + ')';
+  txt.innerHTML = pcIcon('refresh-cw', 16, '#fff') + ' Hay una actualización disponible (v' + versionServidor + ')';
   const btn = document.createElement('button');
   btn.textContent = 'Actualizar ahora';
   btn.style.cssText = 'background:#fff;color:#1a5c35;border:none;border-radius:20px;padding:8px 16px;font-weight:700;font-size:0.85rem;cursor:pointer;flex-shrink:0;';
@@ -892,46 +899,46 @@ if ('serviceWorker' in navigator) {
         </div>
         <div style="flex:1;text-align:center;position:relative;z-index:1;">
             <h1 id="app-titulo" style="color:#ffffff;display:inline;font-size:1.1rem;font-weight:800;letter-spacing:-0.3px;text-shadow:0 2px 8px rgba(0,0,0,0.5);">Inspección Ambiental y SST por Frente de Obra</h1>
-            <button onclick="(function(){var h=document.getElementById('app-titulo');var v=prompt('Editar título:',h.innerText);if(v&&v.trim())h.innerText=v.trim();})()" style="margin-left:8px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.35);border-radius:6px;padding:2px 8px;font-size:0.72rem;color:white;cursor:pointer;backdrop-filter:blur(4px);">✏️ Editar</button>
+            <button onclick="(function(){var h=document.getElementById('app-titulo');var v=prompt('Editar título:',h.innerText);if(v&&v.trim())h.innerText=v.trim();})()" style="margin-left:8px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.35);border-radius:6px;padding:2px 8px;font-size:0.72rem;color:white;cursor:pointer;backdrop-filter:blur(4px);display:inline-flex;align-items:center;gap:4px;"><span class="pc-icon-hydrate" data-i="pencil" data-s="12" data-c="#fff"></span> Editar</button>
             <p style="color:rgba(255,255,255,0.75);font-size:0.72rem;margin-top:4px;letter-spacing:0.3px;">Corporación Autónoma Regional del Canal del Dique</p>
-            <p style="color:#86efac;font-size:0.68rem;margin-top:3px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;text-shadow:0 1px 3px rgba(0,0,0,0.3);">📐 Área Técnica de Planeación — CARDIQUE</p>
+            <p style="color:#86efac;font-size:0.68rem;margin-top:3px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;text-shadow:0 1px 3px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;gap:4px;"><span class="pc-icon-hydrate" data-i="ruler" data-s="12" data-c="#86efac"></span> Área Técnica de Planeación — CARDIQUE</p>
         </div>
     </div>
     <div style="display:flex;justify-content:center;margin-top:-18px;margin-bottom:10px;z-index:10;position:relative;">
       <div style="background:linear-gradient(135deg,#0d3321,#2d9e52);color:#fff;font-size:0.82rem;font-weight:800;letter-spacing:3px;padding:8px 24px;border-radius:30px;box-shadow:0 4px 16px rgba(13,51,33,0.35);display:flex;align-items:center;gap:8px;border:2px solid rgba(255,255,255,0.25);">
-        <span style="font-size:1rem;">🌿</span>
+        <span class="pc-icon-hydrate" data-i="leaf" data-s="18" data-c="#2d9e52"></span>
         <span>ProyeCar</span>
         <span style="font-size:0.65rem;font-weight:600;letter-spacing:1px;opacity:0.85;background:rgba(255,255,255,0.15);padding:2px 7px;border-radius:10px;">v1.2.3</span>
       </div>
     </div>
-    <div class="security-banner no-print" style="display:none;">🔒 MODO SEGURO: Datos no salen de su dispositivo</div>
+    <div class="security-banner no-print" style="display:none;"><span class="pc-icon-hydrate" data-i="lock" data-s="14" data-c="currentColor"></span> MODO SEGURO: Datos no salen de su dispositivo</div>
 </div>
 
 <div id="pantalla-datos" class="pantalla activa"><div class="container">
     <div class="card no-print">
-        <div class="card-header"><h2><span class="icon-box icon-box-verde"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a5c35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2"/><rect x="8" y="2.5" width="8" height="3.5" rx="1"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="13" y2="16"/></svg></span>Datos generales de la inspección</h2></div>
+        <div class="card-header"><h2><span class="icon-box icon-box-verde"><span class="pc-icon-hydrate" data-i="clipboard-list" data-s="20" data-c="#1a5c35"></span></span>Datos generales de la inspección</h2></div>
         <div class="form-row">
-            <div class="form-group"><label>📄 Contrato</label><input type="text" id="proyecto" placeholder="N° o nombre del contrato"></div>
-            <div class="form-group"><label>📅 Fecha</label><input type="date" id="fecha"></div>
-            <div class="form-group"><label>📍 Municipio</label><input type="text" id="ubicacion" value="Jurisdicción CARDIQUE"></div>
-            <div class="form-group"><label>👤 Profesional</label><input type="text" id="inspector"></div>
+            <div class="form-group"><label class="pc-icon-label"><span class="pc-icon-hydrate" data-i="file-text" data-s="14" data-c="#64748b"></span><span>Contrato</span></label><input type="text" id="proyecto" placeholder="N° o nombre del contrato"></div>
+            <div class="form-group"><label class="pc-icon-label"><span class="pc-icon-hydrate" data-i="calendar" data-s="14" data-c="#64748b"></span><span>Fecha</span></label><input type="date" id="fecha"></div>
+            <div class="form-group"><label class="pc-icon-label"><span class="pc-icon-hydrate" data-i="map-pin" data-s="14" data-c="#64748b"></span><span>Municipio</span></label><input type="text" id="ubicacion" value="Jurisdicción CARDIQUE"></div>
+            <div class="form-group"><label class="pc-icon-label"><span class="pc-icon-hydrate" data-i="user" data-s="14" data-c="#64748b"></span><span>Profesional</span></label><input type="text" id="inspector"></div>
         </div>
     </div>
 </div></div>
 
 <div id="pantalla-frentes" class="pantalla"><div class="container">
     <div class="chips-grid" id="chips-categorias">
-        <div class="chip" data-catid="todos"><span class="chip-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a5c35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg></span><span class="chip-label">Todos</span></div>
-        <div class="chip" data-catid="ambiental"><span class="chip-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a5c35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V12M12 12c0-5 4-9 9-9 0 5-4 9-9 9zm0 0C12 7 8 3 3 3c0 5 4 9 9 9z"/></svg></span><span class="chip-label">Ambiental</span></div>
-        <div class="chip" data-catid="sst"><span class="chip-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a5c35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 5v6c0 5 3.4 9 8 11 4.6-2 8-6 8-11V5z"/></svg></span><span class="chip-label">SST</span></div>
-        <div class="chip" data-catid="juridica"><span class="chip-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a5c35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M5 7l-3 6a4 4 0 0 0 6 0zM19 7l-3 6a4 4 0 0 0 6 0zM4 7h16M8 7l4-4 4 4"/></svg></span><span class="chip-label">Jurídica</span></div>
-        <div class="chip" data-catid="social"><span class="chip-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a5c35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="9" r="2.6"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5M15 20c0-2.5 1.8-4.3 4.2-4.6"/></svg></span><span class="chip-label">Social</span></div>
-        <div class="chip" data-catid="tecnica"><span class="chip-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a5c35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 1-5.4 5.4l-5.6 5.6a1.5 1.5 0 0 0 2.1 2.1l5.6-5.6a4 4 0 0 1 5.4-5.4l-2.5 2.5-2-2z"/></svg></span><span class="chip-label">Técnica</span></div>
+        <div class="chip" data-catid="todos"><span class="chip-icon"><span class="pc-icon-hydrate" data-i="layout-grid" data-s="22" data-c="#1a5c35"></span></span><span class="chip-label">Todos</span></div>
+        <div class="chip" data-catid="ambiental"><span class="chip-icon"><span class="pc-icon-hydrate" data-i="leaf" data-s="22" data-c="#1a5c35"></span></span><span class="chip-label">Ambiental</span></div>
+        <div class="chip" data-catid="sst"><span class="chip-icon"><span class="pc-icon-hydrate" data-i="hard-hat" data-s="22" data-c="#1a5c35"></span></span><span class="chip-label">SST</span></div>
+        <div class="chip" data-catid="juridica"><span class="chip-icon"><span class="pc-icon-hydrate" data-i="scale" data-s="22" data-c="#1a5c35"></span></span><span class="chip-label">Jurídica</span></div>
+        <div class="chip" data-catid="social"><span class="chip-icon"><span class="pc-icon-hydrate" data-i="users" data-s="22" data-c="#1a5c35"></span></span><span class="chip-label">Social</span></div>
+        <div class="chip" data-catid="tecnica"><span class="chip-icon"><span class="pc-icon-hydrate" data-i="wrench" data-s="22" data-c="#1a5c35"></span></span><span class="chip-label">Técnica</span></div>
     </div>
     <div class="card no-print">
-        <div class="card-header"><h2><span class="icon-box icon-box-verde"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a5c35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h12"/><path d="M13 4v5"/><path d="M17 4v3.5"/><path d="M13 9l4-2"/><path d="M13 9v7"/><circle cx="13" cy="18" r="1.6"/></svg></span>Frentes de obra</h2></div>
+        <div class="card-header"><h2><span class="icon-box icon-box-verde"><span class="pc-icon-hydrate" data-i="construction" data-s="20" data-c="#1a5c35"></span></span>Frentes de obra</h2></div>
         <div id="frentes-container"></div>
-        <button id="agregar-frente" class="btn-agregar-frente">➕ Agregar nuevo frente</button>
+        <button id="agregar-frente" class="btn-agregar-frente"><span class="pc-icon-hydrate" data-i="plus" data-s="16" data-c="currentColor"></span> Agregar nuevo frente</button>
     </div>
 </div></div>
 
@@ -939,36 +946,36 @@ if ('serviceWorker' in navigator) {
     <div class="no-print" style="display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 20px; align-items: center; justify-content: center;">
                 <div style="text-align:center;padding:16px 20px 12px;font-size:0.76rem;color:#6b7280;border-top:2px solid #d1fae5;margin-bottom:12px;background:linear-gradient(135deg,#f0fdf4,#f8fafc);border-radius:0 0 16px 16px;">
             <span style="display:inline-flex;align-items:center;gap:6px;background:white;padding:6px 14px;border-radius:30px;box-shadow:0 2px 8px rgba(13,51,33,0.08);border:1px solid #bbf7d0;">
-                <span style="color:#2d9e52;font-weight:700;">🌿</span>
+                <span class="pc-icon-hydrate" data-i="leaf" data-s="16" data-c="#2d9e52"></span>
                 <span style="color:#374151;font-weight:600;">Herramienta desarrollada por <strong style="color:#0d3321;">Dairo Narváez</strong> — Área Técnica de Planeación, CARDIQUE, 2026</span>
             </span>
         </div>
         <div class="btn-herramientas-grid">
             <button id="compartir-inspeccion" class="btn-h" style="background:linear-gradient(135deg,#7c3aed,#a855f7);">
-                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                <span class="pc-icon-hydrate" data-i="share-2" data-s="30" data-c="#fff"></span>
                 Compartir ítems personalizados
             </button>
             <button id="importar-items-custom" class="btn-h" style="background:linear-gradient(135deg,#0ea5e9,#0284c7);">
-                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span class="pc-icon-hydrate" data-i="download" data-s="30" data-c="#fff"></span>
                 Importar ítems compartidos
             </button>
             <button id="exportar-json" class="btn-h" style="background:linear-gradient(135deg,#475569,#64748b);">
-                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <span class="pc-icon-hydrate" data-i="upload" data-s="30" data-c="#fff"></span>
                 Exportar respaldo JSON
             </button>
             <button id="exportar-items-custom" class="btn-h" style="background:linear-gradient(135deg,#1a5c35,#2d9e52);">
-                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
+                <span class="pc-icon-hydrate" data-i="bar-chart-2" data-s="30" data-c="#fff"></span>
                 Compartir inspección
             </button>
             <button id="generar-pdf" class="btn-h" style="background:linear-gradient(135deg,#d97706,#f59e0b);">
-                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                <span class="pc-icon-hydrate" data-i="file-text" data-s="30" data-c="#fff"></span>
                 Generar informe para Dirección
             </button>
         </div>
         <!-- ── Comparación Semanal ── -->
         <div id="cs-seccion" style="margin-top:14px;border:1px solid #bbf7d0;border-radius:14px;overflow:hidden;">
             <div id="cs-toggle-row" onclick="csToggle()" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:linear-gradient(135deg,#f0fdf4,#f8fafc);cursor:pointer;user-select:none;">
-                <span style="font-size:0.88rem;font-weight:700;color:#1e3a2f;">📊 Incluir comparación semanal</span>
+                <span style="font-size:0.88rem;font-weight:700;color:#1e3a2f;display:inline-flex;align-items:center;gap:6px;"><span class="pc-icon-hydrate" data-i="bar-chart-2" data-s="16" data-c="#1e3a2f"></span> Incluir comparación semanal</span>
                 <div id="cs-toggle-switch" style="width:40px;height:22px;background:#d1d5db;border-radius:11px;position:relative;flex-shrink:0;">
                     <div id="cs-toggle-knob" style="position:absolute;top:3px;left:3px;width:16px;height:16px;background:white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.25);"></div>
                 </div>
@@ -991,13 +998,13 @@ if ('serviceWorker' in navigator) {
                         <select id="filtro-area-pdf" style="flex:1;min-width:140px;padding:6px 10px;border-radius:8px;border:0.5px solid var(--color-border-tertiary);font-size:16px;background:var(--color-background-primary);color:var(--color-text-primary);"><option value="todas">Todas las áreas</option></select>
                     </div>
                 </div>
-                <button onclick="csSemanalGenerar()" style="width:100%;background:linear-gradient(135deg,#1a5c35,#16a34a);color:white;border:none;border-radius:10px;padding:11px;font-size:0.85rem;font-weight:700;cursor:pointer;margin-bottom:4px;box-shadow:0 3px 10px rgba(22,163,74,0.25);">🔄 Generar comparación</button>
+                <button onclick="csSemanalGenerar()" style="width:100%;background:linear-gradient(135deg,#1a5c35,#16a34a);color:white;border:none;border-radius:10px;padding:11px;font-size:0.85rem;font-weight:700;cursor:pointer;margin-bottom:4px;box-shadow:0 3px 10px rgba(22,163,74,0.25);display:inline-flex;align-items:center;justify-content:center;gap:6px;"><span class="pc-icon-hydrate" data-i="refresh-cw" data-s="16" data-c="#fff"></span> Generar comparación</button>
                 <div id="contenedor-graficas-pdf" style="margin-top:8px;"></div>
-                <button id="btn-listo-comparacion" onclick="generarInformeConComparacion()" style="display:none;width:100%;background:linear-gradient(135deg,#0d9488,#14b8a6);color:white;border:none;border-radius:12px;padding:13px;font-size:0.9rem;font-weight:700;cursor:pointer;margin-top:8px;">📄 Generar comparación semanal en PDF</button>
+                <button id="btn-listo-comparacion" onclick="generarInformeConComparacion()" style="display:none;width:100%;background:linear-gradient(135deg,#0d9488,#14b8a6);color:white;border:none;border-radius:12px;padding:13px;font-size:0.9rem;font-weight:700;cursor:pointer;margin-top:8px;align-items:center;justify-content:center;gap:6px;"><span class="pc-icon-hydrate" data-i="file-down" data-s="16" data-c="#fff"></span> Generar comparación semanal en PDF</button>
             </div>
         </div>
-        <button id="reset-global" class="btn-peligro">🔄 Reiniciar todo</button>
-        <button id="guardar-manual" style="background:#2c5e3f;">💾 Guardar manualmente</button>
+        <button id="reset-global" class="btn-peligro"><span class="pc-icon-hydrate" data-i="refresh-cw" data-s="16" data-c="currentColor"></span> Reiniciar todo</button>
+        <button id="guardar-manual" style="background:#2c5e3f;display:inline-flex;align-items:center;gap:6px;"><span class="pc-icon-hydrate" data-i="save" data-s="16" data-c="#fff"></span> Guardar manualmente</button>
         <span id="save-indicator" class="save-indicator"></span>
     </div>
 </div></div>
@@ -1007,12 +1014,12 @@ if ('serviceWorker' in navigator) {
 <div id="pantalla-historial" class="pantalla">
 <div class="container">
     <div class="card">
-        <div class="card-header"><h2><span class="icon-box icon-box-verde"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a5c35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><polyline points="12 7.5 12 12 15 14"/><line x1="12" y1="1.8" x2="12" y2="3.2"/><line x1="12" y1="20.8" x2="12" y2="22.2"/><line x1="1.8" y1="12" x2="3.2" y2="12"/><line x1="20.8" y1="12" x2="22.2" y2="12"/></svg></span>Historial de Inspecciones</h2></div>
+        <div class="card-header"><h2><span class="icon-box icon-box-verde"><span class="pc-icon-hydrate" data-i="clock" data-s="20" data-c="#1a5c35"></span></span>Historial de Inspecciones</h2></div>
         <div id="hist-lista"></div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;">
-            <button id="btn-archivar" style="background:#2c5e3f;">📥 Archivar inspección actual</button>
-            <button id="btn-limpiar-hist" class="btn-peligro" style="font-size:.8rem;padding:8px 14px;">🗑️ Limpiar historial</button>
-            <button id="importar-inspeccion" class="btn-sec" style="background:linear-gradient(135deg,#7c3aed,#a855f7);margin-bottom:8px;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;">📥 Importar inspección recibida</button>
+            <button id="btn-archivar" style="background:#2c5e3f;display:inline-flex;align-items:center;gap:6px;"><span class="pc-icon-hydrate" data-i="archive" data-s="16" data-c="#fff"></span> Archivar inspección actual</button>
+            <button id="btn-limpiar-hist" class="btn-peligro" style="font-size:.8rem;padding:8px 14px;display:inline-flex;align-items:center;gap:6px;"><span class="pc-icon-hydrate" data-i="trash-2" data-s="14" data-c="currentColor"></span> Limpiar historial</button>
+            <button id="importar-inspeccion" class="btn-sec" style="background:linear-gradient(135deg,#7c3aed,#a855f7);margin-bottom:8px;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;"><span class="pc-icon-hydrate" data-i="download" data-s="16" data-c="#fff"></span> Importar inspección recibida</button>
         </div>
     </div>
 </div>
@@ -1022,12 +1029,12 @@ if ('serviceWorker' in navigator) {
 <div id="pantalla-comparar" class="pantalla">
 <div class="container">
     <div class="card">
-        <div class="card-header"><h2><span class="icon-box icon-box-verde"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="15" stroke="#1a5c35" stroke-width="2.4"/><line x1="10" y1="21" x2="10" y2="10" stroke="#1a5c35" stroke-width="2.4"/><line x1="16" y1="21" x2="16" y2="6" stroke="#1a5c35" stroke-width="2.4"/><line x1="21" y1="21" x2="21" y2="9" stroke="#1a5c35" stroke-width="2.4"/><polyline points="3 16 10 9 16 4 21 8" fill="none" stroke="#4ade80" stroke-width="2"/></svg></span>Comparar Inspecciones</h2></div>
+        <div class="card-header"><h2><span class="icon-box icon-box-verde"><span class="pc-icon-hydrate" data-i="bar-chart-2" data-s="20" data-c="#1a5c35"></span></span>Comparar Inspecciones</h2></div>
         <div class="comp-select">
             <div><span class="comp-label">Inspección A</span><select id="comp-sel-a" class="comp-sel"><option value="">— Selecciona —</option></select></div>
             <div><span class="comp-label">Inspección B</span><select id="comp-sel-b" class="comp-sel"><option value="">— Selecciona —</option></select></div>
         </div>
-        <button id="btn-comparar" style="background:#1e6f3f;width:100%;">📊 Comparar</button>
+        <button id="btn-comparar" style="background:#1e6f3f;width:100%;display:inline-flex;align-items:center;justify-content:center;gap:6px;"><span class="pc-icon-hydrate" data-i="bar-chart-2" data-s="16" data-c="#fff"></span> Comparar</button>
         <div id="comp-resultado" class="comp-resultado"></div>
     </div>
 </div>
@@ -1037,9 +1044,9 @@ if ('serviceWorker' in navigator) {
 <!-- PANTALLA SYNC -->
 <div id="pantalla-sync" class="pantalla"><div class="container">
     <div class="card">
-        <div class="card-header"><h2><span class="icon-box icon-box-verde"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a5c35" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg></span>Sincronización</h2></div>
+        <div class="card-header"><h2><span class="icon-box icon-box-verde"><span class="pc-icon-hydrate" data-i="refresh-cw" data-s="20" data-c="#1a5c35"></span></span>Sincronización</h2></div>
         <div id="sync-lista"></div>
-        <button id="btn-sync-reintentar" style="width:100%;">🔄 Reintentar ahora</button>
+        <button id="btn-sync-reintentar" style="width:100%;display:inline-flex;align-items:center;justify-content:center;gap:6px;"><span class="pc-icon-hydrate" data-i="refresh-cw" data-s="16" data-c="currentColor"></span> Reintentar ahora</button>
     </div>
 </div></div>
 
@@ -1048,15 +1055,15 @@ if ('serviceWorker' in navigator) {
         <div class="menu-titulo">Secciones principales</div>
         <div class="menu-lista">
             <button class="menu-item" onclick="mostrarPantalla('herramientas')">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 1-5.4 5.4l-5.6 5.6a1.5 1.5 0 0 0 2.1 2.1l5.6-5.6a4 4 0 0 1 5.4-5.4l-2.5 2.5-2-2z"/></svg>
+                <span class="pc-icon-hydrate" data-i="wrench" data-s="22" data-c="#1a5c35"></span>
                 Herramientas
             </button>
             <button class="menu-item" onclick="mostrarPantalla('historial')">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><polyline points="12 7.5 12 12 15 14"/><line x1="12" y1="1.8" x2="12" y2="3.2"/><line x1="12" y1="20.8" x2="12" y2="22.2"/><line x1="1.8" y1="12" x2="3.2" y2="12"/><line x1="20.8" y1="12" x2="22.2" y2="12"/></svg>
+                <span class="pc-icon-hydrate" data-i="clock" data-s="22" data-c="#1a5c35"></span>
                 Historial de inspección
             </button>
             <button class="menu-item" onclick="mostrarPantalla('comparar')">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="15" stroke="currentColor" stroke-width="2.4"/><line x1="10" y1="21" x2="10" y2="10" stroke="currentColor" stroke-width="2.4"/><line x1="16" y1="21" x2="16" y2="6" stroke="currentColor" stroke-width="2.4"/><line x1="21" y1="21" x2="21" y2="9" stroke="currentColor" stroke-width="2.4"/><polyline points="3 16 10 9 16 4 21 8" fill="none" stroke="#4ade80" stroke-width="2"/></svg>
+                <span class="pc-icon-hydrate" data-i="bar-chart-2" data-s="22" data-c="#1a5c35"></span>
                 Comparar inspecciones
             </button>
         </div>
@@ -1068,16 +1075,16 @@ if ('serviceWorker' in navigator) {
 <!-- NAV BAR -->
 <nav class="nav-bar no-print">
     <button class="nav-btn activo" id="nav-datos" onclick="mostrarPantalla('datos')">
-        <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>Datos
+        <span class="nav-icon"><span class="pc-icon-hydrate" data-i="file-text" data-s="18" data-c="currentColor"></span></span>Datos
     </button>
     <button class="nav-btn" id="nav-frentes" onclick="mostrarPantalla('frentes')">
-        <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18M7 15l4-6 4 3 4-8"/></svg></span>Frentes
+        <span class="nav-icon"><span class="pc-icon-hydrate" data-i="chart-line" data-s="18" data-c="currentColor"></span></span>Frentes
     </button>
     <button class="nav-btn" id="nav-sync" onclick="mostrarPantalla('sync')">
-        <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg></span>Sync
+        <span class="nav-icon"><span class="pc-icon-hydrate" data-i="refresh-cw" data-s="18" data-c="currentColor"></span></span>Sync
     </button>
     <button class="nav-btn" id="nav-mas" onclick="mostrarPantalla('mas')">
-        <span class="nav-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></span>Más
+        <span class="nav-icon"><span class="pc-icon-hydrate" data-i="ellipsis" data-s="18" data-c="currentColor"></span></span>Más
     </button>
 </nav>
 
@@ -1089,7 +1096,7 @@ if ('serviceWorker' in navigator) {
 
 <script type="module" src="supabase-pdfs.js"></script>
 <script>
-    console.log('🚀 ProyeCar v' + APP_VERSION + ' cargado');
+    console.log('ProyeCar v' + APP_VERSION + ' cargado');
 
     const PLANTILLAS_AUTO = [
         {
@@ -1411,13 +1418,13 @@ if ('serviceWorker' in navigator) {
 
     // ======================== MODELO DE DATOS ========================
     const CATEGORIAS_BASE = [
-        { id: "ambiental", nombre: "🌱 Ambiental", items: [
+        { id: "ambiental", nombre: "Ambiental", items: [
             { id: "amb1", texto: "Buen orden y aseo en el frente de obra.", cumple: null, obs: "", tipoVerificacion: "foto" },
             { id: "amb2", texto: "Manejo adecuado de residuos sólidos.", cumple: null, obs: "", tipoVerificacion: "foto" },
             { id: "amb3", texto: "Puntos ecologicos en buen estado.", cumple: null, obs: "", tipoVerificacion: "foto" },
             { id: "amb4", texto: "Control de material particulado (Carque y descargue de material por volquetas)", cumple: null, obs: "", tipoVerificacion: "foto" }
         ] },
-        { id: "sst", nombre: "⛑️ Seguridad y Salud (SST)", items: [
+        { id: "sst", nombre: "Seguridad y Salud (SST)", items: [
             { id: "sst1", texto: "Uso de EPP por cada trabajador, segun su actividad.", cumple: null, obs: "", tipoVerificacion: "foto" },
             { id: "sst2", texto: "Señalización y aislamiento.", cumple: null, obs: "", tipoVerificacion: "foto" },
             { id: "sst3", texto: "Capacitaciones e inducciones de seguridad al dia.", cumple: null, obs: "", tipoVerificacion: "documento" },
@@ -1429,7 +1436,7 @@ if ('serviceWorker' in navigator) {
             { id: "sst9", texto: "Elementos de emergencias instalados en un punto estratégico.", cumple: null, obs: "", tipoVerificacion: "foto" },
             { id: "sst10", texto: "Inspecciones sobre condiciones seguras de trabajo.", cumple: null, obs: "", tipoVerificacion: "documento" }
         ] },
-        { id: "juridica", nombre: "⚖️ Jurídica", items: [
+        { id: "juridica", nombre: "Jurídica", items: [
             { id: "jur1", texto: "Licencias y permisos ambientales en obra.", cumple: null, obs: "", tipoVerificacion: "verbal" },
             { id: "jur2", texto: "Pólizas del contrato vigentes.", cumple: null, obs: "", tipoVerificacion: "verbal" },
             { id: "jur3", texto: "Contratos de trabajo formalizados.", cumple: null, obs: "", tipoVerificacion: "documento" },
@@ -1437,7 +1444,7 @@ if ('serviceWorker' in navigator) {
             { id: "jur5", texto: "Actas de vecindad firmadas y archivadas.", cumple: null, obs: "", tipoVerificacion: "documento" },
             { id: "jur6", texto: "Permiso de ocupación de cauce vigente.", cumple: null, obs: "", tipoVerificacion: "verbal" }
         ]},
-        { id: "social", nombre: "🤝 Social", items: [
+        { id: "social", nombre: "Social", items: [
             { id: "soc1", texto: "Mano de obra local contratada según contrato.", cumple: null, obs: "", tipoVerificacion: "documento" },
             { id: "soc2", texto: "Buzón o canal de PQR activo y visible.", cumple: null, obs: "", tipoVerificacion: "foto" },
             { id: "soc3", texto: "Socialización del proyecto con registro.", cumple: null, obs: "", tipoVerificacion: "documento" },
@@ -1445,7 +1452,7 @@ if ('serviceWorker' in navigator) {
             { id: "soc5", texto: "Plan de Gestión Social implementado.", cumple: null, obs: "", tipoVerificacion: "documento" },
             { id: "soc6", texto: "Accesos peatonales y vehiculares habilitados.", cumple: null, obs: "", tipoVerificacion: "foto" }
         ]},
-        { id: "tecnica", nombre: "🔧 Técnica", items: [
+        { id: "tecnica", nombre: "Técnica", items: [
             { id: "tec1", texto: "Planos vigentes disponibles en obra.", cumple: null, obs: "", tipoVerificacion: "documento" },
             { id: "tec2", texto: "Materiales y procesos según especificaciones.", cumple: null, obs: "", tipoVerificacion: "foto" },
             { id: "tec3", texto: "Cronograma actualizado sin atrasos críticos.", cumple: null, obs: "", tipoVerificacion: "documento" },
@@ -1518,7 +1525,7 @@ if ('serviceWorker' in navigator) {
 
     fechaInput.valueAsDate = new Date();
 
-    function showSavedMessage() { saveIndicator.textContent = "✅ Datos guardados"; setTimeout(() => saveIndicator.textContent = "", 2000); }
+    function showSavedMessage() { saveIndicator.innerHTML = pcIcon('circle-check', 14, '#16a34a') + ' Datos guardados'; setTimeout(() => saveIndicator.textContent = "", 2000); }
     function getFormValues() {
         return {
             proyecto:  document.getElementById("proyecto").value,
@@ -1662,7 +1669,7 @@ if ('serviceWorker' in navigator) {
             // Toggle arrow
             const toggleArrow = document.createElement("span");
             toggleArrow.className = "frente-toggle";
-            toggleArrow.innerText = "▶";
+            toggleArrow.innerHTML = pcIcon('chevron-right', 14, '#86efac');
             const tituloDiv = document.createElement("div");
             tituloDiv.className = "frente-titulo";
             const nombreInput = document.createElement("input");
@@ -1673,7 +1680,7 @@ if ('serviceWorker' in navigator) {
             nombreInput.addEventListener("change", (e) => { frentes[idx].nombre = e.target.value; saveToLocal(); });
             tituloDiv.appendChild(nombreInput);
             const contratLabel = document.createElement("label");
-            contratLabel.innerText = "🏢 Contratista:";
+            contratLabel.innerHTML = pcIconLabel('building-2', 'Contratista:', 14, '#ffffff');
             contratLabel.style.cssText = "font-size:0.82rem;color:#ffffff;margin-left:10px;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,0.4);";
             const contratInput = document.createElement("input");
             contratInput.type = "text";
@@ -1686,7 +1693,7 @@ if ('serviceWorker' in navigator) {
             tituloDiv.appendChild(contratLabel);
             tituloDiv.appendChild(contratInput);
             const btnEliminar = document.createElement("button");
-            btnEliminar.innerText = "🗑️ Eliminar frente";
+            btnEliminar.innerHTML = pcIconBtn('trash-2', 'Eliminar frente', 14, '#ffb3b3');
             btnEliminar.className = "btn-eliminar-frente";
             btnEliminar.onclick = () => { setTimeout(() => { if (confirm("¿Eliminar este frente?")) { frentes.splice(idx, 1); saveToLocal(); renderFrentes(); } }, 10); };
             tituloDiv.prepend(toggleArrow);
@@ -1717,22 +1724,13 @@ if ('serviceWorker' in navigator) {
             frente.categorias.forEach((cat, catIdx) => {
                 const catDiv = document.createElement("div"); catDiv.className = "categoria"; catDiv.dataset.catid = cat.id;
                 const catTitulo = document.createElement("div"); catTitulo.className = "cat-titulo";
-                const catToggle = document.createElement("span"); catToggle.className = "cat-toggle"; catToggle.innerText = "▶";
+                const catToggle = document.createElement("span"); catToggle.className = "cat-toggle"; catToggle.innerHTML = pcIcon('chevron-right', 12, 'currentColor');
                 const catLabelWrap = document.createElement("span");
                 catLabelWrap.style.cssText = "display:flex;align-items:center;gap:10px;";
-                const ICONOS_AREA = {
-                    ambiental: { bg: "icon-box-verde",  svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#27500A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20c0-9 5-15 15-16 1 9-5 16-15 16z"/><path d="M6 18c3-4 7-7 12-9"/></svg>' },
-                    sst:       { bg: "icon-box-ambar",  svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#BA7517" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 5-3 8-7 9-4-1-7-4-7-9V6z"/><polyline points="9 12 11 14 15 9"/></svg>' },
-                    juridica:  { bg: "icon-box-azul",   svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="21"/><line x1="6" y1="21" x2="18" y2="21"/><line x1="4" y1="7" x2="20" y2="7"/><path d="M4 7l-2.5 5a2.5 2.5 0 0 0 5 0z"/><path d="M20 7l-2.5 5a2.5 2.5 0 0 0 5 0z"/></svg>' },
-                    social:    { bg: "icon-box-morado", svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8.5" cy="8" r="2.8"/><path d="M3 19c0-3.3 2.5-5.5 5.5-5.5S14 15.7 14 19"/><circle cx="17" cy="9" r="2.2"/><path d="M15.5 13.2c2.6.2 4.5 2.2 4.5 5.3"/></svg>' },
-                    tecnica:   { bg: "icon-box-gris",   svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.2M12 18.8V21M4.2 12H2M22 12h-2.2M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6"/></svg>' }
-                };
-                const iconInfo = ICONOS_AREA[cat.id];
-                if (iconInfo) {
-                    const iconBox = document.createElement("span");
-                    iconBox.className = "icon-box " + iconInfo.bg;
-                    iconBox.innerHTML = iconInfo.svg;
-                    catLabelWrap.appendChild(iconBox);
+                if (CAT_ICON_MAP[cat.id]) {
+                    const iconBoxWrap = document.createElement("span");
+                    iconBoxWrap.innerHTML = pcIconBox(cat.id);
+                    catLabelWrap.appendChild(iconBoxWrap.firstChild);
                 }
                 const catNombre = document.createElement("span");
                 catNombre.innerText = cat.nombre.replace(/^[^\p{L}\p{N}]+\s*/u, '');
@@ -1740,7 +1738,7 @@ if ('serviceWorker' in navigator) {
                 catTitulo.appendChild(catLabelWrap); catTitulo.appendChild(catToggle);
 
                 const btnEditarCat = document.createElement("button");
-                btnEditarCat.innerHTML = "✏️";
+                btnEditarCat.innerHTML = pcIcon('pencil', 16, 'currentColor');
                 btnEditarCat.className = "btn-editar";
                 btnEditarCat.title = "Editar nombre del área";
                 btnEditarCat.setAttribute("aria-label", "Editar nombre del área");
@@ -1757,7 +1755,7 @@ if ('serviceWorker' in navigator) {
                 };
 
                 const btnEliminarCat = document.createElement("button");
-                btnEliminarCat.innerHTML = "🗑️";
+                btnEliminarCat.innerHTML = pcIcon('trash-2', 16, 'currentColor');
                 btnEliminarCat.className = "btn-eliminar";
                 btnEliminarCat.title = "Eliminar área";
                 btnEliminarCat.setAttribute("aria-label", "Eliminar área");
@@ -1799,21 +1797,20 @@ if ('serviceWorker' in navigator) {
                     const itemCard = document.createElement("div"); itemCard.className = "item-card";
                     const row = document.createElement("div"); row.className = "item-row";
                     const desc = document.createElement("div"); desc.className = "item-desc";
-                    if (item.tipoVerificacion === "verbal") { desc.innerText = "🗣️ " + item.texto; }
+                    if (item.tipoVerificacion === "verbal") { desc.innerHTML = pcIcon('message-circle', 14, '#64748b') + ' ' + item.texto; }
                     else {
                         var fotoItems = frentes[idx].fotoItems || {};
                         var tieneVinculo = Object.values(fotoItems).some(function(v){ return v === item.id; });
-                        var icono = item.tipoVerificacion === "documento" ? "📄" : "📷";
                         var iconSpan = document.createElement('span');
-                        iconSpan.innerText = icono;
+                        iconSpan.innerHTML = item.tipoVerificacion === "documento" ? pcIcon('file-text', 14, '#64748b') : pcIcon('camera', 14, '#64748b');
                         if (tieneVinculo) { iconSpan.style.cssText = 'background:#16a34a;color:#fff;border-radius:50%;padding:2px;'; }
                         desc.appendChild(iconSpan);
                         desc.appendChild(document.createTextNode(' ' + item.texto));
                     }
                     const acciones = document.createElement("div"); acciones.className = "item-actions";
                     const estadoDiv = document.createElement("div"); estadoDiv.className = "estado-btns";
-                    const btnSi = document.createElement("button"); btnSi.innerText = "✅ Cumple"; btnSi.className = `btn-cumple ${item.cumple === true ? "activo" : ""}`;
-                    const btnNo = document.createElement("button"); btnNo.innerText = "❌ No cumple"; btnNo.className = `btn-nocumple ${item.cumple === false ? "activo" : ""}`;
+                    const btnSi = document.createElement("button"); btnSi.innerHTML = pcIconBtn('circle-check', 'Cumple', 14, 'currentColor'); btnSi.className = `btn-cumple ${item.cumple === true ? "activo" : ""}`;
+                    const btnNo = document.createElement("button"); btnNo.innerHTML = pcIconBtn('circle-x', 'No cumple', 14, 'currentColor'); btnNo.className = `btn-nocumple ${item.cumple === false ? "activo" : ""}`;
                     // Create obsInput first so btnNo can reference it
                     const obsDiv = document.createElement("div"); obsDiv.className = "item-obs";
                     const obsInput = document.createElement("textarea"); obsInput.placeholder = "Observación del ítem (auto-completa al marcar No cumple)"; obsInput.value = item.obs || "";
@@ -1855,7 +1852,7 @@ if ('serviceWorker' in navigator) {
                         saveToLocal();
                     };
                     estadoDiv.appendChild(btnSi); estadoDiv.appendChild(btnNo);
-                    const editar = document.createElement("button"); editar.innerHTML = "✏️"; editar.className = "btn-editar";
+                    const editar = document.createElement("button"); editar.innerHTML = pcIcon('pencil', 16, 'currentColor'); editar.className = "btn-editar";
                     editar.onclick = () => {
                         setTimeout(() => {
                             const nuevo = prompt("Editar ítem:", item.texto);
@@ -1884,7 +1881,7 @@ if ('serviceWorker' in navigator) {
                             }
                         }, 10);
                     };
-                    const eliminar = document.createElement("button"); eliminar.innerHTML = "🗑️"; eliminar.className = "btn-eliminar";
+                    const eliminar = document.createElement("button"); eliminar.innerHTML = pcIcon('trash-2', 16, 'currentColor'); eliminar.className = "btn-eliminar";
                     eliminar.onclick = () => {
                         setTimeout(() => {
                             if (confirm("¿Eliminar ítem?")) {
@@ -1926,7 +1923,7 @@ if ('serviceWorker' in navigator) {
                 });
                 catBody.appendChild(itemsDiv);
                 catDiv.appendChild(catBody);
-                const btnAgregarItem = document.createElement("div"); btnAgregarItem.className = "agregar-item"; btnAgregarItem.innerHTML = "➕ Agregar ítem a esta categoría";
+                const btnAgregarItem = document.createElement("div"); btnAgregarItem.className = "agregar-item"; btnAgregarItem.innerHTML = pcIconBtn('plus', 16, 'currentColor', 'Agregar ítem a esta categoría');
                 btnAgregarItem.onclick = () => { setTimeout(() => {
                     const texto = prompt("Nombre del nuevo ítem:");
                     if (texto && texto.trim()) {
@@ -1966,7 +1963,7 @@ if ('serviceWorker' in navigator) {
             });
 
             const btnAgregarCat = document.createElement("button");
-            btnAgregarCat.innerText = "➕ Agregar área nueva";
+            btnAgregarCat.innerHTML = pcIconBtn('plus', 16, 'currentColor', 'Agregar área nueva');
             btnAgregarCat.className = "btn-agregar-frente";
             btnAgregarCat.style.cssText = "margin:8px 0 4px;font-size:0.82rem;padding:8px 16px;white-space:nowrap;";
             btnAgregarCat.onclick = () => {
@@ -1975,7 +1972,7 @@ if ('serviceWorker' in navigator) {
                     if (!nombre || !nombre.trim()) return;
                     frentes[idx].categorias.push({
                         id: "custom_" + Date.now(),
-                        nombre: "📋 " + nombre.trim(),
+                        nombre: nombre.trim(),
                         items: []
                     });
                     saveToLocal();
@@ -1985,7 +1982,7 @@ if ('serviceWorker' in navigator) {
             accionesCarruselBody.appendChild(btnAgregarCat);
 
             const fotosDiv = document.createElement("div"); fotosDiv.className = "frente-fotos-area";
-            const fotosTitulo = document.createElement("h4"); fotosTitulo.innerText = "📸 Evidencia fotográfica de este frente";
+            const fotosTitulo = document.createElement("h4"); fotosTitulo.innerHTML = pcIconLabel('camera', 'Evidencia fotográfica de este frente', 16, '#1e3a2f');
             fotosDiv.appendChild(fotosTitulo);
             const fotosGrid = document.createElement("div"); fotosGrid.className = "fotos-grid";
             if (frente.fotos && frente.fotos.length > 0) {
@@ -2005,7 +2002,7 @@ if ('serviceWorker' in navigator) {
                             }
                         } catch(e) {}
                     }
-                    const btnDel = document.createElement("button"); btnDel.innerText = "✕"; btnDel.className = "del-foto"; btnDel.onclick = async () => {
+                    const btnDel = document.createElement("button"); btnDel.innerHTML = pcIcon('x', 14, 'currentColor'); btnDel.className = "del-foto"; btnDel.onclick = async () => {
                         const fid = frentes[idx].fotos[fotoIdx];
                         frentes[idx].fotos.splice(fotoIdx, 1);
                         try { await idbEliminarFoto(fid); } catch(e) {}
@@ -2020,7 +2017,7 @@ if ('serviceWorker' in navigator) {
                 fotosGrid.appendChild(emptyMsg);
             }
             fotosDiv.appendChild(fotosGrid);
-            const btnSubirFotosFrente = document.createElement("button"); btnSubirFotosFrente.className = "btn-foto"; btnSubirFotosFrente.innerHTML = "📷 Subir fotos a este frente";
+            const btnSubirFotosFrente = document.createElement("button"); btnSubirFotosFrente.className = "btn-foto"; btnSubirFotosFrente.innerHTML = pcIconBtn('camera', 'Subir fotos a este frente', 16, 'currentColor');
             btnSubirFotosFrente.onclick = () => {
                 const input = document.createElement("input"); input.type = "file"; input.multiple = true; input.accept = "image/*";
                 input.onchange = async (e) => {
@@ -2038,7 +2035,7 @@ if ('serviceWorker' in navigator) {
                         modal.style.cssText = 'background:#fff;border-radius:12px;padding:16px;max-width:480px;width:92%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.3);';
                         var title = document.createElement('p');
                         title.style.cssText = 'font-weight:600;font-size:1rem;margin:0 0 12px;color:#1e293b;';
-                        title.innerText = '📎 Vincular foto a ítem';
+                        title.innerHTML = pcIconLabel('paperclip', 'Vincular foto a ítem', 14, '#1e3a2f');
                         modal.appendChild(title);
                         var btnNone = document.createElement('button');
                         btnNone.style.cssText = 'display:block;width:100%;text-align:left;padding:10px 12px;margin-bottom:8px;border:1px dashed #cbd5e1;border-radius:8px;background:#f8fafc;cursor:pointer;font-size:0.85rem;color:#6b7280;';
@@ -2112,10 +2109,10 @@ if ('serviceWorker' in navigator) {
             const obsTituloRow = document.createElement("div");
             obsTituloRow.style.cssText = "display:flex;align-items:center;gap:6px;margin-bottom:4px;";
             const obsTitulo = document.createElement("h4");
-            obsTitulo.innerText = "📝 Observaciones";
+            obsTitulo.innerHTML = pcIconLabel('notebook-pen', 'Observaciones', 16, '#1e3a2f');
             obsTituloRow.appendChild(obsTitulo);
             const btnGenResumen = document.createElement("button");
-            btnGenResumen.innerText = "🔄 Generar";
+            btnGenResumen.innerHTML = pcIconBtn('refresh-cw', 'Generar', 14, 'currentColor');
             btnGenResumen.style.cssText = "font-size:0.72rem;padding:2px 8px;background:#e8f5e9;color:#1a5c32;border:1px solid #a7d7a9;border-radius:6px;cursor:pointer;font-weight:normal;";
             btnGenResumen.onclick = () => { generarResumenEjecutivo(idx); };
             obsTituloRow.appendChild(btnGenResumen);
@@ -2136,10 +2133,10 @@ if ('serviceWorker' in navigator) {
             const recTituloRow = document.createElement("div");
             recTituloRow.style.cssText = "display:flex;align-items:center;gap:6px;margin-bottom:4px;";
             const recTitulo = document.createElement("h4");
-            recTitulo.innerText = "📋 Recomendaciones";
+            recTitulo.innerHTML = pcIconLabel('clipboard-list', 'Recomendaciones', 16, '#1e3a2f');
             recTituloRow.appendChild(recTitulo);
             const btnGenRecom = document.createElement("button");
-            btnGenRecom.innerText = "🔄 Generar";
+            btnGenRecom.innerHTML = pcIconBtn('refresh-cw', 'Generar', 14, 'currentColor');
             btnGenRecom.style.cssText = "font-size:0.72rem;padding:2px 8px;background:#e8f5e9;color:#1a5c32;border:1px solid #a7d7a9;border-radius:6px;cursor:pointer;font-weight:normal;";
             btnGenRecom.onclick = () => { generarRecomendaciones(idx); };
             recTituloRow.appendChild(btnGenRecom);
@@ -2174,7 +2171,7 @@ if ('serviceWorker' in navigator) {
                     var impModal = document.createElement('div');
                     impModal.style.cssText = 'background:#fff;border-radius:16px;padding:24px;max-width:420px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.3);';
                     impModal.innerHTML =
-                        '<div style="font-size:1.2rem;font-weight:700;color:#0d3321;margin-bottom:14px;">📋 Inspección recibida</div>' +
+                        '<div style="font-size:1.2rem;font-weight:700;color:#0d3321;margin-bottom:14px;display:flex;align-items:center;gap:8px;">' + pcIcon('clipboard-list', 20, '#0d3321') + ' Inspección recibida</div>' +
                         '<div style="font-size:0.88rem;color:#374151;line-height:1.7;margin-bottom:18px;">' +
                             '<b>Inspector:</b> ' + (impData.inspector || 'No especificado') + '<br>' +
                             '<b>Proyecto:</b> ' + (impData.proyecto || 'Sin nombre') + '<br>' +
@@ -2183,7 +2180,7 @@ if ('serviceWorker' in navigator) {
                         '<div style="font-size:0.82rem;color:#6b7280;margin-bottom:20px;">¿Guardar esta inspección en el historial?</div>' +
                         '<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">' +
                             '<button id="imp-modal-cancelar" style="padding:10px 18px;border-radius:8px;border:none;background:#e5e7eb;color:#374151;font-size:0.88rem;cursor:pointer;">Cancelar</button>' +
-                            '<button id="imp-modal-guardar" style="padding:10px 18px;border-radius:8px;border:none;background:#16a34a;color:#fff;font-size:0.88rem;font-weight:700;cursor:pointer;">✅ Guardar en historial</button>' +
+                            '<button id="imp-modal-guardar" style="padding:10px 18px;border-radius:8px;border:none;background:#16a34a;color:#fff;font-size:0.88rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">' + pcIconBtn('circle-check', 'Guardar en historial', 14, '#fff') + '</button>' +
                         '</div>';
                     impOverlay.appendChild(impModal);
                     document.body.appendChild(impOverlay);
@@ -2207,7 +2204,7 @@ if ('serviceWorker' in navigator) {
                         });
                         try {
                             localStorage.setItem('cardique_historial', JSON.stringify(historial));
-                            alert('✅ Inspección guardada en el historial correctamente.');
+                            alert('Inspección guardada en el historial correctamente.');
                             if (typeof renderHistorial === 'function') renderHistorial();
                         } catch(e3) {
                             alert('Error al guardar en historial.');
@@ -2216,6 +2213,7 @@ if ('serviceWorker' in navigator) {
                 }
             } catch(e) {}
         }
+        if (typeof pcIconHydrateAll === 'function') pcIconHydrateAll();
     }
 
     function generarResumenEjecutivo(idx) {
@@ -2285,11 +2283,11 @@ if ('serviceWorker' in navigator) {
                 return;
             }
             var codigo = "PC-ITEMS:" + btoa(unescape(encodeURIComponent(saved)));
-            var whatsappUrl = 'https://wa.me/?text=' + encodeURIComponent('🔗 Ítems personalizados ProyeCar\n\n' + codigo + '\n\nCopia este código y pégalo en ProyeCar → "Importar ítems compartidos"');
+            var whatsappUrl = 'https://wa.me/?text=' + encodeURIComponent('Ítems personalizados ProyeCar\n\n' + codigo + '\n\nCopia este código y pégalo en ProyeCar → "Importar ítems compartidos"');
             if (navigator.share) {
                 navigator.share({
                     title: 'Ítems ProyeCar',
-                    text: '🔗 Ítems personalizados ProyeCar\n\n' + codigo + '\n\nCopia este código y pégalo en ProyeCar → "Importar ítems compartidos"'
+                    text: 'Ítems personalizados ProyeCar\n\n' + codigo + '\n\nCopia este código y pégalo en ProyeCar → "Importar ítems compartidos"'
                 });
             } else {
                 window.open(whatsappUrl, '_blank');
@@ -2339,7 +2337,7 @@ if ('serviceWorker' in navigator) {
                 });
                 saveToLocal();
                 renderFrentes();
-                alert("✅ Se importaron " + agregados + " ítem(s) personalizado(s) correctamente.");
+                alert("Se importaron " + agregados + " ítem(s) personalizado(s) correctamente.");
             } catch(e) {
                 alert("Error al importar el código. Verifica que esté completo y sin espacios.");
             }
@@ -2430,7 +2428,7 @@ if ('serviceWorker' in navigator) {
                     historial.unshift(entrada);
                     try {
                         localStorage.setItem("cardique_historial", JSON.stringify(historial));
-                        alert("✅ Inspección importada correctamente al historial.");
+                        alert("Inspección importada correctamente al historial.");
                         if (typeof renderHistorial === 'function') renderHistorial();
                     } catch(e3) {
                         alert("Error al guardar. El archivo puede ser muy grande por las fotos.");
@@ -2670,7 +2668,7 @@ if ('serviceWorker' in navigator) {
             + '<tr><td>&#128197; Fecha:</td><td>'+esc(fecha)+'</td></tr>'
             + '<tr><td>&#128205; Municipio:</td><td>'+esc(ubicacion)+'</td></tr>'
             + '<tr><td>&#128100; Profesional:</td><td>'+esc(inspector)+'</td></tr>'
-            + '<tr><td>&#127959; Frentes:</td><td>'+frentes.length+'</td></tr>'
+            + '<tr><td>Frentes:</td><td>'+frentes.length+'</td></tr>'
             + '</tbody></table>';
         h += '</div>';
         h += '<div class="portada-footer-strip">CARDIQUE &middot; &Aacute;rea de Planeaci&oacute;n &middot; Uso interno</div>';
@@ -2680,8 +2678,8 @@ if ('serviceWorker' in navigator) {
         h += '<div class="sec-h">1. Resumen Global de Cumplimiento</div><div class="sec-b">';
         h += '<div class="kpi-row">'
             + '<div class="kpi-card"><div class="kpi-num" style="color:#1e3a2f">'+gTot+'</div><div class="kpi-lbl">Total</div></div>'
-            + '<div class="kpi-card"><div class="kpi-num" style="color:#16a34a">'+gC+'</div><div class="kpi-lbl">&#10004; Cumplen</div></div>'
-            + '<div class="kpi-card"><div class="kpi-num" style="color:#dc2626">'+gN+'</div><div class="kpi-lbl">&#10008; No cumplen</div></div>'
+            + '<div class="kpi-card"><div class="kpi-num" style="color:#16a34a">'+gC+'</div><div class="kpi-lbl">Cumplen</div></div>'
+            + '<div class="kpi-card"><div class="kpi-num" style="color:#dc2626">'+gN+'</div><div class="kpi-lbl">No cumplen</div></div>'
             + '<div class="kpi-card"><div class="kpi-num" style="color:#6b7280">'+gS+'</div><div class="kpi-lbl">Sin calificar</div></div>'
             + '<div class="kpi-card"><div class="kpi-num" style="color:#f59e0b">'+gPct+'%</div><div class="kpi-lbl">Cumplimiento</div></div>'
             + '</div>';
@@ -2718,7 +2716,7 @@ if ('serviceWorker' in navigator) {
         for(var fi=0;fi<frentes.length;fi++){
             var fr=frentes[fi],st=stats[fi],bc=st.pct>=80?'#16a34a':st.pct>=50?'#d97706':'#dc2626';
             h += '<div class="frente-pg">';
-            h += '<div class="frente-banner"><h2>&#127959; '+esc(fr.nombre)+'</h2>'
+            h += '<div class="frente-banner"><h2>'+esc(fr.nombre)+'</h2>'
                 +'<p>Secci&oacute;n '+(fi+2)+' de '+(frentes.length+1)+' &nbsp;|&nbsp; Profesional: '+esc(inspector)
                 +' &nbsp;|&nbsp; Contratista: '+esc(fr.contratista||'No especificado')+' &nbsp;|&nbsp; Fecha: '+esc(fecha)+'</p></div>';
             h += '<div class="mini-kpi-row">'
@@ -2759,9 +2757,9 @@ if ('serviceWorker' in navigator) {
                         + '<div style="display:flex;justify-content:center;">' + pie(arc, arn, ars, 120) + '</div>'
                         + '<div style="font-size:11pt;font-weight:800;color:' + arcol + ';margin-top:5px;">' + arpct + '%</div>'
                         + '<div style="font-size:7.5pt;margin-top:3px;">'
-                        + '<span style="color:#166534;font-weight:700;">&#10004;&nbsp;' + arc + '</span>'
-                        + '&nbsp;&middot;&nbsp;<span style="color:#991b1b;font-weight:700;">&#10008;&nbsp;' + arn + '</span>'
-                        + '&nbsp;&middot;&nbsp;<span style="color:#6b7280;">&#9633;&nbsp;' + ars + '</span>'
+                        + '<span style="color:#166534;font-weight:700;">Cumple: ' + arc + '</span>'
+                        + '&nbsp;&middot;&nbsp;<span style="color:#991b1b;font-weight:700;">No cumple: ' + arn + '</span>'
+                        + '&nbsp;&middot;&nbsp;<span style="color:#6b7280;">Sin cal.: ' + ars + '</span>'
                         + '</div>'
                         + '</div>';
                 }
@@ -2774,7 +2772,7 @@ if ('serviceWorker' in navigator) {
                 var cat=fr.categorias[ci]; if(!cat.items.length) continue;
                 var cc=0,cn=0;
                 cat.items.forEach(function(it){if(it.cumple===true)cc++;else if(it.cumple===false)cn++;});
-                h += '<div class="cat-h">'+cat.nombre+' <span style="font-weight:400;font-size:8.5pt;color:#4b5563">('+cc+' &#10004; / '+cn+' &#10008; / '+(cat.items.length-cc-cn)+' &#9633;)</span></div>';
+                h += '<div class="cat-h">'+cat.nombre+' <span style="font-weight:400;font-size:8.5pt;color:#4b5563">('+cc+' cumple / '+cn+' no cumple / '+(cat.items.length-cc-cn)+' sin cal.)</span></div>';
                 h += '<table class="ck-table"><thead><tr><th>Item</th><th>Estado</th><th>Observaci&oacute;n</th></tr></thead><tbody>';
                 for(var ii=0;ii<cat.items.length;ii++){
                     var it=cat.items[ii],bd=badge(it.cumple);
@@ -2861,12 +2859,12 @@ if ('serviceWorker' in navigator) {
                 var arData = areaResData[ardi];
                 var arChH = Math.max(160, arData.areas.length * 36 + 50);
                 h += '<div style="margin-bottom:24px;page-break-inside:avoid;break-inside:avoid;">';
-                h += '<div class="sub-t">&#127959; ' + esc(arData.nombre) + '</div>';
+                h += '<div class="sub-t">' + esc(arData.nombre) + '</div>';
                 h += '<table class="t-res"><thead><tr>'
                     + '<th style="text-align:left;">&Aacute;rea</th><th>Total</th>'
-                    + '<th style="color:#16a34a;">&#10004; Cumple</th>'
-                    + '<th style="color:#dc2626;">&#10008; No Cumple</th>'
-                    + '<th style="color:#6b7280;">&#9633; Sin Cal.</th>'
+                    + '<th style="color:#16a34a;">Cumple</th>'
+                    + '<th style="color:#dc2626;">No Cumple</th>'
+                    + '<th style="color:#6b7280;">Sin Cal.</th>'
                     + '<th>% Cumplimiento</th><th>Ranking</th>'
                     + '</tr></thead><tbody>';
                 for (var arri = 0; arri < arData.areas.length; arri++) {
@@ -2983,7 +2981,7 @@ if ('serviceWorker' in navigator) {
     }
 
     btnResetGlobal.onclick = () => {
-        if (confirm("⚠️ Reiniciar borrará todos los datos de inspección. Los ítems personalizados se conservan.\n¿Continuar?")) {
+        if (confirm("Reiniciar borrará todos los datos de inspección. Los ítems personalizados se conservan.\n¿Continuar?")) {
             // Extraer ítems custom de frentes en memoria ANTES de resetear (fuente más confiable)
             var customSnapshot = extractCustomItems(frentes);
             // Completar con lo que haya en localStorage por si hay más ítems guardados
@@ -3059,10 +3057,10 @@ if ('serviceWorker' in navigator) {
         const abiertos = frentes.filter(f => (uiSt[f.nombre] || {}).open === true);
         const abierto = abiertos.length === 1 ? abiertos[0] : null;
         if (!abierto) {
-            return '📋 ProyeCar\n\n' + frentes.length + ' frente(s) registrados:\n' + frentes.map(f => '• ' + f.nombre).join('\n');
+            return 'ProyeCar\n\n' + frentes.length + ' frente(s) registrados:\n' + frentes.map(f => '• ' + f.nombre).join('\n');
         }
         const totalItems = abierto.categorias.reduce((n, c) => n + c.items.length, 0);
-        return '📋 ProyeCar — ' + abierto.nombre + '\n' +
+        return 'ProyeCar — ' + abierto.nombre + '\n' +
             (abierto.contratista ? 'Contratista: ' + abierto.contratista + '\n' : '') +
             abierto.categorias.length + ' área(s), ' + totalItems + ' ítem(s) registrados.';
     }
@@ -3082,7 +3080,7 @@ if ('serviceWorker' in navigator) {
         if (!cont) return;
         const items = await colaLeerTodas();
         if (items.length === 0) {
-            cont.innerHTML = '<div class="hist-empty">✅ Todo sincronizado. No hay informes pendientes.</div>';
+            cont.innerHTML = '<div class="hist-empty">' + pcIcon('circle-check', 20, '#16a34a') + ' Todo sincronizado. No hay informes pendientes.</div>';
             return;
         }
         cont.innerHTML = items.map(it => {
@@ -3138,7 +3136,7 @@ if ('serviceWorker' in navigator) {
         document.querySelectorAll('#chips-categorias .chip').forEach(chip => {
             const catid = chip.dataset.catid;
             if (catid === 'todos') return;
-            const icono = chip.querySelector('.chip-icon').innerHTML;
+            const icono = pcIconCat(catid, 22);
             const nombre = chip.querySelector('.chip-label').textContent;
             const btn = document.createElement('button');
             btn.className = 'menu-item';
@@ -3235,7 +3233,7 @@ if ('serviceWorker' in navigator) {
         const hist = getHistorial();
         hist.unshift(registro);
         saveHistorial(hist);
-        alert('✅ Inspección archivada en historial.');
+        alert('Inspección archivada en historial.');
         mostrarPantalla('historial');
     };
 
@@ -3290,9 +3288,9 @@ if ('serviceWorker' in navigator) {
                         : '';
                     if (pct > 0 && pct < 25) outside.push('<span style="color:#16a34a;font-size:0.62rem;font-weight:700;">' + pct + '%</span>');
                     const redInside = pctNo >= 25
-                        ? '<div style="position:absolute;right:0;width:' + pctNo + '%;top:0;height:100%;display:flex;align-items:center;justify-content:center;"><span style="color:#fff;font-size:6px;line-height:1;font-weight:700;">' + pctNo + '% ✗</span></div>'
+                        ? '<div style="position:absolute;right:0;width:' + pctNo + '%;top:0;height:100%;display:flex;align-items:center;justify-content:center;"><span style="color:#fff;font-size:6px;line-height:1;font-weight:700;display:inline-flex;align-items:center;gap:1px;">' + pctNo + '% ' + pcIcon('x', 8, '#fff') + '</span></div>'
                         : '';
-                    if (pctNo > 0 && pctNo < 25) outside.push('<span style="color:#dc2626;font-size:0.62rem;font-weight:700;">' + pctNo + '% ✗</span>');
+                    if (pctNo > 0 && pctNo < 25) outside.push('<span style="color:#dc2626;font-size:0.62rem;font-weight:700;display:inline-flex;align-items:center;gap:2px;">' + pctNo + '% ' + pcIcon('x', 10, '#dc2626') + '</span>');
                     const outsideHtml = outside.length > 0
                         ? '<div style="display:flex;gap:4px;flex-shrink:0;">' + outside.join('') + '</div>'
                         : '';
@@ -3321,16 +3319,16 @@ if ('serviceWorker' in navigator) {
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;">
                     <div>
                         <div class="hist-proyecto">${r.proyecto || 'Sin nombre'}</div>
-                        <div class="hist-fecha">📅 ${r.fecha || ''} &nbsp;|&nbsp; Archivado: ${r.archivedAt || ''}</div>
-                        <div class="hist-inspector">👤 ${r.inspector || 'No especificado'}${r.importado ? '<span style="font-size:0.7rem;background:#7c3aed;color:#fff;padding:2px 8px;border-radius:10px;margin-left:6px;">Importada</span>' : ''}</div>
+                        <div class="hist-fecha" style="display:flex;align-items:center;gap:4px;">${pcIcon('calendar',12,'#64748b')} ${r.fecha || ''} &nbsp;|&nbsp; Archivado: ${r.archivedAt || ''}</div>
+                        <div class="hist-inspector" style="display:flex;align-items:center;gap:4px;">${pcIcon('user',12,'#64748b')} ${r.inspector || 'No especificado'}${r.importado ? '<span style="font-size:0.7rem;background:#7c3aed;color:#fff;padding:2px 8px;border-radius:10px;margin-left:6px;">Importada</span>' : ''}</div>
                     </div>
-                    <span style="font-size:0.8rem;font-weight:500;color:var(--color-text-secondary);">📋 ${numFrentes}${numFrentes === 1 ? ' frente' : ' frentes'}</span>
+                    <span style="font-size:0.8rem;font-weight:500;color:var(--color-text-secondary);display:inline-flex;align-items:center;gap:4px;">${pcIcon('clipboard-list',12,'#64748b')} ${numFrentes}${numFrentes === 1 ? ' frente' : ' frentes'}</span>
                 </div>
                 ${desgloseHTML}
                 <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
                     <button onclick="restaurarInspeccion(${i})" style="font-size:.75rem;padding:6px 12px;background:#2c5e3f;">↩️ Restaurar</button>
-                    <button onclick="editarInspeccion(${i})" style="font-size:.75rem;padding:6px 12px;background:#1a5c32;">✏️ Editar</button>
-                    <button onclick="eliminarHistorial(${i})" style="font-size:.75rem;padding:6px 12px;background:#b91c1c;">🗑️ Borrar</button>
+                    <button onclick="editarInspeccion(${i})" style="font-size:.75rem;padding:6px 12px;background:#1a5c32;display:inline-flex;align-items:center;gap:4px;">${pcIcon('pencil',12,'#fff')} Editar</button>
+                    <button onclick="eliminarHistorial(${i})" style="font-size:.75rem;padding:6px 12px;background:#b91c1c;display:inline-flex;align-items:center;gap:4px;">${pcIcon('trash-2',12,'#fff')} Borrar</button>
                 </div>
             </div>`;
         }).join('');
@@ -3348,7 +3346,7 @@ if ('serviceWorker' in navigator) {
 
         function esc2(s) { return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-        card.innerHTML = '<div style="font-size:1rem;font-weight:600;margin-bottom:16px;color:#1e3a2f;">✏️ Editar inspección</div>'
+        card.innerHTML = '<div style="font-size:1rem;font-weight:600;margin-bottom:16px;color:#1e3a2f;display:flex;align-items:center;gap:8px;">' + pcIcon('pencil', 18, '#1e3a2f') + ' Editar inspección</div>'
             + '<label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Contrato / Nombre</label>'
             + '<input id="edit-hist-proyecto" type="text" value="' + esc2(entrada.proyecto) + '" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;margin-bottom:12px;box-sizing:border-box;">'
             + '<label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Fecha</label>'
@@ -3358,7 +3356,7 @@ if ('serviceWorker' in navigator) {
             + '<label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Inspector</label>'
             + '<input id="edit-hist-inspector" type="text" value="' + esc2(entrada.inspector) + '" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;margin-bottom:16px;box-sizing:border-box;">'
             + '<div style="display:flex;gap:8px;">'
-            + '<button id="edit-hist-save" style="flex:1;padding:10px;background:#1a5c32;color:#fff;border:none;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer;">💾 Guardar cambios</button>'
+            + '<button id="edit-hist-save" style="flex:1;padding:10px;background:#1a5c32;color:#fff;border:none;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;">' + pcIconBtn('save', 14, '#fff', 'Guardar cambios') + '</button>'
             + '<button id="edit-hist-cancel" style="padding:10px 16px;background:#6b7280;color:#fff;border:none;border-radius:8px;font-size:0.9rem;cursor:pointer;">Cancelar</button>'
             + '</div>';
 
@@ -3502,12 +3500,12 @@ if ('serviceWorker' in navigator) {
                 + '<div style="flex:1;background:#fff7ed;border:2px solid #BA7517;border-radius:12px;padding:12px;">'
                 +   '<div style="font-size:0.65rem;font-weight:700;color:#BA7517;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px;">ANTERIOR</div>'
                 +   '<div style="font-weight:700;font-size:0.9rem;color:#1e3a2f;">' + (anterior.proyecto || 'Sin nombre') + '</div>'
-                +   '<div style="font-size:0.78rem;color:#6b7280;">📅 ' + (anterior.fecha || '') + '</div>'
+                +   '<div style="font-size:0.78rem;color:#6b7280;display:flex;align-items:center;gap:4px;">' + pcIcon('calendar', 12, '#6b7280') + ' ' + (anterior.fecha || '') + '</div>'
                 + '</div>'
                 + '<div style="flex:1;background:#f0fdf4;border:2px solid #27500A;border-radius:12px;padding:12px;">'
                 +   '<div style="font-size:0.65rem;font-weight:700;color:#27500A;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px;">MÁS RECIENTE</div>'
                 +   '<div style="font-weight:700;font-size:0.9rem;color:#1e3a2f;">' + (reciente.proyecto || 'Sin nombre') + '</div>'
-                +   '<div style="font-size:0.78rem;color:#6b7280;">📅 ' + (reciente.fecha || '') + '</div>'
+                +   '<div style="font-size:0.78rem;color:#6b7280;display:flex;align-items:center;gap:4px;">' + pcIcon('calendar', 12, '#6b7280') + ' ' + (reciente.fecha || '') + '</div>'
                 + '</div></div>';
 
             // PASO 3: frentes de la inspección reciente
@@ -3533,7 +3531,7 @@ if ('serviceWorker' in navigator) {
 
                 if (filteredCats.length === 0) return;
 
-                html += '<div style="font-size:1rem;font-weight:700;color:#1e3a2f;margin:16px 0 8px;padding-bottom:6px;border-bottom:2px solid #e2e8f0;">🏗️ ' + (fR.nombre || '') + '</div>';
+                html += '<div style="font-size:1rem;font-weight:700;color:#1e3a2f;margin:16px 0 8px;padding-bottom:6px;border-bottom:2px solid #e2e8f0;display:flex;align-items:center;gap:8px;">' + pcIcon('construction', 18, '#1e3a2f') + ' ' + (fR.nombre || '') + '</div>';
 
                 if (!fA) {
                     html += '<div style="background:#f8fafc;border-radius:12px;padding:12px;color:#6b7280;font-size:0.85rem;margin-bottom:10px;">Solo en inspección reciente — sin datos anteriores para comparar</div>';
@@ -3572,10 +3570,10 @@ if ('serviceWorker' in navigator) {
                         + '<div style="font-size:0.65rem;font-weight:700;color:#27500A;text-transform:uppercase;letter-spacing:.04em;margin-top:2px;">RECIENTE</div>';
 
                     var badges = (sA || sR) ? '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;justify-content:center;">'
-                        + (sA ? '<span style="background:#fff7ed;color:#BA7517;border:1px solid #BA7517;font-size:0.68rem;font-weight:700;padding:2px 8px;border-radius:20px;">✓ ' + pA + '% ant.</span>' : '')
-                        + (sA ? '<span style="background:#fff1f1;color:#A32D2D;border:1px solid rgba(163,45,45,0.5);font-size:0.68rem;font-weight:700;padding:2px 8px;border-radius:20px;">✗ ' + (100 - pA) + '% ant.</span>' : '')
-                        + (sR ? '<span style="background:#f0fdf4;color:#27500A;border:1px solid #27500A;font-size:0.68rem;font-weight:700;padding:2px 8px;border-radius:20px;">✓ ' + pR + '% rec.</span>' : '')
-                        + (sR ? '<span style="background:#fff1f1;color:#A32D2D;border:1px solid rgba(163,45,45,0.5);font-size:0.68rem;font-weight:700;padding:2px 8px;border-radius:20px;">✗ ' + (100 - pR) + '% rec.</span>' : '')
+                        + (sA ? '<span style="background:#fff7ed;color:#BA7517;border:1px solid #BA7517;font-size:0.68rem;font-weight:700;padding:2px 8px;border-radius:20px;display:inline-flex;align-items:center;gap:3px;">' + pcIcon('check', 10, '#BA7517') + ' ' + pA + '% ant.</span>' : '')
+                        + (sA ? '<span style="background:#fff1f1;color:#A32D2D;border:1px solid rgba(163,45,45,0.5);font-size:0.68rem;font-weight:700;padding:2px 8px;border-radius:20px;display:inline-flex;align-items:center;gap:3px;">' + pcIcon('x', 10, '#A32D2D') + ' ' + (100 - pA) + '% ant.</span>' : '')
+                        + (sR ? '<span style="background:#f0fdf4;color:#27500A;border:1px solid #27500A;font-size:0.68rem;font-weight:700;padding:2px 8px;border-radius:20px;display:inline-flex;align-items:center;gap:3px;">' + pcIcon('check', 10, '#27500A') + ' ' + pR + '% rec.</span>' : '')
+                        + (sR ? '<span style="background:#fff1f1;color:#A32D2D;border:1px solid rgba(163,45,45,0.5);font-size:0.68rem;font-weight:700;padding:2px 8px;border-radius:20px;display:inline-flex;align-items:center;gap:3px;">' + pcIcon('x', 10, '#A32D2D') + ' ' + (100 - pR) + '% rec.</span>' : '')
                         + '</div>' : '';
 
                     // PASO 5: HTML tarjeta por categoría
@@ -3847,7 +3845,7 @@ if ('serviceWorker' in navigator) {
                 if (!frenteHdrCreado) {
                     var fHdr = document.createElement('div');
                     fHdr.style.cssText = 'font-size:0.8rem;font-weight:700;color:#1e3a2f;margin:12px 0 4px;padding:4px 8px;background:#e8f5e9;border-radius:6px;';
-                    fHdr.textContent = '🏗️ ' + fNombre;
+                    fHdr.innerHTML = pcIcon('construction', 16, '#1e3a2f') + ' ' + fNombre;
                     contenedor.appendChild(fHdr);
                     frenteHdrCreado = true;
                 }
@@ -4110,11 +4108,11 @@ if ('serviceWorker' in navigator) {
         h += '<div style="flex:1;background:#f0fdf4;border:2px solid #16a34a;border-radius:10px;padding:10px 14px;">'
             + '<div style="font-size:7.5pt;font-weight:700;color:#16a34a;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px;">MÁS RECIENTE</div>'
             + '<div style="font-weight:700;font-size:10pt;color:#1e3a2f;">' + eH(proyR) + '</div>'
-            + '<div style="font-size:8.5pt;color:#6b7280;">📅 ' + eH(fechaR) + '</div></div>';
+            + '<div style="font-size:8.5pt;color:#6b7280;">' + pcIcon('calendar', 10, '#6b7280') + ' ' + eH(fechaR) + '</div></div>';
         h += '<div style="flex:1;background:#fff7ed;border:2px solid #f59e0b;border-radius:10px;padding:10px 14px;">'
             + '<div style="font-size:7.5pt;font-weight:700;color:#b45309;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px;">ANTERIOR</div>'
             + '<div style="font-weight:700;font-size:10pt;color:#1e3a2f;">' + eH(proyA2) + '</div>'
-            + '<div style="font-size:8.5pt;color:#6b7280;">📅 ' + eH(fechaA2) + '</div></div>';
+            + '<div style="font-size:8.5pt;color:#6b7280;">' + pcIcon('calendar', 10, '#6b7280') + ' ' + eH(fechaA2) + '</div></div>';
         h += '</div>';
 
         // Resumen gris
@@ -4274,8 +4272,8 @@ if ('serviceWorker' in navigator) {
         modal.innerHTML =
             '<div style="background:white;border-radius:20px;padding:24px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.25);">' +
               '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">' +
-                '<h3 style="font-size:1rem;font-weight:700;color:#1e3a2f;margin:0;">📊 Comparación Semanal</h3>' +
-                '<button id="cs-close" aria-label="Cerrar" style="background:none;border:none;box-shadow:none;color:#6b7280;font-size:1.1rem;cursor:pointer;padding:4px 8px;line-height:1;">✕</button>' +
+                '<h3 style="font-size:1rem;font-weight:700;color:#1e3a2f;margin:0;display:flex;align-items:center;gap:8px;">' + pcIcon('bar-chart-2', 18, '#1e3a2f') + ' Comparación Semanal</h3>' +
+                '<button id="cs-close" aria-label="Cerrar" style="background:none;border:none;box-shadow:none;color:#6b7280;font-size:1.1rem;cursor:pointer;padding:4px 8px;line-height:1;display:inline-flex;align-items:center;">' + pcIcon('x', 18, '#6b7280') + '</button>' +
               '</div>' +
               '<div style="display:flex;align-items:center;justify-content:space-between;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;margin-bottom:10px;">' +
                 '<div><div style="font-size:0.65rem;font-weight:700;color:#64748b;letter-spacing:0.6px;text-transform:uppercase;margin-bottom:4px;">Anterior</div>' +
@@ -4291,7 +4289,7 @@ if ('serviceWorker' in navigator) {
                 '<select id="cs-filtro-frente" style="flex:1;padding:8px 10px;border-radius:10px;border:1px solid #d1d5db;font-size:0.78rem;background:white;color:#374151;"><option value="todos">Todos los frentes</option></select>' +
                 '<select id="cs-filtro-area" style="flex:1;padding:8px 10px;border-radius:10px;border:1px solid #d1d5db;font-size:0.78rem;background:white;color:#374151;"><option value="todas">Todas las áreas</option></select>' +
               '</div>' +
-              '<button id="cs-generar" style="width:100%;background:linear-gradient(135deg,#1a5c35,#16a34a);color:white;border:none;border-radius:12px;padding:13px;font-size:0.9rem;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(22,163,74,0.3);">🔄 Generar</button>' +
+              '<button id="cs-generar" style="width:100%;background:linear-gradient(135deg,#1a5c35,#16a34a);color:white;border:none;border-radius:12px;padding:13px;font-size:0.9rem;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(22,163,74,0.3);display:inline-flex;align-items:center;justify-content:center;gap:6px;">' + pcIconBtn('refresh-cw', 'Generar', 16, '#fff') + '</button>' +
             '</div>';
         document.body.appendChild(modal);
 

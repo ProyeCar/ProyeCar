@@ -1,5 +1,5 @@
-// build: 2026-07-12-fix-banner-version
-const APP_VERSION = '1.5.60';
+// build: 2026-07-12-lucide-icons
+const APP_VERSION = '1.5.61';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {
