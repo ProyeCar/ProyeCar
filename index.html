@@ -1231,6 +1231,37 @@
             min-width: 0;
         }
         .filtro-area-chevron { flex-shrink: 0; opacity: 0.65; line-height: 0; }
+        .filtro-areas-toolbar {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        .filtro-areas-hint {
+            font-size: 0.72rem;
+            color: #64748b;
+            line-height: 1.35;
+            padding: 0 2px;
+        }
+        #btn-limpiar-filtros-areas {
+            align-self: flex-start;
+            display: none;
+            padding: 8px 14px;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 20px;
+            background: #fff;
+            color: #475569;
+            font-size: 0.78rem;
+            font-weight: 700;
+            cursor: pointer;
+            gap: 6px;
+            box-shadow: 0 1px 4px rgba(15,23,42,0.06);
+        }
+        #btn-limpiar-filtros-areas:hover {
+            border-color: #86efac;
+            color: #166534;
+            background: #f0fdf4;
+        }
 
         /* ===== SYNC (tab Sync) ===== */
         .sync-item {
@@ -1308,7 +1339,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.86";
+const APP_VERSION = "1.5.87";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -1519,7 +1550,11 @@ document.addEventListener('DOMContentLoaded', function() {
 </div></div>
 
 <div id="pantalla-frentes" class="pantalla"><div class="container">
-    <div class="chips-grid" id="chips-categorias"></div>
+    <div class="filtro-areas-toolbar">
+        <div class="filtro-areas-hint">Toca una o varias áreas para enfocar el checklist. Vuelve a tocar un chip activo para quitarlo.</div>
+        <div class="chips-grid" id="chips-categorias"></div>
+        <button type="button" id="btn-limpiar-filtros-areas"><span class="pc-icon-hydrate" data-i="x" data-s="14" data-c="currentColor"></span> Limpiar filtros</button>
+    </div>
     <div class="card no-print">
         <div class="card-header"><h2><span class="icon-box icon-box-verde"><span class="pc-icon-hydrate" data-i="construction" data-s="20" data-c="#1a5c35"></span></span>Frentes de obra</h2></div>
         <div id="frentes-container"></div>
@@ -3117,7 +3152,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                     saveToLocal();
                     renderFrentes();
-                    aplicarFiltroCategoria(newId);
+                    enfocarFiltroCategoria(newId);
                 }, 10);
             };
             accionesCarruselBody.appendChild(btnAgregarCat);
@@ -3300,9 +3335,7 @@ document.addEventListener('DOMContentLoaded', function() {
             frentesContainer.appendChild(frenteDiv);
         });
         renderChipsCategorias();
-        var filtroActivo = localStorage.getItem('proyecar_categoria_activa') || 'todos';
-        if (filtroActivo !== 'todos' && !chipCategoriaExiste(filtroActivo)) filtroActivo = 'todos';
-        aplicarFiltroUI(filtroActivo);
+        aplicarFiltroUI(obtenerFiltroCategoriasActivas());
         // Procesar importación pendiente si existe (modal HTML — evita confirm() bloqueado en iOS Safari)
         var pendingImport = sessionStorage.getItem('proyecar_import_pending');
         if (pendingImport) {
@@ -4270,6 +4303,37 @@ document.addEventListener('DOMContentLoaded', function() {
         social: 'Social',
         tecnica: 'Técnica'
     };
+    var FILTRO_CATEGORIAS_LS_KEY = 'proyecar_categorias_filtro';
+    var FILTRO_CATEGORIA_LEGACY_KEY = 'proyecar_categoria_activa';
+
+    function obtenerFiltroCategoriasActivas() {
+        try {
+            var raw = localStorage.getItem(FILTRO_CATEGORIAS_LS_KEY);
+            if (raw) {
+                var parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) {
+                    return parsed.filter(function(id) { return id && id !== 'todos' && chipCategoriaExiste(id); });
+                }
+            }
+            var legacy = localStorage.getItem(FILTRO_CATEGORIA_LEGACY_KEY);
+            if (legacy && legacy !== 'todos' && chipCategoriaExiste(legacy)) {
+                return [legacy];
+            }
+        } catch (e) {}
+        return [];
+    }
+    function guardarFiltroCategorias(ids) {
+        try {
+            var limpios = (ids || []).filter(function(id) { return id && id !== 'todos'; });
+            if (limpios.length === 0) {
+                localStorage.removeItem(FILTRO_CATEGORIAS_LS_KEY);
+                localStorage.removeItem(FILTRO_CATEGORIA_LEGACY_KEY);
+            } else {
+                localStorage.setItem(FILTRO_CATEGORIAS_LS_KEY, JSON.stringify(limpios));
+                localStorage.removeItem(FILTRO_CATEGORIA_LEGACY_KEY);
+            }
+        } catch (e) {}
+    }
     function htmlFiltroAreaCard(catid, nombre) {
         var iconHtml = catid === 'todos'
             ? '<span class="icon-box icon-box-verde">' + pcIcon('layout-grid', 20, '#1a5c35') + '</span>'
@@ -4287,9 +4351,12 @@ document.addEventListener('DOMContentLoaded', function() {
         chip.type = 'button';
         chip.dataset.catid = catid;
         if (esCustom) chip.dataset.custom = '1';
-        chip.setAttribute('aria-label', 'Filtrar por ' + nombre);
+        chip.setAttribute('aria-label', catid === 'todos' ? 'Mostrar todas las áreas' : 'Mostrar u ocultar área ' + nombre);
         chip.innerHTML = htmlFiltroAreaCard(catid, nombre);
-        chip.addEventListener('click', function() { aplicarFiltroCategoria(catid); });
+        chip.addEventListener('click', function() {
+            if (catid === 'todos') limpiarFiltrosAreas();
+            else toggleFiltroCategoria(catid);
+        });
         return chip;
     }
     function renderChipsCategorias() {
@@ -4324,21 +4391,59 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         return false;
     }
-
-    // ── Chips de categoría (filtro rápido en tab Frentes) ──
-    function aplicarFiltroUI(catid) {
-        if (catid !== 'todos' && !chipCategoriaExiste(catid)) catid = 'todos';
-        document.querySelectorAll('#chips-categorias .chip').forEach(c => c.classList.toggle('active', c.dataset.catid === catid));
-        document.querySelectorAll('#frentes-container .categoria').forEach(cat => {
-            cat.style.display = (catid === 'todos' || cat.dataset.catid === catid) ? '' : 'none';
+    function categoriaIdValida(catid) {
+        if (!catid || catid === 'todos') return false;
+        if (chipCategoriaExiste(catid)) return true;
+        if (CATEGORIAS_BASE.some(function(cb) { return cb.id === catid; })) return true;
+        return frentes.some(function(f) {
+            return (f.categorias || []).some(function(c) { return c.id === catid; });
         });
     }
-    function aplicarFiltroCategoria(catid) {
-        aplicarFiltroUI(catid);
-        try { localStorage.setItem('proyecar_categoria_activa', catid); } catch (e) {}
+
+    // ── Chips de categoría (filtro visual multi-selección en tab Frentes) ──
+    function aplicarFiltroUI(activeIds) {
+        var ids = Array.isArray(activeIds) ? activeIds.slice() : [];
+        ids = ids.filter(function(id) { return id && id !== 'todos' && chipCategoriaExiste(id); });
+        var todosActivo = ids.length === 0;
+
+        document.querySelectorAll('#chips-categorias .chip').forEach(function(c) {
+            var cid = c.dataset.catid;
+            if (cid === 'todos') c.classList.toggle('active', todosActivo);
+            else c.classList.toggle('active', !todosActivo && ids.indexOf(cid) >= 0);
+        });
+        document.querySelectorAll('#frentes-container .categoria').forEach(function(cat) {
+            cat.style.display = (todosActivo || ids.indexOf(cat.dataset.catid) >= 0) ? '' : 'none';
+        });
+
+        var btnLimpiar = document.getElementById('btn-limpiar-filtros-areas');
+        if (btnLimpiar) btnLimpiar.style.display = todosActivo ? 'none' : 'inline-flex';
+    }
+    function toggleFiltroCategoria(catid) {
+        if (catid === 'todos') { limpiarFiltrosAreas(); return; }
+        if (!chipCategoriaExiste(catid)) return;
+        var ids = obtenerFiltroCategoriasActivas();
+        var idx = ids.indexOf(catid);
+        if (idx >= 0) ids.splice(idx, 1);
+        else ids.push(catid);
+        guardarFiltroCategorias(ids);
+        aplicarFiltroUI(ids);
+    }
+    function limpiarFiltrosAreas() {
+        guardarFiltroCategorias([]);
+        aplicarFiltroUI([]);
+    }
+    function enfocarFiltroCategoria(catid) {
+        if (!catid || catid === 'todos' || !chipCategoriaExiste(catid)) {
+            limpiarFiltrosAreas();
+            return;
+        }
+        guardarFiltroCategorias([catid]);
+        aplicarFiltroUI([catid]);
     }
     renderChipsCategorias();
-    aplicarFiltroUI(localStorage.getItem('proyecar_categoria_activa') || 'todos');
+    aplicarFiltroUI(obtenerFiltroCategoriasActivas());
+    var btnLimpiarFiltrosAreas = document.getElementById('btn-limpiar-filtros-areas');
+    if (btnLimpiarFiltrosAreas) btnLimpiarFiltrosAreas.addEventListener('click', limpiarFiltrosAreas);
 
     // ── Barra inferior: indicador deslizante, ripple y bounce ──
     (function initNavBarModern() {
