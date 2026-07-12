@@ -1254,13 +1254,61 @@
             font-size: 16px !important;
         }
 
+        /* === Campos de texto expandibles (global) === */
+        .dato-card, .frente-campo, .form-group, .item-obs, .frente-observaciones-area, .frente-recomendaciones-area {
+            position: relative;
+        }
+        input.pc-tx-compact[type="text"],
+        input.pc-tx-compact:not([type]),
+        textarea.pc-tx-compact {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            resize: none;
+            transition: height 0.15s ease, box-shadow 0.15s ease;
+        }
+        input.pc-tx-compact[type="text"],
+        input.pc-tx-compact:not([type]) {
+            white-space: nowrap;
+        }
+        textarea.pc-tx-compact {
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            white-space: normal;
+            word-break: break-word;
+        }
+        input.pc-tx-expanded,
+        textarea.pc-tx-expanded,
+        textarea.pc-tx-mirror {
+            overflow: visible;
+            text-overflow: clip;
+            white-space: pre-wrap;
+            word-break: break-word;
+            -webkit-line-clamp: unset;
+            display: block;
+            resize: none;
+            position: relative;
+            z-index: 30;
+        }
+        .pc-tx-hidden-input {
+            display: none !important;
+        }
+        .frente-card:has(.pc-tx-expanded),
+        .frente-card:has(.pc-tx-mirror),
+        .dato-card:has(.pc-tx-expanded),
+        .dato-card:has(.pc-tx-mirror),
+        .item-card:has(.pc-tx-expanded),
+        .item-card:has(.pc-tx-mirror) {
+            overflow: visible;
+        }
+
     </style>
     <link rel="manifest" href="./manifest.json">
     <script src="icons.js"></script>
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.85";
+const APP_VERSION = "1.5.86";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -2487,11 +2535,130 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     function loadUiState() { return leerJSON("cardique_ui_state", {}); }
     function saveUiState(st) { guardarJSON("cardique_ui_state", st); }
-    function autoResizeEl(el) {
-        function grow() { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
-        el.addEventListener('focus', grow);
-        el.addEventListener('input', grow);
-        el.addEventListener('blur', function() { el.style.height = ''; });
+    function pcIsTextField(el) {
+        if (!el || el.dataset.pcExpandSkip) return false;
+        if (el.classList.contains('pc-tx-mirror')) return false;
+        if (el.tagName === 'TEXTAREA') return true;
+        if (el.tagName === 'INPUT') {
+            var t = (el.type || 'text').toLowerCase();
+            return t === 'text' || t === '';
+        }
+        return false;
+    }
+    function pcCompactLineHeight(el) {
+        var cs = getComputedStyle(el);
+        var lh = parseFloat(cs.lineHeight);
+        if (isNaN(lh)) lh = parseFloat(cs.fontSize) * 1.35;
+        var py = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+        var by = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+        return Math.ceil(lh + py + by);
+    }
+    function pcCompactTextarea(el) {
+        el.classList.remove('pc-tx-expanded');
+        el.classList.add('pc-tx-compact');
+        el.style.height = pcCompactLineHeight(el) + 'px';
+        el.style.overflow = 'hidden';
+    }
+    function pcExpandTextarea(el) {
+        el.classList.remove('pc-tx-compact');
+        el.classList.add('pc-tx-expanded');
+        el.style.overflow = 'hidden';
+        el.style.height = 'auto';
+        el.style.height = el.scrollHeight + 'px';
+        el.style.overflow = 'visible';
+    }
+    function pcGrowTextarea(el) {
+        if (!el.classList.contains('pc-tx-expanded')) return;
+        el.style.height = 'auto';
+        el.style.height = el.scrollHeight + 'px';
+    }
+    function pcCopyInputStylesToTextarea(input, ta) {
+        var cs = getComputedStyle(input);
+        ta.style.width = '100%';
+        ta.style.boxSizing = 'border-box';
+        ta.style.fontSize = cs.fontSize;
+        ta.style.fontWeight = cs.fontWeight;
+        ta.style.fontFamily = cs.fontFamily;
+        ta.style.lineHeight = cs.lineHeight;
+        ta.style.padding = cs.padding;
+        ta.style.border = cs.border;
+        ta.style.borderRadius = cs.borderRadius;
+        ta.style.color = cs.color;
+        ta.style.minHeight = pcCompactLineHeight(input) + 'px';
+        var bg = cs.backgroundColor;
+        if (!bg || bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)') ta.style.background = '#ffffff';
+        else ta.style.background = bg;
+    }
+    function pcExpandInputMirror(input) {
+        if (input._pcMirrorTa) return;
+        var ta = document.createElement('textarea');
+        ta.value = input.value;
+        ta.className = input.className;
+        ta.classList.remove('pc-tx-compact', 'pc-tx-hidden-input');
+        ta.classList.add('pc-tx-expanded', 'pc-tx-mirror');
+        ta.placeholder = input.placeholder || '';
+        ta.setAttribute('rows', '1');
+        ta.setAttribute('autocomplete', input.autocomplete || 'off');
+        pcCopyInputStylesToTextarea(input, ta);
+        input._pcMirrorTa = ta;
+        input.classList.add('pc-tx-hidden-input');
+        input.parentNode.insertBefore(ta, input.nextSibling);
+        function syncAndGrow() {
+            input.value = ta.value;
+            ta.style.height = 'auto';
+            ta.style.height = ta.scrollHeight + 'px';
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        ta.addEventListener('input', syncAndGrow);
+        syncAndGrow();
+        ta.focus();
+        var len = ta.value.length;
+        ta.setSelectionRange(len, len);
+        ta.addEventListener('blur', function onMirrorBlur() {
+            input.value = ta.value;
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            ta.remove();
+            input._pcMirrorTa = null;
+            input.classList.remove('pc-tx-hidden-input');
+            input.classList.add('pc-tx-compact');
+        });
+    }
+    function pcBindExpandibleText(root) {
+        if (!root || root.nodeType !== 1) return;
+        var list = [];
+        if (pcIsTextField(root)) list.push(root);
+        root.querySelectorAll('input, textarea').forEach(function(el) {
+            if (pcIsTextField(el)) list.push(el);
+        });
+        list.forEach(function(el) {
+            if (el.dataset.pcExpandBound === '1') return;
+            el.dataset.pcExpandBound = '1';
+            el.classList.add('pc-tx-compact');
+            if (el.tagName === 'TEXTAREA') {
+                pcCompactTextarea(el);
+                el.addEventListener('focus', function() { pcExpandTextarea(el); });
+                el.addEventListener('blur', function() { pcCompactTextarea(el); });
+                el.addEventListener('input', function() { pcGrowTextarea(el); });
+            } else {
+                el.addEventListener('focus', function() {
+                    if (el._pcMirrorTa) return;
+                    pcExpandInputMirror(el);
+                });
+            }
+        });
+    }
+    function pcInitExpandibleText() {
+        pcBindExpandibleText(document);
+        if (window._pcExpandMo) return;
+        window._pcExpandMo = new MutationObserver(function(muts) {
+            muts.forEach(function(m) {
+                m.addedNodes.forEach(function(node) {
+                    if (node.nodeType === 1) pcBindExpandibleText(node);
+                });
+            });
+        });
+        window._pcExpandMo.observe(document.body, { childList: true, subtree: true });
     }
 
     function saveToLocal() {
@@ -2781,9 +2948,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     const obsDiv = document.createElement("div"); obsDiv.className = "item-obs";
                     const obsInput = document.createElement("textarea"); obsInput.placeholder = "Observación del ítem (auto-completa al marcar No cumple)"; obsInput.value = item.obs || "";
                     obsInput.id = "obs-item-" + idx + "-" + cat.id + "-" + item.id;
-                    obsInput.style.cssText = "min-height:60px;resize:none;overflow:hidden;width:100%;box-sizing:border-box;";
-                    obsInput.addEventListener('focus', (e) => { e.target.style.height='auto'; e.target.style.height=e.target.scrollHeight+'px'; });
-                    obsInput.addEventListener('input', (e) => { e.target.style.height='auto'; e.target.style.height=e.target.scrollHeight+'px'; item.obs = e.target.value; saveToLocal(); });
+                    obsInput.style.cssText = "width:100%;box-sizing:border-box;";
+                    obsInput.addEventListener('input', (e) => { item.obs = e.target.value; saveToLocal(); });
 
                     btnSi.onclick = (e) => {
                         e.preventDefault(); e.stopPropagation();
@@ -2878,9 +3044,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     obsDiv.appendChild(obsInput);
                     if (item.tipoVerificacion === "verbal") {
                         const vvInput = document.createElement("input"); vvInput.placeholder = "Verificado con (nombre/cargo) el (fecha)..."; vvInput.value = item.verificacionVerbal || "";
-                        vvInput.style.cssText = "min-height:40px;resize:none;overflow:hidden;width:100%;box-sizing:border-box;";
-                        vvInput.setAttribute('oninput', "this.style.height='auto';this.style.height=this.scrollHeight+'px'");
-                        vvInput.setAttribute('onfocus', "this.style.height='auto';this.style.height=this.scrollHeight+'px'");
+                        vvInput.style.cssText = "width:100%;box-sizing:border-box;";
                         vvInput.addEventListener('input', (e) => { item.verificacionVerbal = e.target.value; saveToLocal(); });
                         obsDiv.appendChild(vvInput);
                     }
@@ -3096,11 +3260,10 @@ document.addEventListener('DOMContentLoaded', function() {
             obsTituloRow.appendChild(btnGenResumen);
             obsEspecificasDiv.appendChild(obsTituloRow);
             const obsTextarea = document.createElement("textarea");
-            obsTextarea.style.cssText = "min-height:60px;resize:none;overflow:hidden;width:100%;box-sizing:border-box;";
+            obsTextarea.style.cssText = "width:100%;box-sizing:border-box;";
             obsTextarea.placeholder = "Observaciones particulares...";
             obsTextarea.value = frente.observaciones || "";
-            obsTextarea.addEventListener('focus', (e) => { e.target.style.height='auto'; e.target.style.height=e.target.scrollHeight+'px'; });
-            obsTextarea.addEventListener("input", (e) => { e.target.style.height='auto'; e.target.style.height=e.target.scrollHeight+'px'; frentes[idx].observaciones = e.target.value; saveToLocal(); });
+            obsTextarea.addEventListener("input", (e) => { frentes[idx].observaciones = e.target.value; saveToLocal(); });
             obsEspecificasDiv.appendChild(obsTextarea);
 
             frenteBody.appendChild(obsEspecificasDiv);
@@ -3121,11 +3284,10 @@ document.addEventListener('DOMContentLoaded', function() {
             recTituloRow.appendChild(btnGenRecom);
             recomendacionesDiv.appendChild(recTituloRow);
             const recTextarea = document.createElement("textarea");
-            recTextarea.style.cssText = "min-height:60px;resize:none;overflow:hidden;width:100%;box-sizing:border-box;";
+            recTextarea.style.cssText = "width:100%;box-sizing:border-box;";
             recTextarea.placeholder = "Recomendaciones específicas...";
             recTextarea.value = frente.recomendaciones || "";
-            recTextarea.addEventListener('focus', (e) => { e.target.style.height='auto'; e.target.style.height=e.target.scrollHeight+'px'; });
-            recTextarea.addEventListener("input", (e) => { e.target.style.height='auto'; e.target.style.height=e.target.scrollHeight+'px'; frentes[idx].recomendaciones = e.target.value; saveToLocal(); });
+            recTextarea.addEventListener("input", (e) => { frentes[idx].recomendaciones = e.target.value; saveToLocal(); });
             recomendacionesDiv.appendChild(recTextarea);
 
             frenteBody.appendChild(recomendacionesDiv);
@@ -5404,6 +5566,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     loadFromLocal();
+    pcInitExpandibleText();
     actualizarSelectoresCompPdf();
     document.getElementById('filtro-frente-pdf').addEventListener('change', _renderizarCompPdf);
     document.getElementById('filtro-area-pdf').addEventListener('change', _renderizarCompPdf);

@@ -1,5 +1,5 @@
-// build: 2026-07-12-frente-nombre-card-style
-const APP_VERSION = '1.5.85';
+// build: 2026-07-12-expandible-text-fields-global
+const APP_VERSION = '1.5.86';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {
