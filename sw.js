@@ -1,5 +1,5 @@
-// build: 2026-07-12-restore-btn-label
-const APP_VERSION = '1.5.82';
+// build: 2026-07-12-restore-card-unify
+const APP_VERSION = '1.5.83';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {

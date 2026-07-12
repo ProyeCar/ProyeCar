@@ -704,36 +704,9 @@
             background: #fff7ed;
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.85), 0 2px 8px rgba(217,119,6,0.14);
         }
-        .herramienta-card--restore {
-            grid-column: 1 / -1;
-            flex-direction: row !important;
-            justify-content: flex-start !important;
-            align-items: center !important;
-            gap: 14px !important;
-            text-align: left !important;
-            padding: 14px 18px !important;
-            min-height: 64px !important;
-            background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%) !important;
-            border-color: rgba(255,255,255,0.22) !important;
-            box-shadow: 0 4px 14px rgba(79,70,229,0.24) !important;
-            color: #fff !important;
-        }
-        .herramienta-card--restore:hover {
-            border-color: rgba(255,255,255,0.35) !important;
-            box-shadow: 0 6px 20px rgba(79,70,229,0.32) !important;
-            background: linear-gradient(135deg, #4338ca 0%, #4f46e5 100%) !important;
-        }
-        .herramienta-card--restore .herramienta-label {
-            color: #fff;
-            font-size: 0.88rem;
-            text-align: left;
-        }
-        .herramienta-icon-inline {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            line-height: 0;
+        .herramienta-card--indigo .herramienta-icon-ring {
+            background: #eef2ff;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.85), 0 2px 8px rgba(79,70,229,0.14);
         }
         .herramienta-label {
             display: block;
@@ -1228,7 +1201,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.82";
+const APP_VERSION = "1.5.83";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -1468,8 +1441,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 <span class="herramienta-icon-ring"><span class="pc-icon-hydrate" data-i="upload" data-s="22" data-c="#475569"></span></span>
                 <span class="herramienta-label">Exportar respaldo JSON</span>
             </button>
-            <button id="restaurar-json" class="herramienta-card herramienta-card--restore">
-                <span class="herramienta-icon-inline"><span class="pc-icon-hydrate" data-i="upload-cloud" data-s="30" data-c="#ffffff"></span></span>
+            <button id="restaurar-json" class="herramienta-card herramienta-card--indigo">
+                <span class="herramienta-icon-ring"><span class="pc-icon-hydrate" data-i="upload-cloud" data-s="22" data-c="#4f46e5"></span></span>
                 <span class="herramienta-label">Restaurar respaldo JSON</span>
             </button>
             <button id="exportar-items-custom" class="herramienta-card herramienta-card--verde">
