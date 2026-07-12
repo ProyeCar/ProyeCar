@@ -1,5 +1,5 @@
-// build: 2026-07-12-datos-form-cards
-const APP_VERSION = '1.5.69';
+// build: 2026-07-12-header-modern-app-version
+const APP_VERSION = '1.5.70';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {
