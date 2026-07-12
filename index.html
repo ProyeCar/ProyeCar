@@ -1246,6 +1246,7 @@
         #btn-limpiar-filtros-areas {
             align-self: flex-start;
             display: none;
+            align-items: center;
             padding: 8px 14px;
             border: 1.5px solid #cbd5e1;
             border-radius: 20px;
@@ -4312,11 +4313,11 @@ document.addEventListener('DOMContentLoaded', function() {
             if (raw) {
                 var parsed = JSON.parse(raw);
                 if (Array.isArray(parsed)) {
-                    return parsed.filter(function(id) { return id && id !== 'todos' && chipCategoriaExiste(id); });
+                    return parsed.filter(function(id) { return categoriaIdValida(id); });
                 }
             }
             var legacy = localStorage.getItem(FILTRO_CATEGORIA_LEGACY_KEY);
-            if (legacy && legacy !== 'todos' && chipCategoriaExiste(legacy)) {
+            if (legacy && legacy !== 'todos' && categoriaIdValida(legacy)) {
                 return [legacy];
             }
         } catch (e) {}
@@ -4370,6 +4371,7 @@ document.addEventListener('DOMContentLoaded', function() {
         obtenerCategoriasCustom().forEach(function(cat) {
             grid.appendChild(crearChipFiltro(cat.id, cat.nombre, true));
         });
+        aplicarFiltroUI(obtenerFiltroCategoriasActivas());
     }
 
     // ── Chips dinámicos para áreas custom agregadas en frentes ──
