@@ -1,5 +1,5 @@
-// build: 2026-07-12-swipe-nav-order-fix
-const APP_VERSION = '1.5.79';
+// build: 2026-07-12-herramientas-cards
+const APP_VERSION = '1.5.80';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {
