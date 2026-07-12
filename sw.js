@@ -1,5 +1,5 @@
-// build: 2026-07-12-foto-items-filtro-areas
-const APP_VERSION = '1.5.88';
+// build: 2026-07-12-comparacion-semanal-n-frentes
+const APP_VERSION = '1.5.89';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {
