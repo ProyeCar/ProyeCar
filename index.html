@@ -841,7 +841,7 @@
         /* ===== CHIPS DE CATEGORÍA (tab Frentes) ===== */
         .chips-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
             gap: 10px;
             margin-bottom: 1.2rem;
         }
@@ -850,18 +850,27 @@
             backdrop-filter: blur(10px);
             border: 1.5px solid #e2e8f0;
             border-radius: 14px;
-            padding: 12px 8px;
+            padding: 10px 6px;
             text-align: center;
             cursor: pointer;
             box-shadow: 0 2px 6px rgba(15,23,42,0.05);
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
         .chip.active {
             border-color: var(--verde-vivo);
             background: linear-gradient(135deg, #f0fdf4, #eafbf8);
             box-shadow: 0 6px 16px rgba(45,158,82,0.18);
         }
-        .chip-icon { display: flex; align-items: center; justify-content: center; margin-bottom: 4px; }
-        .chip-label { font-size: 0.68rem; font-weight: 700; color: #1e293b; letter-spacing: 0.2px; }
+        .chip-icon { display: flex; align-items: center; justify-content: center; margin-bottom: 4px; flex-shrink: 0; }
+        .chip-label {
+            font-size: 0.68rem; font-weight: 700; color: #1e293b; letter-spacing: 0.2px;
+            line-height: 1.25; word-break: break-word; overflow-wrap: break-word;
+            max-width: 100%; width: 100%; hyphens: auto;
+        }
 
         /* ===== SYNC (tab Sync) ===== */
         .sync-item {
@@ -884,7 +893,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.65";
+const APP_VERSION = "1.5.66";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -1683,12 +1692,80 @@ if ('serviceWorker' in navigator) {
             verificacionVerbal: item.verificacionVerbal || ''
         };
     }
+    function normalizarNombreCat(nombre) {
+        return (nombre || '').replace(/^[^\p{L}\p{N}]+\s*/u, '').trim().toLowerCase();
+    }
+    function inferBaseCategoriaId(cat) {
+        if (cat.id && CATEGORIAS_BASE.some(function(cb) { return cb.id === cat.id; })) {
+            return cat.id;
+        }
+        var nombreNorm = normalizarNombreCat(cat.nombre);
+        if (nombreNorm) {
+            for (var i = 0; i < CATEGORIAS_BASE.length; i++) {
+                if (normalizarNombreCat(CATEGORIAS_BASE[i].nombre) === nombreNorm) {
+                    return CATEGORIAS_BASE[i].id;
+                }
+            }
+        }
+        if (Array.isArray(cat.items) && cat.items.length > 0) {
+            var mejorId = null, mejorOverlap = 0;
+            CATEGORIAS_BASE.forEach(function(cb) {
+                var baseIds = cb.items.map(function(it) { return it.id; });
+                var overlap = cat.items.filter(function(it) { return baseIds.includes(it.id); }).length;
+                if (overlap > mejorOverlap) { mejorOverlap = overlap; mejorId = cb.id; }
+            });
+            if (mejorOverlap >= 1) return mejorId;
+        }
+        return cat.id || null;
+    }
+    function mergeCategoriaItems(dest, src) {
+        (src.items || []).forEach(function(item) {
+            var ex = dest.items.find(function(it) { return it.id === item.id; });
+            if (!ex) {
+                dest.items.push(item);
+            } else if (item.cumple !== null && item.cumple !== undefined && (ex.cumple === null || ex.cumple === undefined)) {
+                ex.cumple = item.cumple;
+                if (item.obs) ex.obs = item.obs;
+                if (item.tipoVerificacion) ex.tipoVerificacion = item.tipoVerificacion;
+                if (item.verificacionVerbal) ex.verificacionVerbal = item.verificacionVerbal;
+            } else if (item.obs && (!ex.obs || !ex.obs.trim())) {
+                ex.obs = item.obs;
+            }
+        });
+    }
+    function deduplicateCategorias(f) {
+        var porId = {};
+        var orden = [];
+        f.categorias.forEach(function(cat) {
+            if (!cat) return;
+            var id = inferBaseCategoriaId(cat);
+            if (!id) {
+                id = cat.id || ('custom_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5));
+            }
+            cat.id = id;
+            var base = CATEGORIAS_BASE.find(function(cb) { return cb.id === id; });
+            if (base && normalizarNombreCat(cat.nombre) === normalizarNombreCat(base.nombre)) {
+                cat.nombre = base.nombre;
+            }
+            if (porId[id]) {
+                mergeCategoriaItems(porId[id], cat);
+            } else {
+                porId[id] = cat;
+                orden.push(id);
+            }
+        });
+        f.categorias = orden.map(function(id) { return porId[id]; });
+        return f;
+    }
     function normalizeCategoria(cat) {
         if (!cat || typeof cat !== 'object') return null;
+        var id = inferBaseCategoriaId(cat) || cat.id || ('custom_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5));
         var items = Array.isArray(cat.items) ? cat.items.map(normalizeItem).filter(Boolean) : [];
+        var base = CATEGORIAS_BASE.find(function(cb) { return cb.id === id; });
+        var nombre = cat.nombre || (base ? base.nombre : 'Área');
         return {
-            id: cat.id || ('custom_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5)),
-            nombre: cat.nombre || 'Área',
+            id: id,
+            nombre: nombre,
             items: items
         };
     }
@@ -1718,7 +1795,7 @@ if ('serviceWorker' in navigator) {
     }
     function normalizeFrentes(arr) {
         if (!Array.isArray(arr)) return [];
-        return arr.map(normalizeFrente).filter(Boolean).map(ensureCategoriasBase);
+        return arr.map(normalizeFrente).filter(Boolean).map(deduplicateCategorias).map(ensureCategoriasBase);
     }
     function ensureTipoVerificacion(frentesData) {
         frentesData.forEach(function(f) {
@@ -2211,10 +2288,19 @@ if ('serviceWorker' in navigator) {
                 setTimeout(() => {
                     const nombre = prompt("Nombre del área nueva:");
                     if (!nombre || !nombre.trim()) return;
+                    var nombreTrim = nombre.trim();
+                    var nombreNorm = normalizarNombreCat(nombreTrim);
+                    var duplicada = frentes[idx].categorias.some(function(c) {
+                        return normalizarNombreCat(c.nombre) === nombreNorm;
+                    });
+                    if (duplicada) {
+                        alert('Ya existe un área con ese nombre en este frente.');
+                        return;
+                    }
                     var newId = "custom_" + Date.now();
                     frentes[idx].categorias.push({
                         id: newId,
-                        nombre: nombre.trim(),
+                        nombre: nombreTrim,
                         items: []
                     });
                     saveToLocal();
