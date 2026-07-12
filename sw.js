@@ -1,5 +1,6 @@
-// build: 2026-07-08-sin-animaciones
-const CACHE_NAME = 'cardique-v' + Math.random();
+// build: 2026-07-12-fix-banner-version
+const APP_VERSION = '1.5.60';
+const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {
   self.skipWaiting();
@@ -7,7 +8,9 @@ self.addEventListener('install', event => {
 
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(names => Promise.all(names.map(name => caches.delete(name))))
+    caches.keys().then(names => Promise.all(
+      names.filter(name => name !== CACHE_NAME).map(name => caches.delete(name))
+    ))
   );
   self.clients.claim();
 });
@@ -20,6 +23,10 @@ self.addEventListener('fetch', e => {
         caches.open(CACHE_NAME).then(cache => cache.put(e.request, resClone));
         return res;
       }).catch(() => caches.match(e.request))
+    );
+  } else if (e.request.url.includes('version.json')) {
+    e.respondWith(
+      fetch(e.request, { cache: 'no-store' }).catch(() => caches.match(e.request))
     );
   } else {
     e.respondWith(

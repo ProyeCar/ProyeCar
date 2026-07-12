@@ -743,31 +743,81 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-if ('serviceWorker' in navigator) {
-  const yaControlado = !!navigator.serviceWorker.controller;
-  navigator.serviceWorker.register('sw.js?v=' + Math.random(), { updateViaCache: 'none' }).then(reg => {
-    reg.update();
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') reg.update();
-    });
-    window.addEventListener('pageshow', () => reg.update());
-  }).catch(err => {});
-  if (yaControlado) {
-    navigator.serviceWorker.addEventListener('controllerchange', mostrarBannerActualizacionPWA);
+const APP_VERSION = "1.5.60";
+const VERSION_LS_KEY = 'proyecar_version_aplicada';
+const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
+
+function compararVersiones(a, b) {
+  const pa = String(a).split('.').map(Number);
+  const pb = String(b).split('.').map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const da = pa[i] || 0, db = pb[i] || 0;
+    if (da > db) return 1;
+    if (da < db) return -1;
   }
+  return 0;
 }
-function mostrarBannerActualizacionPWA() {
+
+function obtenerVersionAplicada() {
+  try { return localStorage.getItem(VERSION_LS_KEY); } catch (e) { return null; }
+}
+
+function marcarVersionAplicada(ver) {
+  try {
+    localStorage.setItem(VERSION_LS_KEY, ver);
+    localStorage.removeItem(VERSION_NOTIFIED_KEY);
+  } catch (e) {}
+}
+
+function ocultarBannerActualizacionPWA() {
+  const b = document.getElementById('pwa-update-banner');
+  if (b) b.remove();
+}
+
+async function obtenerVersionServidor() {
+  try {
+    const res = await fetch('version.json?_=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.version || null;
+  } catch (e) { return null; }
+}
+
+function esPWAInstalada() {
+  return window.matchMedia('(display-mode: standalone)').matches
+    || window.navigator.standalone === true;
+}
+
+function notificarActualizacionPWA(versionServidor) {
+  if (!('Notification' in window)) return;
+  if (Notification.permission !== 'granted') return;
+  if (!esPWAInstalada()) return;
+  try {
+    if (localStorage.getItem(VERSION_NOTIFIED_KEY) === versionServidor) return;
+  } catch (e) { return; }
+  try {
+    new Notification('ProyeCar', {
+      body: 'Hay una actualización disponible (v' + versionServidor + ')',
+      icon: 'icon-192.png',
+      tag: 'proyecar-update-' + versionServidor
+    });
+    localStorage.setItem(VERSION_NOTIFIED_KEY, versionServidor);
+  } catch (e) {}
+}
+
+function mostrarBannerActualizacionPWA(versionServidor) {
   if (document.getElementById('pwa-update-banner')) return;
   const b = document.createElement('div');
   b.id = 'pwa-update-banner';
   b.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99998;background:#1a5c35;color:#fff;padding:12px 16px;padding-bottom:calc(12px + env(safe-area-inset-bottom));display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:0.85rem;font-family:inherit;box-shadow:0 -2px 10px rgba(0,0,0,0.25);';
   const txt = document.createElement('span');
-  txt.textContent = '🔄 Hay una actualización disponible';
+  txt.textContent = '🔄 Hay una actualización disponible (v' + versionServidor + ')';
   const btn = document.createElement('button');
   btn.textContent = 'Actualizar ahora';
   btn.style.cssText = 'background:#fff;color:#1a5c35;border:none;border-radius:20px;padding:8px 16px;font-weight:700;font-size:0.85rem;cursor:pointer;flex-shrink:0;';
   btn.onclick = async () => {
     try {
+      marcarVersionAplicada(versionServidor);
       const regs = await navigator.serviceWorker.getRegistrations();
       await Promise.all(regs.map(r => r.unregister()));
       const keys = await caches.keys();
@@ -778,6 +828,47 @@ function mostrarBannerActualizacionPWA() {
   b.appendChild(txt);
   b.appendChild(btn);
   document.body.appendChild(b);
+  notificarActualizacionPWA(versionServidor);
+}
+
+async function verificarActualizacionPWA() {
+  const versionServidor = await obtenerVersionServidor();
+  if (!versionServidor) return;
+
+  let aplicada = obtenerVersionAplicada();
+  if (!aplicada) {
+    marcarVersionAplicada(APP_VERSION);
+    aplicada = APP_VERSION;
+  }
+
+  if (compararVersiones(APP_VERSION, versionServidor) >= 0) {
+    marcarVersionAplicada(APP_VERSION);
+    ocultarBannerActualizacionPWA();
+    return;
+  }
+
+  if (compararVersiones(versionServidor, aplicada) > 0) {
+    mostrarBannerActualizacionPWA(versionServidor);
+  } else {
+    ocultarBannerActualizacionPWA();
+  }
+}
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js?v=' + APP_VERSION, { updateViaCache: 'none' }).then(reg => {
+    reg.update();
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        reg.update();
+        verificarActualizacionPWA();
+      }
+    });
+    window.addEventListener('pageshow', () => {
+      reg.update();
+      verificarActualizacionPWA();
+    });
+    verificarActualizacionPWA();
+  }).catch(() => {});
 }
 </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
@@ -998,7 +1089,6 @@ function mostrarBannerActualizacionPWA() {
 
 <script type="module" src="supabase-pdfs.js"></script>
 <script>
-    const APP_VERSION = "1.5.59";
     console.log('🚀 ProyeCar v' + APP_VERSION + ' cargado');
 
     const PLANTILLAS_AUTO = [
