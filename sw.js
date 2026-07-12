@@ -1,5 +1,5 @@
-// build: 2026-07-12-logo-ring-size-fix
-const APP_VERSION = '1.5.71';
+// build: 2026-07-12-logo-ring-size-enlarge
+const APP_VERSION = '1.5.72';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {
