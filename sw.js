@@ -1,5 +1,5 @@
-// build: 2026-07-12-herramientas-backup-security
-const APP_VERSION = '1.5.81';
+// build: 2026-07-12-restore-btn-label
+const APP_VERSION = '1.5.82';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {
