@@ -704,6 +704,10 @@
             background: #fff7ed;
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.85), 0 2px 8px rgba(217,119,6,0.14);
         }
+        .herramienta-card--indigo .herramienta-icon-ring {
+            background: #eef2ff;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.85), 0 2px 8px rgba(79,70,229,0.14);
+        }
         .herramienta-label {
             display: block;
             font-size: 0.8rem;
@@ -1197,7 +1201,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.80";
+const APP_VERSION = "1.5.81";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -1436,6 +1440,10 @@ document.addEventListener('DOMContentLoaded', function() {
             <button id="exportar-json" class="herramienta-card herramienta-card--gris">
                 <span class="herramienta-icon-ring"><span class="pc-icon-hydrate" data-i="upload" data-s="22" data-c="#475569"></span></span>
                 <span class="herramienta-label">Exportar respaldo JSON</span>
+            </button>
+            <button id="restaurar-json" class="herramienta-card herramienta-card--indigo">
+                <span class="herramienta-icon-ring"><span class="pc-icon-hydrate" data-i="rotate-ccw" data-s="22" data-c="#4f46e5"></span></span>
+                <span class="herramienta-label">Restaurar desde respaldo</span>
             </button>
             <button id="exportar-items-custom" class="herramienta-card herramienta-card--verde">
                 <span class="herramienta-icon-ring"><span class="pc-icon-hydrate" data-i="bar-chart-2" data-s="22" data-c="#1a5c35"></span></span>
@@ -1985,8 +1993,208 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Elementos DOM
     const frentesContainer = document.getElementById("frentes-container");
-    const btnResetGlobal = document.getElementById("reset-global");
-    const btnExportarJson = document.getElementById("exportar-json");
+    function descargarRespaldoJson() {
+        const data = { proyecto: proyectoInput.value, fecha: fechaInput.value, ubicacion: ubicacionInput.value, inspector: inspectorInput.value, frentes };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "inspeccion_frentes_" + Date.now() + ".json";
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function validarEstructuraRespaldo(data) {
+        if (!data || typeof data !== "object") {
+            return { ok: false, error: "El archivo no contiene un objeto JSON válido de ProyeCar." };
+        }
+        if (!Array.isArray(data.frentes)) {
+            return { ok: false, error: 'Falta el array "frentes" en el respaldo.' };
+        }
+        if (data.frentes.length === 0) {
+            return { ok: false, error: "El respaldo no contiene frentes de obra." };
+        }
+        try {
+            var parsed = parseFrentesStorage(JSON.stringify(data));
+            if (!parsed.frentes || parsed.frentes.length === 0) {
+                return { ok: false, error: "No se pudieron normalizar los frentes del respaldo." };
+            }
+            var tieneCategorias = parsed.frentes.every(function(f) {
+                return Array.isArray(f.categorias) && f.categorias.length > 0;
+            });
+            if (!tieneCategorias) {
+                return { ok: false, error: "El respaldo no incluye categorías válidas en los frentes." };
+            }
+            return { ok: true, parsed: parsed, raw: data };
+        } catch (e) {
+            return { ok: false, error: "Estructura inválida: " + (e.message || "error al validar") };
+        }
+    }
+
+    function aplicarRespaldoDesdeJson(parsed, rawData) {
+        frentes = parsed.frentes;
+        proyectoInput.value = parsed.proyecto || "";
+        fechaInput.value = parsed.fecha || "";
+        ubicacionInput.value = parsed.ubicacion || "";
+        inspectorInput.value = parsed.inspector || "";
+        if (!fechaInput.value) fechaInput.valueAsDate = new Date();
+        if (rawData && rawData.fotoMap && typeof idbGuardarFoto === "function") {
+            Object.keys(rawData.fotoMap).forEach(function(id) {
+                try { idbGuardarFoto(id, rawData.fotoMap[id]); } catch (e) {}
+            });
+        }
+        var itemsPersonalizados = extractCustomItems(frentes);
+        try { localStorage.setItem("proyecar_items_custom", JSON.stringify(itemsPersonalizados)); } catch (e) {}
+        renderFrentes();
+        if (typeof renderChipsCategorias === "function") renderChipsCategorias();
+        saveToLocal();
+    }
+
+    function crearModalOverlay(cardHtml, onClose) {
+        var overlay = document.createElement("div");
+        overlay.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(13,51,33,0.72);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;";
+        var card = document.createElement("div");
+        card.style.cssText = "background:#fff;padding:22px;border-radius:16px;width:100%;max-width:420px;box-shadow:0 12px 40px rgba(0,0,0,0.28);font-family:inherit;";
+        card.innerHTML = cardHtml;
+        overlay.appendChild(card);
+        document.body.appendChild(overlay);
+        function cerrar() {
+            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            if (onClose) onClose();
+        }
+        overlay.onclick = function(e) { if (e.target === overlay) cerrar(); };
+        return { overlay: overlay, card: card, cerrar: cerrar };
+    }
+
+    function confirmarRestaurarRespaldo(parsed, rawData) {
+        var modal = crearModalOverlay(
+            '<div style="font-size:1rem;font-weight:700;color:#1e3a2f;margin-bottom:10px;display:flex;align-items:center;gap:8px;">' +
+                pcIcon("rotate-ccw", 20, "#4f46e5") + ' Restaurar respaldo</div>' +
+            '<p style="font-size:0.88rem;color:#475569;line-height:1.5;margin:0 0 18px;">' +
+                'Esto reemplazará los datos actuales por los del respaldo. ¿Continuar?</p>' +
+            '<div style="display:flex;gap:10px;flex-wrap:wrap;">' +
+                '<button id="modal-restaurar-confirm" style="flex:1;min-width:120px;padding:11px 16px;background:#4f46e5;color:#fff;border:none;border-radius:10px;font-size:0.88rem;font-weight:700;cursor:pointer;">Restaurar</button>' +
+                '<button id="modal-restaurar-cancel" style="padding:11px 16px;background:#e5e7eb;color:#374151;border:none;border-radius:10px;font-size:0.88rem;font-weight:600;cursor:pointer;">Cancelar</button>' +
+            '</div>'
+        );
+        modal.card.querySelector("#modal-restaurar-cancel").onclick = modal.cerrar;
+        modal.card.querySelector("#modal-restaurar-confirm").onclick = function() {
+            aplicarRespaldoDesdeJson(parsed, rawData);
+            modal.cerrar();
+            alert("Respaldo restaurado correctamente.");
+        };
+    }
+
+    function ejecutarReinicioGlobal() {
+        var customSnapshot = extractCustomItems(frentes);
+        try {
+            var lsCustom = JSON.parse(localStorage.getItem("proyecar_items_custom") || "{}");
+            Object.keys(lsCustom).forEach(function(catId) {
+                if (!customSnapshot[catId]) customSnapshot[catId] = [];
+                lsCustom[catId].forEach(function(ci) {
+                    if (!customSnapshot[catId].find(function(x) { return x.id === ci.id; })) {
+                        customSnapshot[catId].push(ci);
+                    }
+                });
+            });
+        } catch (e) {}
+
+        localStorage.removeItem("inspectorFrentesData");
+        localStorage.removeItem("cardique_ui_state");
+        frentes = [
+            { nombre: "Frente 1 - Arroyo Ají Molido", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" },
+            { nombre: "Frente 2 - Box Matagente", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" }
+        ];
+        proyectoInput.value = "";
+        fechaInput.valueAsDate = new Date();
+        ubicacionInput.value = "Jurisdicción CARDIQUE";
+        inspectorInput.value = "";
+        frentes.forEach(function(fr) {
+            fr.categorias.forEach(function(cat) {
+                var customItems = customSnapshot[cat.id];
+                if (customItems && customItems.length > 0) {
+                    var idsExistentes = cat.items.map(function(i) { return i.id; });
+                    customItems.forEach(function(ci) {
+                        if (!idsExistentes.includes(ci.id)) {
+                            cat.items.push({ id: ci.id, texto: ci.texto, cumple: null, obs: "", tipoVerificacion: ci.tipoVerificacion || "foto" });
+                        }
+                    });
+                }
+            });
+        });
+        try { localStorage.setItem("proyecar_items_custom", JSON.stringify(customSnapshot)); } catch (e) {}
+        renderFrentes();
+        if (typeof renderChipsCategorias === "function") renderChipsCategorias();
+        saveToLocal();
+    }
+
+    function iniciarFlujoReiniciarTodo() {
+        var modal1 = crearModalOverlay(
+            '<div style="font-size:1rem;font-weight:700;color:#b91c1c;margin-bottom:10px;display:flex;align-items:center;gap:8px;">' +
+                pcIcon("alert-triangle", 20, "#b91c1c") + ' ¿Reiniciar todo?</div>' +
+            '<p style="font-size:0.88rem;color:#475569;line-height:1.5;margin:0 0 18px;">' +
+                '¿Estás seguro de reiniciar todo? Se perderán todos los frentes y evaluaciones.</p>' +
+            '<div style="display:flex;gap:10px;flex-wrap:wrap;">' +
+                '<button id="modal-reset1-confirm" style="flex:1;min-width:120px;padding:11px 16px;background:#b91c1c;color:#fff;border:none;border-radius:10px;font-size:0.88rem;font-weight:700;cursor:pointer;">Continuar</button>' +
+                '<button id="modal-reset1-cancel" style="padding:11px 16px;background:#e5e7eb;color:#374151;border:none;border-radius:10px;font-size:0.88rem;font-weight:600;cursor:pointer;">Cancelar</button>' +
+            '</div>'
+        );
+        modal1.card.querySelector("#modal-reset1-cancel").onclick = modal1.cerrar;
+        modal1.card.querySelector("#modal-reset1-confirm").onclick = function() {
+            modal1.cerrar();
+            var modal2 = crearModalOverlay(
+                '<div style="font-size:1rem;font-weight:700;color:#1e3a2f;margin-bottom:10px;display:flex;align-items:center;gap:8px;">' +
+                    pcIcon("upload", 20, "#475569") + ' Respaldo recomendado</div>' +
+                '<p style="font-size:0.88rem;color:#475569;line-height:1.5;margin:0 0 14px;">' +
+                    '¿Deseas exportar un respaldo JSON antes de continuar?</p>' +
+                '<button id="modal-reset2-backup" style="width:100%;padding:11px 16px;background:#f1f5f9;color:#1e3a2f;border:1.5px solid #cbd5e1;border-radius:10px;font-size:0.88rem;font-weight:700;cursor:pointer;margin-bottom:12px;display:inline-flex;align-items:center;justify-content:center;gap:6px;">' +
+                    pcIconBtn("upload", "Descargar respaldo JSON", 16, "#475569") + '</button>' +
+                '<p id="modal-reset2-backup-msg" style="display:none;font-size:0.8rem;color:#16a34a;margin:0 0 12px;font-weight:600;">Respaldo descargado correctamente.</p>' +
+                '<div style="display:flex;gap:10px;flex-wrap:wrap;">' +
+                    '<button id="modal-reset2-continue" style="flex:1;min-width:120px;padding:11px 16px;background:#b91c1c;color:#fff;border:none;border-radius:10px;font-size:0.88rem;font-weight:700;cursor:pointer;">Continuar sin respaldo</button>' +
+                    '<button id="modal-reset2-cancel" style="padding:11px 16px;background:#e5e7eb;color:#374151;border:none;border-radius:10px;font-size:0.88rem;font-weight:600;cursor:pointer;">Cancelar</button>' +
+                '</div>'
+            );
+            modal2.card.querySelector("#modal-reset2-backup").onclick = function() {
+                descargarRespaldoJson();
+                var msg = modal2.card.querySelector("#modal-reset2-backup-msg");
+                if (msg) msg.style.display = "block";
+            };
+            modal2.card.querySelector("#modal-reset2-cancel").onclick = modal2.cerrar;
+            modal2.card.querySelector("#modal-reset2-continue").onclick = function() {
+                modal2.cerrar();
+                var modal3 = crearModalOverlay(
+                    '<div style="font-size:1rem;font-weight:700;color:#b91c1c;margin-bottom:10px;display:flex;align-items:center;gap:8px;">' +
+                        pcIcon("shield-alert", 20, "#b91c1c") + ' Confirmación final</div>' +
+                    '<p style="font-size:0.88rem;color:#475569;line-height:1.5;margin:0 0 12px;">' +
+                        'Esta acción es irreversible. Escribe <strong>REINICIAR</strong> para confirmar:</p>' +
+                    '<input id="modal-reset3-input" type="text" autocomplete="off" placeholder="REINICIAR" style="width:100%;padding:10px 12px;border:1.5px solid #fca5a5;border-radius:10px;font-size:16px;margin-bottom:14px;box-sizing:border-box;text-transform:uppercase;">' +
+                    '<div style="display:flex;gap:10px;flex-wrap:wrap;">' +
+                        '<button id="modal-reset3-confirm" disabled style="flex:1;min-width:120px;padding:11px 16px;background:#b91c1c;color:#fff;border:none;border-radius:10px;font-size:0.88rem;font-weight:700;cursor:not-allowed;opacity:0.55;">Reiniciar definitivamente</button>' +
+                        '<button id="modal-reset3-cancel" style="padding:11px 16px;background:#e5e7eb;color:#374151;border:none;border-radius:10px;font-size:0.88rem;font-weight:600;cursor:pointer;">Cancelar</button>' +
+                    '</div>'
+                );
+                var input3 = modal3.card.querySelector("#modal-reset3-input");
+                var btnConfirm3 = modal3.card.querySelector("#modal-reset3-confirm");
+                function syncConfirm3() {
+                    var ok = input3.value.trim().toUpperCase() === "REINICIAR";
+                    btnConfirm3.disabled = !ok;
+                    btnConfirm3.style.opacity = ok ? "1" : "0.55";
+                    btnConfirm3.style.cursor = ok ? "pointer" : "not-allowed";
+                }
+                input3.addEventListener("input", syncConfirm3);
+                modal3.card.querySelector("#modal-reset3-cancel").onclick = modal3.cerrar;
+                btnConfirm3.onclick = function() {
+                    if (input3.value.trim().toUpperCase() !== "REINICIAR") return;
+                    modal3.cerrar();
+                    ejecutarReinicioGlobal();
+                    alert("Inspección reiniciada. Los ítems personalizados se conservaron.");
+                };
+            };
+        };
+    }
+
+    const btnRestaurarJson = document.getElementById("restaurar-json");
     const btnGenerarPdf = document.getElementById("generar-pdf");
     const btnGuardarManual = document.getElementById("guardar-manual");
     const saveIndicator = document.getElementById("save-indicator");
@@ -2032,6 +2240,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const proyectoInput = document.getElementById("proyecto");
     const ubicacionInput = document.getElementById("ubicacion");
     const inspectorInput = document.getElementById("inspector");
+    const btnResetGlobal = document.getElementById("reset-global");
+    const btnExportarJson = document.getElementById("exportar-json");
 
     fechaInput.valueAsDate = new Date();
 
@@ -3156,12 +3366,34 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         input.click();
     };
-    btnExportarJson.onclick = () => {
-        const data = { proyecto: proyectoInput.value, fecha: fechaInput.value, ubicacion: ubicacionInput.value, inspector: inspectorInput.value, frentes };
-        const blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json"});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a"); a.href = url; a.download = `inspeccion_frentes_${Date.now()}.json`; a.click(); URL.revokeObjectURL(url);
-    };
+    btnExportarJson.onclick = () => { descargarRespaldoJson(); };
+    if (btnRestaurarJson) {
+        btnRestaurarJson.onclick = function() {
+            var input = document.createElement("input");
+            input.type = "file";
+            input.accept = ".json,application/json";
+            input.onchange = function(e) {
+                var file = e.target.files[0];
+                if (!file) return;
+                var reader = new FileReader();
+                reader.onload = function(ev) {
+                    try {
+                        var data = JSON.parse(ev.target.result);
+                        var validacion = validarEstructuraRespaldo(data);
+                        if (!validacion.ok) {
+                            alert("Archivo inválido: " + validacion.error);
+                            return;
+                        }
+                        confirmarRestaurarRespaldo(validacion.parsed, validacion.raw);
+                    } catch (err) {
+                        alert("Error al leer el archivo. Verifica que sea un JSON válido de ProyeCar.");
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        };
+    }
     btnGuardarManual.onclick = () => { saveToLocal(); alert("Datos guardados manualmente."); };
     btnAgregarFrente.onclick = () => { setTimeout(() => {
         const nuevoNombre = prompt("Nombre del nuevo frente:", "Nuevo frente");
@@ -3695,53 +3927,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    btnResetGlobal.onclick = () => {
-        if (confirm("Reiniciar borrará todos los datos de inspección. Los ítems personalizados se conservan.\n¿Continuar?")) {
-            // Extraer ítems custom de frentes en memoria ANTES de resetear (fuente más confiable)
-            var customSnapshot = extractCustomItems(frentes);
-            // Completar con lo que haya en localStorage por si hay más ítems guardados
-            try {
-                var lsCustom = JSON.parse(localStorage.getItem("proyecar_items_custom") || "{}");
-                Object.keys(lsCustom).forEach(function(catId) {
-                    if (!customSnapshot[catId]) customSnapshot[catId] = [];
-                    lsCustom[catId].forEach(function(ci) {
-                        if (!customSnapshot[catId].find(function(x) { return x.id === ci.id; })) {
-                            customSnapshot[catId].push(ci);
-                        }
-                    });
-                });
-            } catch(e) {}
-
-            localStorage.removeItem("inspectorFrentesData");
-            localStorage.removeItem("cardique_ui_state");
-            frentes = [
-                { nombre: "Frente 1 - Arroyo Ají Molido", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" },
-                { nombre: "Frente 2 - Box Matagente", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" }
-            ];
-            proyectoInput.value = "";
-            fechaInput.valueAsDate = new Date();
-            ubicacionInput.value = "Jurisdicción CARDIQUE";
-            inspectorInput.value = "";
-            // Re-aplicar ítems custom sobre los frentes recién reseteados
-            frentes.forEach(function(fr) {
-                fr.categorias.forEach(function(cat) {
-                    var customItems = customSnapshot[cat.id];
-                    if (customItems && customItems.length > 0) {
-                        var idsExistentes = cat.items.map(function(i) { return i.id; });
-                        customItems.forEach(function(ci) {
-                            if (!idsExistentes.includes(ci.id)) {
-                                cat.items.push({ id: ci.id, texto: ci.texto, cumple: null, obs: "", tipoVerificacion: ci.tipoVerificacion || "foto" });
-                            }
-                        });
-                    }
-                });
-            });
-            // Garantizar que proyecar_items_custom nunca sea borrado por el reset
-            try { localStorage.setItem("proyecar_items_custom", JSON.stringify(customSnapshot)); } catch(e) {}
-            renderFrentes();
-            saveToLocal();
-        }
-    };
+    btnResetGlobal.onclick = () => { iniciarFlujoReiniciarTodo(); };
 
     proyectoInput.addEventListener("input", saveToLocal);
     ubicacionInput.addEventListener("input", saveToLocal);

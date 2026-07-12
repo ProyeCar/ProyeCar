@@ -1,5 +1,5 @@
-// build: 2026-07-12-herramientas-cards
-const APP_VERSION = '1.5.80';
+// build: 2026-07-12-herramientas-backup-security
+const APP_VERSION = '1.5.81';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {
