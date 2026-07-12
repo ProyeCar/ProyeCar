@@ -1,5 +1,5 @@
-// build: 2026-07-12-datos-typography
-const APP_VERSION = '1.5.77';
+// build: 2026-07-12-ios-input-zoom-fix
+const APP_VERSION = '1.5.78';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
     <title>CARDIQUE - Inspección Ambiental y SST por Frente de Obra</title>
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
@@ -329,7 +329,7 @@
             border: none;
             background: transparent;
             padding: 0;
-            font-size: 0.88rem;
+            font-size: 16px;
             font-weight: 600;
             color: #1e293b;
             font-family: inherit;
@@ -515,7 +515,7 @@
         .item-obs input {
             width: 100%; margin-top: 8px; padding: 7px 12px;
             border-radius: 10px; border: 1.5px solid #e2e8f0;
-            background: #f8fafc; font-size: 0.83rem;
+            background: #f8fafc; font-size: 16px;
         }
         .item-obs input:focus { border-color: var(--verde-vivo); outline: none; }
         .agregar-item, button.btn-agregar-area {
@@ -980,7 +980,7 @@
         /* ── COMPARAR ── */
         .comp-select { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
         .comp-label { font-weight: 600; color: #1e3a2f; margin-bottom: 4px; display: block; }
-        .comp-sel { width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 20px; font-size: .9rem; background: white; }
+        .comp-sel { width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 20px; font-size: 16px; background: white; }
         .comp-resultado { margin-top: 16px; }
         .comp-card { background: white; border-radius: 20px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,.05); }
         .comp-card:hover { box-shadow: 0 8px 22px rgba(13,51,33,0.10); }
@@ -1101,13 +1101,20 @@
         button .pc-icon-btn, .btn-agregar-frente, .btn-agregar-area, .btn-foto, .agregar-item { display: inline-flex; align-items: center; gap: 6px; }
         .nav-icon { display: inline-flex; align-items: center; justify-content: center; }
 
+        /* iOS Safari: font-size mínimo 16px evita auto-zoom al enfocar campos */
+        input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]),
+        textarea,
+        select {
+            font-size: 16px !important;
+        }
+
     </style>
     <link rel="manifest" href="./manifest.json">
     <script src="icons.js"></script>
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.77";
+const APP_VERSION = "1.5.78";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -4075,13 +4082,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
         card.innerHTML = '<div style="font-size:1rem;font-weight:600;margin-bottom:16px;color:#1e3a2f;display:flex;align-items:center;gap:8px;">' + pcIconEdit(18) + ' Editar inspección</div>'
             + '<label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Contrato / Nombre</label>'
-            + '<input id="edit-hist-proyecto" type="text" value="' + esc2(entrada.proyecto) + '" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;margin-bottom:12px;box-sizing:border-box;">'
+            + '<input id="edit-hist-proyecto" type="text" value="' + esc2(entrada.proyecto) + '" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:16px;margin-bottom:12px;box-sizing:border-box;">'
             + '<label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Fecha</label>'
-            + '<input id="edit-hist-fecha" type="date" value="' + esc2(entrada.fecha) + '" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;margin-bottom:12px;box-sizing:border-box;">'
+            + '<input id="edit-hist-fecha" type="date" value="' + esc2(entrada.fecha) + '" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:16px;margin-bottom:12px;box-sizing:border-box;">'
             + '<label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Municipio</label>'
-            + '<input id="edit-hist-ubicacion" type="text" value="' + esc2(entrada.ubicacion) + '" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;margin-bottom:12px;box-sizing:border-box;">'
+            + '<input id="edit-hist-ubicacion" type="text" value="' + esc2(entrada.ubicacion) + '" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:16px;margin-bottom:12px;box-sizing:border-box;">'
             + '<label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Inspector</label>'
-            + '<input id="edit-hist-inspector" type="text" value="' + esc2(entrada.inspector) + '" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;margin-bottom:16px;box-sizing:border-box;">'
+            + '<input id="edit-hist-inspector" type="text" value="' + esc2(entrada.inspector) + '" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:16px;margin-bottom:16px;box-sizing:border-box;">'
             + '<div style="display:flex;gap:8px;">'
             + '<button id="edit-hist-save" style="flex:1;padding:10px;background:#1a5c32;color:#fff;border:none;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;">' + pcIconBtn('save', 'Guardar cambios', 14, '#fff') + '</button>'
             + '<button id="edit-hist-cancel" style="padding:10px 16px;background:#6b7280;color:#fff;border:none;border-radius:8px;font-size:0.9rem;cursor:pointer;">Cancelar</button>'
