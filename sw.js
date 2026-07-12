@@ -1,5 +1,5 @@
-// build: 2026-07-12-dedup-categorias-chips-wrap
-const APP_VERSION = '1.5.66';
+// build: 2026-07-12-filtrar-area-text-fit
+const APP_VERSION = '1.5.67';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {

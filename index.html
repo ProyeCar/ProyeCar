@@ -741,9 +741,12 @@
         }
         .menu-lista { display: flex; flex-direction: column; gap: 10px; }
         .menu-lista-areas {
-            display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            align-items: stretch;
         }
-        @media (max-width: 400px) {
+        @media (max-width: 360px) {
             .menu-lista-areas { grid-template-columns: 1fr; }
         }
         .menu-item {
@@ -760,24 +763,49 @@
             background: linear-gradient(135deg, #f8fafc 0%, #f0fdf4 100%) !important;
             border: 1.5px solid #a7f3d0 !important;
             border-radius: 14px !important;
-            padding: 12px 14px !important;
+            padding: 12px 12px !important;
             box-shadow: 0 2px 8px rgba(16,185,129,0.10) !important;
             color: #0f172a !important;
             font-size: 0.86rem !important;
-            min-height: 64px;
+            min-height: 76px;
+            height: 100%;
+            display: flex !important;
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: flex-start;
+            gap: 8px;
+            box-sizing: border-box;
+            overflow: hidden;
         }
         .menu-item-area:hover {
             border-color: #34d399 !important;
             box-shadow: 0 6px 18px rgba(16,185,129,0.22) !important;
             background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%) !important;
         }
-        .menu-area-header {
-            display: flex; align-items: center; gap: 10px; width: 100%;
+        .menu-area-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            flex-shrink: 0;
+            gap: 6px;
         }
+        .menu-area-top .icon-box { flex-shrink: 0; }
         .menu-area-label {
-            font-weight: 700; color: #1e3a2f; flex: 1; line-height: 1.25;
+            font-weight: 700;
+            color: #1e3a2f;
+            line-height: 1.3;
+            font-size: clamp(0.6rem, 1.6vw + 0.42rem, 0.84rem);
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            hyphens: auto;
+            width: 100%;
+            min-width: 0;
+            flex: 1 1 auto;
+            text-align: left;
+            display: block;
         }
-        .menu-area-chevron { margin-left: auto; opacity: 0.65; flex-shrink: 0; }
+        .menu-area-chevron { opacity: 0.65; flex-shrink: 0; line-height: 0; }
         .hist-tag { background: #f0fdf4; border: 1px solid #86efac; border-radius: 20px; padding: 3px 10px; font-size: .75rem; font-weight: 600; color: #166534; }
         .hist-empty { text-align: center; padding: 60px 20px; color: #94a3b8; font-size: 1rem; }
         .hist-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
@@ -893,7 +921,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.66";
+const APP_VERSION = "1.5.67";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -3488,11 +3516,11 @@ if ('serviceWorker' in navigator) {
             btn.type = 'button';
             btn.setAttribute('aria-label', 'Filtrar frentes por ' + nombre);
             btn.innerHTML =
-                '<span class="menu-area-header">' +
+                '<span class="menu-area-top">' +
                     iconHtml +
-                    '<span class="menu-area-label">' + nombre + '</span>' +
                     '<span class="menu-area-chevron">' + pcIcon('chevron-right', 16, '#64748b') + '</span>' +
-                '</span>';
+                '</span>' +
+                '<span class="menu-area-label">' + nombre + '</span>';
             btn.onclick = () => { mostrarPantalla('frentes'); aplicarFiltroCategoria(catid); };
             cont.appendChild(btn);
         });
