@@ -208,13 +208,20 @@
         }
         .frente-titulo input::placeholder { color: rgba(255,255,255,0.6); }
         .btn-eliminar-frente {
-            background: rgba(163,45,45,0.15);
-            color: #ffb3b3;
-            border: 1px solid rgba(163,45,45,0.3);
-            padding: 5px 12px; border-radius: 20px; cursor: pointer;
-            font-size: 0.78rem; font-weight: 600;
+            background: rgba(254,226,226,0.95) !important;
+            color: #991b1b !important;
+            border: 1.5px solid #f87171 !important;
+            padding: 6px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.78rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 1px 4px rgba(185,28,28,0.2) !important;
         }
-        .btn-eliminar-frente:hover { background: rgba(163,45,45,0.3); }
+        .btn-eliminar-frente:hover { background: #fee2e2 !important; border-color: #ef4444 !important; }
         .frente-acciones-carrusel {
             display: flex; align-items: center; gap: 8px;
             padding: 6px 10px; margin: 0 0 4px;
@@ -265,12 +272,10 @@
         .item-desc { flex: 3; font-weight: 600; font-size: 0.88rem; color: #111827; line-height: 1.45; }
         .item-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
         .item-actions-secundarias {
-            display: flex; gap: 2px;
+            display: flex; gap: 6px;
             margin-top: 2px; padding-top: 8px;
             border-top: 1px dashed #e2e8f0;
-            opacity: 0.55;
         }
-        .item-actions-secundarias:hover, .item-actions-secundarias:focus-within { opacity: 1; }
         .estado-btns {
             display: flex; gap: 6px;
             background: #f1f5f9;
@@ -287,7 +292,40 @@
         .btn-cumple:not(.activo), .btn-nocumple:not(.activo) { background: #e2e8f0; color: #475569; }
         .btn-cumple:not(.activo):hover { background: #dcfce7; color: #16a34a; }
         .btn-nocumple:not(.activo):hover { background: #fee2e2; color: #dc2626; }
-        .btn-editar, .btn-eliminar, .btn-color-cat { background: none; border: none; font-size: 1rem; cursor: pointer; padding: 4px 6px; min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+        .btn-editar, .btn-eliminar, .btn-color-cat {
+            font-size: 0;
+            cursor: pointer;
+            padding: 8px;
+            min-width: 40px;
+            min-height: 40px;
+            width: 40px;
+            height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            border: 1.5px solid;
+            box-shadow: 0 1px 4px rgba(15,23,42,0.1);
+        }
+        button.btn-editar {
+            background: #eff6ff !important;
+            border-color: #60a5fa !important;
+            color: #1d4ed8 !important;
+            box-shadow: 0 1px 4px rgba(29,78,216,0.18) !important;
+        }
+        button.btn-editar:hover { background: #dbeafe !important; border-color: #3b82f6 !important; }
+        button.btn-eliminar {
+            background: #fef2f2 !important;
+            border-color: #f87171 !important;
+            color: #b91c1c !important;
+            box-shadow: 0 1px 4px rgba(185,28,28,0.18) !important;
+        }
+        button.btn-eliminar:hover { background: #fee2e2 !important; border-color: #ef4444 !important; }
+        button.btn-color-cat {
+            background: #f8fafc !important;
+            border-color: #cbd5e1 !important;
+            color: #475569 !important;
+        }
         .cat-icon-actions { display: flex; align-items: center; margin-left: 12px; padding-left: 10px; border-left: 1.5px solid #cbd5e1; }
         .item-obs input {
             width: 100%; margin-top: 8px; padding: 7px 12px;
@@ -295,17 +333,28 @@
             background: #f8fafc; font-size: 0.83rem;
         }
         .item-obs input:focus { border-color: var(--verde-vivo); outline: none; }
-        .agregar-item {
+        .agregar-item, button.btn-agregar-area {
             margin-top: 10px;
-            background: white;
-            border: 1.5px dashed #059669;
-            border-radius: 40px; padding: 7px 16px;
-            display: inline-flex; align-items: center; gap: 6px;
-            font-weight: 700; cursor: pointer; font-size: 0.83rem;
-            color: #065f46;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            background: #ecfdf5 !important;
+            border: 1.5px dashed #34d399 !important;
+            border-radius: 40px;
+            padding: 8px 16px !important;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 0.83rem !important;
+            color: #047857 !important;
+            box-shadow: 0 2px 6px rgba(16,185,129,0.14) !important;
+            min-height: 44px;
         }
-        .agregar-item:hover { background: #ecfdf5; border-color: #10b981; }
+        .agregar-item:hover, button.btn-agregar-area:hover {
+            background: #d1fae5 !important;
+            border-color: #10b981 !important;
+            box-shadow: 0 3px 10px rgba(16,185,129,0.22) !important;
+        }
+        div.agregar-item { font-size: 0.83rem; }
 
         /* === FOTOS === */
         .frente-fotos-area, .frente-obs-area, .frente-recomendaciones-area {
@@ -321,13 +370,20 @@
         .foto-thumb img { width: 100%; height: 100%; object-fit: cover; }
         .del-foto { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.55); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-size: 0.7rem; }
         .btn-foto {
-            background: linear-gradient(135deg, #eff6ff, #dbeafe);
-            border: 1.5px dashed var(--azul-cienaga);
-            padding: 7px 14px; border-radius: 30px;
-            display: inline-flex; align-items: center; gap: 6px;
-            cursor: pointer; font-size: 0.8rem; color: #0369a1; font-weight: 600;
+            background: linear-gradient(135deg, #eff6ff, #dbeafe) !important;
+            border: 1.5px dashed var(--azul-cienaga) !important;
+            padding: 8px 14px !important;
+            border-radius: 30px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 0.8rem !important;
+            color: #0369a1 !important;
+            font-weight: 600;
+            box-shadow: 0 1px 4px rgba(14,165,233,0.15) !important;
         }
-        .btn-foto:hover { background: #dbeafe; }
+        .btn-foto:hover { background: #dbeafe !important; }
 
         /* === BOTONES GLOBALES === */
         button {
@@ -343,7 +399,53 @@
         .btn-pdf:hover { box-shadow: 0 5px 18px rgba(217,119,6,0.4); }
         .btn-peligro { background: linear-gradient(135deg, #b91c1c, #ef4444); box-shadow: 0 3px 12px rgba(185,28,28,0.3); }
         .btn-sec { background: linear-gradient(135deg, #475569, #64748b); box-shadow: 0 3px 12px rgba(71,85,105,0.25); }
-        .btn-agregar-frente { background: var(--verde-gradient); color: #fff; border: 2px dashed rgba(255,255,255,0.4); border-radius: var(--radius-sm); margin-top: 10px; }
+        .btn-agregar-frente {
+            background: var(--verde-gradient) !important;
+            color: #fff !important;
+            border: 2px dashed rgba(255,255,255,0.45) !important;
+            border-radius: var(--radius-sm);
+            margin-top: 10px;
+            padding: 10px 20px !important;
+            font-size: 0.88rem !important;
+            gap: 8px;
+        }
+        .btn-agregar-frente .pc-icon { stroke: #fff; }
+        .btn-hist-editar {
+            font-size: 0.75rem !important;
+            padding: 6px 12px !important;
+            background: #1a5c32 !important;
+            color: #fff !important;
+            border: 1.5px solid #15803d !important;
+            border-radius: 8px !important;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 1px 4px rgba(26,92,50,0.25) !important;
+        }
+        .btn-hist-eliminar {
+            font-size: 0.75rem !important;
+            padding: 6px 12px !important;
+            background: #b91c1c !important;
+            color: #fff !important;
+            border: 1.5px solid #991b1b !important;
+            border-radius: 8px !important;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 1px 4px rgba(185,28,28,0.25) !important;
+        }
+        .btn-accion-generar {
+            font-size: 0.72rem !important;
+            padding: 4px 10px !important;
+            background: #e8f5e9 !important;
+            color: #1a5c32 !important;
+            border: 1.5px solid #86efac !important;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
+            box-shadow: none !important;
+            gap: 4px;
+        }
+        .btn-accion-generar:hover { background: #dcfce7 !important; border-color: #4ade80 !important; }
         .btn-herramientas-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:12px; width:100%; }
         .btn-h { display:flex !important; flex-direction:column; align-items:center; justify-content:center; width:100% !important; aspect-ratio:1; background:var(--verde-gradient) !important; color:#fff; border-radius:var(--radius) !important; padding:10px 4px !important; font-size:0.62rem !important; font-weight:700; letter-spacing:0.3px; gap:6px; min-width:unset; box-shadow:var(--shadow-md) !important; line-height:1.2; text-align:center; }
         .btn-h:active { box-shadow:var(--shadow-sm) !important; }
@@ -741,7 +843,7 @@
         .pc-icon { display: inline-block; vertical-align: -0.15em; flex-shrink: 0; }
         .pc-icon-btn, .pc-icon-label { display: inline-flex; align-items: center; gap: 6px; }
         label.pc-icon-label { font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; font-size: 11px; color: var(--gris-600); }
-        button .pc-icon-btn, .btn-agregar-frente, .btn-foto, .agregar-item { display: inline-flex; align-items: center; gap: 6px; }
+        button .pc-icon-btn, .btn-agregar-frente, .btn-agregar-area, .btn-foto, .agregar-item { display: inline-flex; align-items: center; gap: 6px; }
         .nav-icon, .chip-icon { display: inline-flex; align-items: center; justify-content: center; }
 
     </style>
@@ -750,7 +852,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.61";
+const APP_VERSION = "1.5.62";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -938,7 +1040,7 @@ if ('serviceWorker' in navigator) {
     <div class="card no-print">
         <div class="card-header"><h2><span class="icon-box icon-box-verde"><span class="pc-icon-hydrate" data-i="construction" data-s="20" data-c="#1a5c35"></span></span>Frentes de obra</h2></div>
         <div id="frentes-container"></div>
-        <button id="agregar-frente" class="btn-agregar-frente"><span class="pc-icon-hydrate" data-i="plus" data-s="16" data-c="currentColor"></span> Agregar nuevo frente</button>
+        <button id="agregar-frente" class="btn-agregar-frente"><span class="pc-icon-hydrate" data-i="plus" data-s="18" data-c="#ffffff"></span> Agregar nuevo frente</button>
     </div>
 </div></div>
 
@@ -1693,7 +1795,7 @@ if ('serviceWorker' in navigator) {
             tituloDiv.appendChild(contratLabel);
             tituloDiv.appendChild(contratInput);
             const btnEliminar = document.createElement("button");
-            btnEliminar.innerHTML = pcIconBtn('trash-2', 'Eliminar frente', 14, '#ffb3b3');
+            btnEliminar.innerHTML = pcActionBtn('delete', 'Eliminar frente', 14);
             btnEliminar.className = "btn-eliminar-frente";
             btnEliminar.onclick = () => { setTimeout(() => { if (confirm("¿Eliminar este frente?")) { frentes.splice(idx, 1); saveToLocal(); renderFrentes(); } }, 10); };
             tituloDiv.prepend(toggleArrow);
@@ -1738,7 +1840,7 @@ if ('serviceWorker' in navigator) {
                 catTitulo.appendChild(catLabelWrap); catTitulo.appendChild(catToggle);
 
                 const btnEditarCat = document.createElement("button");
-                btnEditarCat.innerHTML = pcIcon('pencil', 16, 'currentColor');
+                btnEditarCat.innerHTML = pcIconEdit(18);
                 btnEditarCat.className = "btn-editar";
                 btnEditarCat.title = "Editar nombre del área";
                 btnEditarCat.setAttribute("aria-label", "Editar nombre del área");
@@ -1755,7 +1857,7 @@ if ('serviceWorker' in navigator) {
                 };
 
                 const btnEliminarCat = document.createElement("button");
-                btnEliminarCat.innerHTML = pcIcon('trash-2', 16, 'currentColor');
+                btnEliminarCat.innerHTML = pcIconDelete(18);
                 btnEliminarCat.className = "btn-eliminar";
                 btnEliminarCat.title = "Eliminar área";
                 btnEliminarCat.setAttribute("aria-label", "Eliminar área");
@@ -1852,7 +1954,7 @@ if ('serviceWorker' in navigator) {
                         saveToLocal();
                     };
                     estadoDiv.appendChild(btnSi); estadoDiv.appendChild(btnNo);
-                    const editar = document.createElement("button"); editar.innerHTML = pcIcon('pencil', 16, 'currentColor'); editar.className = "btn-editar";
+                    const editar = document.createElement("button"); editar.innerHTML = pcIconEdit(18); editar.className = "btn-editar";
                     editar.onclick = () => {
                         setTimeout(() => {
                             const nuevo = prompt("Editar ítem:", item.texto);
@@ -1881,7 +1983,7 @@ if ('serviceWorker' in navigator) {
                             }
                         }, 10);
                     };
-                    const eliminar = document.createElement("button"); eliminar.innerHTML = pcIcon('trash-2', 16, 'currentColor'); eliminar.className = "btn-eliminar";
+                    const eliminar = document.createElement("button"); eliminar.innerHTML = pcIconDelete(18); eliminar.className = "btn-eliminar";
                     eliminar.onclick = () => {
                         setTimeout(() => {
                             if (confirm("¿Eliminar ítem?")) {
@@ -1923,7 +2025,7 @@ if ('serviceWorker' in navigator) {
                 });
                 catBody.appendChild(itemsDiv);
                 catDiv.appendChild(catBody);
-                const btnAgregarItem = document.createElement("div"); btnAgregarItem.className = "agregar-item"; btnAgregarItem.innerHTML = pcIconBtn('plus', 16, 'currentColor', 'Agregar ítem a esta categoría');
+                const btnAgregarItem = document.createElement("div"); btnAgregarItem.className = "agregar-item"; btnAgregarItem.innerHTML = pcActionBtn('add', 'Agregar ítem a esta categoría', 18);
                 btnAgregarItem.onclick = () => { setTimeout(() => {
                     const texto = prompt("Nombre del nuevo ítem:");
                     if (texto && texto.trim()) {
@@ -1963,8 +2065,8 @@ if ('serviceWorker' in navigator) {
             });
 
             const btnAgregarCat = document.createElement("button");
-            btnAgregarCat.innerHTML = pcIconBtn('plus', 16, 'currentColor', 'Agregar área nueva');
-            btnAgregarCat.className = "btn-agregar-frente";
+            btnAgregarCat.innerHTML = pcActionBtn('add', 'Agregar área nueva', 18);
+            btnAgregarCat.className = "btn-agregar-area";
             btnAgregarCat.style.cssText = "margin:8px 0 4px;font-size:0.82rem;padding:8px 16px;white-space:nowrap;";
             btnAgregarCat.onclick = () => {
                 setTimeout(() => {
@@ -2002,7 +2104,7 @@ if ('serviceWorker' in navigator) {
                             }
                         } catch(e) {}
                     }
-                    const btnDel = document.createElement("button"); btnDel.innerHTML = pcIcon('x', 14, 'currentColor'); btnDel.className = "del-foto"; btnDel.onclick = async () => {
+                    const btnDel = document.createElement("button"); btnDel.innerHTML = pcIcon('x', 14, '#ffffff'); btnDel.className = "del-foto"; btnDel.onclick = async () => {
                         const fid = frentes[idx].fotos[fotoIdx];
                         frentes[idx].fotos.splice(fotoIdx, 1);
                         try { await idbEliminarFoto(fid); } catch(e) {}
@@ -2017,7 +2119,7 @@ if ('serviceWorker' in navigator) {
                 fotosGrid.appendChild(emptyMsg);
             }
             fotosDiv.appendChild(fotosGrid);
-            const btnSubirFotosFrente = document.createElement("button"); btnSubirFotosFrente.className = "btn-foto"; btnSubirFotosFrente.innerHTML = pcIconBtn('camera', 'Subir fotos a este frente', 16, 'currentColor');
+            const btnSubirFotosFrente = document.createElement("button"); btnSubirFotosFrente.className = "btn-foto"; btnSubirFotosFrente.innerHTML = pcIconBtn('camera', 'Subir fotos a este frente', 16, '#0369a1');
             btnSubirFotosFrente.onclick = () => {
                 const input = document.createElement("input"); input.type = "file"; input.multiple = true; input.accept = "image/*";
                 input.onchange = async (e) => {
@@ -2112,8 +2214,9 @@ if ('serviceWorker' in navigator) {
             obsTitulo.innerHTML = pcIconLabel('notebook-pen', 'Observaciones', 16, '#1e3a2f');
             obsTituloRow.appendChild(obsTitulo);
             const btnGenResumen = document.createElement("button");
-            btnGenResumen.innerHTML = pcIconBtn('refresh-cw', 'Generar', 14, 'currentColor');
-            btnGenResumen.style.cssText = "font-size:0.72rem;padding:2px 8px;background:#e8f5e9;color:#1a5c32;border:1px solid #a7d7a9;border-radius:6px;cursor:pointer;font-weight:normal;";
+            btnGenResumen.innerHTML = pcIconBtn('refresh-cw', 'Generar', 14, '#1a5c32');
+            btnGenResumen.className = "btn-accion-generar";
+            btnGenResumen.style.cssText = "";
             btnGenResumen.onclick = () => { generarResumenEjecutivo(idx); };
             obsTituloRow.appendChild(btnGenResumen);
             obsEspecificasDiv.appendChild(obsTituloRow);
@@ -2136,8 +2239,9 @@ if ('serviceWorker' in navigator) {
             recTitulo.innerHTML = pcIconLabel('clipboard-list', 'Recomendaciones', 16, '#1e3a2f');
             recTituloRow.appendChild(recTitulo);
             const btnGenRecom = document.createElement("button");
-            btnGenRecom.innerHTML = pcIconBtn('refresh-cw', 'Generar', 14, 'currentColor');
-            btnGenRecom.style.cssText = "font-size:0.72rem;padding:2px 8px;background:#e8f5e9;color:#1a5c32;border:1px solid #a7d7a9;border-radius:6px;cursor:pointer;font-weight:normal;";
+            btnGenRecom.innerHTML = pcIconBtn('refresh-cw', 'Generar', 14, '#1a5c32');
+            btnGenRecom.className = "btn-accion-generar";
+            btnGenRecom.style.cssText = "";
             btnGenRecom.onclick = () => { generarRecomendaciones(idx); };
             recTituloRow.appendChild(btnGenRecom);
             recomendacionesDiv.appendChild(recTituloRow);
@@ -3327,8 +3431,8 @@ if ('serviceWorker' in navigator) {
                 ${desgloseHTML}
                 <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
                     <button onclick="restaurarInspeccion(${i})" style="font-size:.75rem;padding:6px 12px;background:#2c5e3f;">↩️ Restaurar</button>
-                    <button onclick="editarInspeccion(${i})" style="font-size:.75rem;padding:6px 12px;background:#1a5c32;display:inline-flex;align-items:center;gap:4px;">${pcIcon('pencil',12,'#fff')} Editar</button>
-                    <button onclick="eliminarHistorial(${i})" style="font-size:.75rem;padding:6px 12px;background:#b91c1c;display:inline-flex;align-items:center;gap:4px;">${pcIcon('trash-2',12,'#fff')} Borrar</button>
+                    <button class="btn-hist-editar" onclick="editarInspeccion(${i})">${pcIcon('pencil',14,'#fff')} Editar</button>
+                    <button class="btn-hist-eliminar" onclick="eliminarHistorial(${i})">${pcIcon('trash-2',14,'#fff')} Borrar</button>
                 </div>
             </div>`;
         }).join('');
@@ -3346,7 +3450,7 @@ if ('serviceWorker' in navigator) {
 
         function esc2(s) { return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-        card.innerHTML = '<div style="font-size:1rem;font-weight:600;margin-bottom:16px;color:#1e3a2f;display:flex;align-items:center;gap:8px;">' + pcIcon('pencil', 18, '#1e3a2f') + ' Editar inspección</div>'
+        card.innerHTML = '<div style="font-size:1rem;font-weight:600;margin-bottom:16px;color:#1e3a2f;display:flex;align-items:center;gap:8px;">' + pcIconEdit(18) + ' Editar inspección</div>'
             + '<label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Contrato / Nombre</label>'
             + '<input id="edit-hist-proyecto" type="text" value="' + esc2(entrada.proyecto) + '" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;margin-bottom:12px;box-sizing:border-box;">'
             + '<label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Fecha</label>'
@@ -3356,7 +3460,7 @@ if ('serviceWorker' in navigator) {
             + '<label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Inspector</label>'
             + '<input id="edit-hist-inspector" type="text" value="' + esc2(entrada.inspector) + '" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;margin-bottom:16px;box-sizing:border-box;">'
             + '<div style="display:flex;gap:8px;">'
-            + '<button id="edit-hist-save" style="flex:1;padding:10px;background:#1a5c32;color:#fff;border:none;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;">' + pcIconBtn('save', 14, '#fff', 'Guardar cambios') + '</button>'
+            + '<button id="edit-hist-save" style="flex:1;padding:10px;background:#1a5c32;color:#fff;border:none;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;">' + pcIconBtn('save', 'Guardar cambios', 14, '#fff') + '</button>'
             + '<button id="edit-hist-cancel" style="padding:10px 16px;background:#6b7280;color:#fff;border:none;border-radius:8px;font-size:0.9rem;cursor:pointer;">Cancelar</button>'
             + '</div>';
 

@@ -90,6 +90,16 @@ function pcIconBtn(name, text, size, color) {
   return '<span class="pc-icon-btn">' + pcIcon(name, size || 16, color || 'currentColor') + '<span>' + text + '</span></span>';
 }
 
+var PC_ACTION = { edit: '#1d4ed8', delete: '#b91c1c', add: '#047857' };
+function pcIconEdit(size) { return pcIcon('pencil', size || 18, PC_ACTION.edit); }
+function pcIconDelete(size) { return pcIcon('trash-2', size || 18, PC_ACTION.delete); }
+function pcIconAdd(size) { return pcIcon('plus', size || 18, PC_ACTION.add); }
+function pcActionBtn(type, text, size) {
+  var map = { edit: ['pencil', PC_ACTION.edit], delete: ['trash-2', PC_ACTION.delete], add: ['plus', PC_ACTION.add] };
+  var m = map[type] || map.add;
+  return pcIconBtn(m[0], text, size || 16, m[1]);
+}
+
 function pcIconLabel(name, text, size, color) {
   return '<span class="pc-icon-label">' + pcIcon(name, size || 14, color || 'currentColor') + '<span>' + text + '</span></span>';
 }
