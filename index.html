@@ -104,14 +104,13 @@
         .logo-ring {
             width: 84px; height: 84px;
             border-radius: 50%;
-            background: linear-gradient(145deg, rgba(255,255,255,0.96), rgba(240,253,244,0.88));
+            background: transparent;
             border: 2.5px solid rgba(255,255,255,0.88);
             box-shadow:
                 0 8px 24px rgba(0,0,0,0.28),
-                0 2px 8px rgba(13,51,33,0.2),
-                inset 0 1px 0 rgba(255,255,255,0.95);
+                0 2px 8px rgba(13,51,33,0.2);
             display: flex; align-items: center; justify-content: center;
-            overflow: hidden; padding: 12px;
+            overflow: hidden; padding: 10px;
             box-sizing: border-box;
         }
         .logo-img {
@@ -120,6 +119,8 @@
             object-position: center;
             background: transparent;
             display: block;
+            mix-blend-mode: multiply;
+            filter: drop-shadow(0 2px 5px rgba(0,0,0,0.18));
         }
         .header-titulo-wrap { flex: 1; min-width: 200px; text-align: center; }
         .header-titulo-row {
@@ -1066,7 +1067,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.72";
+const APP_VERSION = "1.5.73";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -1860,6 +1861,41 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnAgregarFrente = document.getElementById("agregar-frente");
     const logoImg = document.getElementById("logo-img");
     const logoFileInput = document.getElementById("logo-file-input");
+
+    function stripLogoWhiteBackground(src, tolerance) {
+        tolerance = tolerance || 30;
+        return new Promise(function(resolve) {
+            if (!src || !String(src).startsWith("data:")) { resolve(src); return; }
+            var image = new Image();
+            image.onload = function() {
+                try {
+                    var canvas = document.createElement("canvas");
+                    canvas.width = image.naturalWidth;
+                    canvas.height = image.naturalHeight;
+                    var ctx = canvas.getContext("2d");
+                    ctx.drawImage(image, 0, 0);
+                    var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    var d = imageData.data;
+                    var minChannel = 255 - tolerance;
+                    for (var i = 0; i < d.length; i += 4) {
+                        if (d[i] >= minChannel && d[i + 1] >= minChannel && d[i + 2] >= minChannel) {
+                            d[i + 3] = 0;
+                        }
+                    }
+                    ctx.putImageData(imageData, 0, 0);
+                    resolve(canvas.toDataURL("image/png"));
+                } catch (e) { resolve(src); }
+            };
+            image.onerror = function() { resolve(src); };
+            image.src = src;
+        });
+    }
+
+    async function aplicarLogoFondoTransparente(src) {
+        if (!logoImg || !src) return;
+        var transparentSrc = await stripLogoWhiteBackground(src);
+        if (transparentSrc) logoImg.src = transparentSrc;
+    }
     const proyectoInput = document.getElementById("proyecto");
     const ubicacionInput = document.getElementById("ubicacion");
     const inspectorInput = document.getElementById("inspector");
@@ -2158,12 +2194,21 @@ document.addEventListener('DOMContentLoaded', function() {
         renderFrentes();
     }
     const savedLogo = localStorage.getItem("cardique_logo");
-    if (savedLogo) { logoImg.src = savedLogo; }
+    if (savedLogo) {
+        logoImg.src = savedLogo;
+        aplicarLogoFondoTransparente(savedLogo);
+    } else {
+        aplicarLogoFondoTransparente(logoImg.src);
+    }
     logoFileInput.onchange = (e) => {
         const file = e.target.files[0];
         if (file && file.type.startsWith("image/")) {
             const reader = new FileReader();
-            reader.onload = (ev) => { logoImg.src = ev.target.result; localStorage.setItem("cardique_logo", ev.target.result); };
+            reader.onload = async (ev) => {
+                const transparentSrc = await stripLogoWhiteBackground(ev.target.result);
+                logoImg.src = transparentSrc;
+                localStorage.setItem("cardique_logo", transparentSrc);
+            };
             reader.readAsDataURL(file);
         }
     };
