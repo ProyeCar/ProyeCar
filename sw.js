@@ -1,5 +1,5 @@
-// build: 2026-07-12-filtrar-area-text-fit
-const APP_VERSION = '1.5.67';
+// build: 2026-07-12-frentes-filtro-area-cards
+const APP_VERSION = '1.5.68';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {

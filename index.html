@@ -735,20 +735,7 @@
             letter-spacing: 0.6px; color: #64748b; margin: 20px 0 10px;
         }
         .menu-titulo:first-child { margin-top: 4px; }
-        .menu-descripcion {
-            font-size: 0.82rem; color: #475569; line-height: 1.45;
-            margin: -4px 0 12px;
-        }
         .menu-lista { display: flex; flex-direction: column; gap: 10px; }
-        .menu-lista-areas {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 10px;
-            align-items: stretch;
-        }
-        @media (max-width: 360px) {
-            .menu-lista-areas { grid-template-columns: 1fr; }
-        }
         .menu-item {
             display: flex; align-items: center; gap: 12px;
             background: white; border-radius: 16px; padding: 14px 16px;
@@ -759,53 +746,6 @@
         }
         .menu-item:hover { box-shadow: 0 8px 22px rgba(13,51,33,0.12); border-color: #bbf7d0; }
         .menu-item svg, .menu-item .pc-icon { flex-shrink: 0; color: #1a5c35; }
-        .menu-item-area {
-            background: linear-gradient(135deg, #f8fafc 0%, #f0fdf4 100%) !important;
-            border: 1.5px solid #a7f3d0 !important;
-            border-radius: 14px !important;
-            padding: 12px 12px !important;
-            box-shadow: 0 2px 8px rgba(16,185,129,0.10) !important;
-            color: #0f172a !important;
-            font-size: 0.86rem !important;
-            min-height: 76px;
-            height: 100%;
-            display: flex !important;
-            flex-direction: column;
-            align-items: stretch;
-            justify-content: flex-start;
-            gap: 8px;
-            box-sizing: border-box;
-            overflow: hidden;
-        }
-        .menu-item-area:hover {
-            border-color: #34d399 !important;
-            box-shadow: 0 6px 18px rgba(16,185,129,0.22) !important;
-            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%) !important;
-        }
-        .menu-area-top {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            width: 100%;
-            flex-shrink: 0;
-            gap: 6px;
-        }
-        .menu-area-top .icon-box { flex-shrink: 0; }
-        .menu-area-label {
-            font-weight: 700;
-            color: #1e3a2f;
-            line-height: 1.3;
-            font-size: clamp(0.6rem, 1.6vw + 0.42rem, 0.84rem);
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-            hyphens: auto;
-            width: 100%;
-            min-width: 0;
-            flex: 1 1 auto;
-            text-align: left;
-            display: block;
-        }
-        .menu-area-chevron { opacity: 0.65; flex-shrink: 0; line-height: 0; }
         .hist-tag { background: #f0fdf4; border: 1px solid #86efac; border-radius: 20px; padding: 3px 10px; font-size: .75rem; font-weight: 600; color: #166534; }
         .hist-empty { text-align: center; padding: 60px 20px; color: #94a3b8; font-size: 1rem; }
         .hist-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
@@ -866,39 +806,61 @@
 
         .frente-card{background:linear-gradient(135deg,#fff 0%,#f9fafb 100%)!important;border:1px solid #e2e8f0!important;box-shadow:0 2px 8px rgba(15,23,42,.04)!important}.categoria{border:1.5px solid #e2e8f0!important}.categoria:active{border-color:#10b981!important;background:linear-gradient(135deg,#f0fffe 0%,#eafbf8 100%)!important}.nav-btn.activo{color:#10b981!important}.nav-btn.activo::after{content:'';position:absolute;bottom:-14px;left:50%;transform:translateX(-50%);width:28px;height:4px;background:linear-gradient(90deg,#10b981 0%,#059669 100%)!important}
 
-        /* ===== CHIPS DE CATEGORÍA (tab Frentes) ===== */
+        /* ===== FILTRO POR ÁREA (tab Frentes) ===== */
         .chips-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 10px;
             margin-bottom: 1.2rem;
+            align-items: stretch;
         }
-        .chip {
-            background: rgba(255,255,255,0.85);
-            backdrop-filter: blur(10px);
-            border: 1.5px solid #e2e8f0;
-            border-radius: 14px;
-            padding: 10px 6px;
-            text-align: center;
-            cursor: pointer;
-            box-shadow: 0 2px 6px rgba(15,23,42,0.05);
-            min-width: 0;
-            display: flex;
-            flex-direction: column;
+        @media (max-width: 360px) {
+            .chips-grid { grid-template-columns: 1fr; }
+        }
+        .chip.filtro-area-card {
+            background: linear-gradient(135deg, #f8fafc 0%, #f0fdf4 100%) !important;
+            border: 1.5px solid #a7f3d0 !important;
+            border-radius: 14px !important;
+            padding: 12px 12px !important;
+            box-shadow: 0 2px 8px rgba(16,185,129,0.10) !important;
+            color: #0f172a !important;
+            min-height: 52px;
+            height: 100%;
+            display: flex !important;
+            flex-direction: row;
             align-items: center;
-            justify-content: center;
+            gap: 10px;
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
+            box-sizing: border-box;
+            overflow: hidden;
+            font-size: 0.86rem !important;
+            font-weight: 600;
         }
-        .chip.active {
-            border-color: var(--verde-vivo);
-            background: linear-gradient(135deg, #f0fdf4, #eafbf8);
-            box-shadow: 0 6px 16px rgba(45,158,82,0.18);
+        .chip.filtro-area-card:hover {
+            border-color: #34d399 !important;
+            box-shadow: 0 6px 18px rgba(16,185,129,0.22) !important;
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%) !important;
         }
-        .chip-icon { display: flex; align-items: center; justify-content: center; margin-bottom: 4px; flex-shrink: 0; }
-        .chip-label {
-            font-size: 0.68rem; font-weight: 700; color: #1e293b; letter-spacing: 0.2px;
-            line-height: 1.25; word-break: break-word; overflow-wrap: break-word;
-            max-width: 100%; width: 100%; hyphens: auto;
+        .chip.filtro-area-card.active {
+            border-color: var(--verde-vivo) !important;
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%) !important;
+            box-shadow: 0 6px 18px rgba(45,158,82,0.22) !important;
         }
+        .filtro-area-icon { flex-shrink: 0; line-height: 0; }
+        .filtro-area-label {
+            font-weight: 700;
+            color: #1e3a2f;
+            line-height: 1.3;
+            font-size: clamp(0.6rem, 1.6vw + 0.42rem, 0.84rem);
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            hyphens: auto;
+            flex: 1;
+            min-width: 0;
+        }
+        .filtro-area-chevron { flex-shrink: 0; opacity: 0.65; line-height: 0; }
 
         /* ===== SYNC (tab Sync) ===== */
         .sync-item {
@@ -913,7 +875,7 @@
         .pc-icon-btn, .pc-icon-label { display: inline-flex; align-items: center; gap: 6px; }
         label.pc-icon-label { font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; font-size: 11px; color: var(--gris-600); }
         button .pc-icon-btn, .btn-agregar-frente, .btn-agregar-area, .btn-foto, .agregar-item { display: inline-flex; align-items: center; gap: 6px; }
-        .nav-icon, .chip-icon { display: inline-flex; align-items: center; justify-content: center; }
+        .nav-icon { display: inline-flex; align-items: center; justify-content: center; }
 
     </style>
     <link rel="manifest" href="./manifest.json">
@@ -921,7 +883,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.67";
+const APP_VERSION = "1.5.68";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -1098,14 +1060,7 @@ if ('serviceWorker' in navigator) {
 </div></div>
 
 <div id="pantalla-frentes" class="pantalla"><div class="container">
-    <div class="chips-grid" id="chips-categorias">
-        <div class="chip" data-catid="todos"><span class="chip-icon"><span class="pc-icon-hydrate" data-i="layout-grid" data-s="22" data-c="#1a5c35"></span></span><span class="chip-label">Todos</span></div>
-        <div class="chip" data-catid="ambiental"><span class="chip-icon"><span class="pc-icon-hydrate" data-i="leaf" data-s="22" data-c="#1a5c35"></span></span><span class="chip-label">Ambiental</span></div>
-        <div class="chip" data-catid="sst"><span class="chip-icon"><span class="pc-icon-hydrate" data-i="hard-hat" data-s="22" data-c="#1a5c35"></span></span><span class="chip-label">SST</span></div>
-        <div class="chip" data-catid="juridica"><span class="chip-icon"><span class="pc-icon-hydrate" data-i="scale" data-s="22" data-c="#1a5c35"></span></span><span class="chip-label">Jurídica</span></div>
-        <div class="chip" data-catid="social"><span class="chip-icon"><span class="pc-icon-hydrate" data-i="users" data-s="22" data-c="#1a5c35"></span></span><span class="chip-label">Social</span></div>
-        <div class="chip" data-catid="tecnica"><span class="chip-icon"><span class="pc-icon-hydrate" data-i="wrench" data-s="22" data-c="#1a5c35"></span></span><span class="chip-label">Técnica</span></div>
-    </div>
+    <div class="chips-grid" id="chips-categorias"></div>
     <div class="card no-print">
         <div class="card-header"><h2><span class="icon-box icon-box-verde"><span class="pc-icon-hydrate" data-i="construction" data-s="20" data-c="#1a5c35"></span></span>Frentes de obra</h2></div>
         <div id="frentes-container"></div>
@@ -1238,9 +1193,6 @@ if ('serviceWorker' in navigator) {
                 Comparar inspecciones
             </button>
         </div>
-        <div class="menu-titulo">Filtrar por área</div>
-        <p class="menu-descripcion">Ir directo a Frentes filtrados por categoría</p>
-        <div class="menu-lista menu-lista-areas" id="areas-menu-lista"></div>
     </div>
 </div></div>
 
@@ -2517,7 +2469,7 @@ if ('serviceWorker' in navigator) {
             // Body is open by default - no maxHeight restriction needed
             frentesContainer.appendChild(frenteDiv);
         });
-        syncChipsCategorias();
+        renderChipsCategorias();
         var filtroActivo = localStorage.getItem('proyecar_categoria_activa') || 'todos';
         if (filtroActivo !== 'todos' && !chipCategoriaExiste(filtroActivo)) filtroActivo = 'todos';
         aplicarFiltroUI(filtroActivo);
@@ -3414,7 +3366,6 @@ if ('serviceWorker' in navigator) {
         if (nombre === 'historial') renderHistorial();
         if (nombre === 'comparar') renderComparar();
         if (nombre === 'sync') renderSync();
-        if (nombre === 'mas') renderMenuAreas();
         const waFab = document.getElementById('wa-fab');
         if (waFab) waFab.style.display = (nombre === 'frentes') ? 'flex' : 'none';
         window.scrollTo(0, 0);
@@ -3496,33 +3447,46 @@ if ('serviceWorker' in navigator) {
     // ── Color guardado por categoría (borde visual, sin selector) ──
     function cargarColoresCategoria() { return leerJSON('proyecar_colores_categoria', {}); }
 
-    // ── Menú "Más": un botón por cada chip en #chips-categorias (excepto "todos") ──
-    function renderMenuAreas() {
-        const cont = document.getElementById('areas-menu-lista');
-        if (!cont) return;
-        syncChipsCategorias();
-        cont.innerHTML = '';
-        const chips = document.querySelectorAll('#chips-categorias .chip');
-        chips.forEach(chip => {
-            const catid = chip.dataset.catid;
-            if (!catid || catid === 'todos') return;
-            const labelEl = chip.querySelector('.chip-label');
-            const nombre = labelEl ? labelEl.textContent.trim() : catid;
-            const iconHtml = (typeof CAT_ICON_MAP !== 'undefined' && CAT_ICON_MAP[catid])
+    var FILTRO_AREA_LABELS = {
+        todos: 'Todos',
+        ambiental: 'Ambiental',
+        sst: 'SST',
+        juridica: 'Jurídica',
+        social: 'Social',
+        tecnica: 'Técnica'
+    };
+    function htmlFiltroAreaCard(catid, nombre) {
+        var iconHtml = catid === 'todos'
+            ? '<span class="icon-box icon-box-verde">' + pcIcon('layout-grid', 20, '#1a5c35') + '</span>'
+            : ((typeof CAT_ICON_MAP !== 'undefined' && CAT_ICON_MAP[catid])
                 ? pcIconBox(catid)
-                : '<span class="icon-box icon-box-verde">' + pcIcon('clipboard-list', 20, '#1a5c35') + '</span>';
-            const btn = document.createElement('button');
-            btn.className = 'menu-item menu-item-area';
-            btn.type = 'button';
-            btn.setAttribute('aria-label', 'Filtrar frentes por ' + nombre);
-            btn.innerHTML =
-                '<span class="menu-area-top">' +
-                    iconHtml +
-                    '<span class="menu-area-chevron">' + pcIcon('chevron-right', 16, '#64748b') + '</span>' +
-                '</span>' +
-                '<span class="menu-area-label">' + nombre + '</span>';
-            btn.onclick = () => { mostrarPantalla('frentes'); aplicarFiltroCategoria(catid); };
-            cont.appendChild(btn);
+                : '<span class="icon-box icon-box-gris">' + pcIcon('clipboard-list', 20, '#475569') + '</span>');
+        var nombreLimpio = (nombre || '').replace(/^[^\p{L}\p{N}]+\s*/u, '');
+        return '<span class="filtro-area-icon">' + iconHtml + '</span>' +
+            '<span class="filtro-area-label">' + nombreLimpio + '</span>' +
+            '<span class="filtro-area-chevron">' + pcIcon('chevron-right', 16, '#64748b') + '</span>';
+    }
+    function crearChipFiltro(catid, nombre, esCustom) {
+        var chip = document.createElement('button');
+        chip.className = 'chip filtro-area-card';
+        chip.type = 'button';
+        chip.dataset.catid = catid;
+        if (esCustom) chip.dataset.custom = '1';
+        chip.setAttribute('aria-label', 'Filtrar por ' + nombre);
+        chip.innerHTML = htmlFiltroAreaCard(catid, nombre);
+        chip.addEventListener('click', function() { aplicarFiltroCategoria(catid); });
+        return chip;
+    }
+    function renderChipsCategorias() {
+        var grid = document.getElementById('chips-categorias');
+        if (!grid) return;
+        grid.innerHTML = '';
+        grid.appendChild(crearChipFiltro('todos', FILTRO_AREA_LABELS.todos, false));
+        CATEGORIAS_BASE.forEach(function(cb) {
+            grid.appendChild(crearChipFiltro(cb.id, FILTRO_AREA_LABELS[cb.id] || cb.nombre, false));
+        });
+        obtenerCategoriasCustom().forEach(function(cat) {
+            grid.appendChild(crearChipFiltro(cat.id, cat.nombre, true));
         });
     }
 
@@ -3545,21 +3509,6 @@ if ('serviceWorker' in navigator) {
         }
         return false;
     }
-    function syncChipsCategorias() {
-        var grid = document.getElementById('chips-categorias');
-        if (!grid) return;
-        grid.querySelectorAll('.chip[data-custom="1"]').forEach(function(el) { el.remove(); });
-        obtenerCategoriasCustom().forEach(function(cat) {
-            var chip = document.createElement('div');
-            chip.className = 'chip';
-            chip.dataset.catid = cat.id;
-            chip.dataset.custom = '1';
-            var nombre = (cat.nombre || '').replace(/^[^\p{L}\p{N}]+\s*/u, '');
-            chip.innerHTML = '<span class="chip-icon">' + pcIcon('clipboard-list', 22, '#475569') + '</span><span class="chip-label">' + nombre + '</span>';
-            chip.addEventListener('click', function() { aplicarFiltroCategoria(cat.id); });
-            grid.appendChild(chip);
-        });
-    }
 
     // ── Chips de categoría (filtro rápido en tab Frentes) ──
     function aplicarFiltroUI(catid) {
@@ -3573,9 +3522,7 @@ if ('serviceWorker' in navigator) {
         aplicarFiltroUI(catid);
         try { localStorage.setItem('proyecar_categoria_activa', catid); } catch (e) {}
     }
-    document.querySelectorAll('#chips-categorias .chip').forEach(chip => {
-        chip.addEventListener('click', () => aplicarFiltroCategoria(chip.dataset.catid));
-    });
+    renderChipsCategorias();
     aplicarFiltroUI(localStorage.getItem('proyecar_categoria_activa') || 'todos');
 
     // ── Swipe horizontal entre tabs ──
