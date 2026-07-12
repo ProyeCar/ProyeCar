@@ -852,7 +852,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.62";
+const APP_VERSION = "1.5.63";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -1636,10 +1636,98 @@ if ('serviceWorker' in navigator) {
             inspector: document.getElementById("inspector").value
         };
     }
+    const FRENTES_STORAGE_KEY = 'inspectorFrentesData';
+    const FRENTES_BACKUP_KEY = 'inspectorFrentesData_backup';
+
+    function normalizeItem(item) {
+        if (!item || typeof item !== 'object') return null;
+        return {
+            id: item.id || ('item_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5)),
+            texto: item.texto || '',
+            cumple: item.cumple === true ? true : (item.cumple === false ? false : null),
+            obs: item.obs || '',
+            tipoVerificacion: item.tipoVerificacion || 'foto',
+            verificacionVerbal: item.verificacionVerbal || ''
+        };
+    }
+    function normalizeCategoria(cat) {
+        if (!cat || typeof cat !== 'object') return null;
+        var items = Array.isArray(cat.items) ? cat.items.map(normalizeItem).filter(Boolean) : [];
+        return {
+            id: cat.id || ('custom_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5)),
+            nombre: cat.nombre || 'Área',
+            items: items
+        };
+    }
+    function normalizeFrente(f) {
+        if (!f || typeof f !== 'object') return null;
+        var cats = Array.isArray(f.categorias) ? f.categorias.map(normalizeCategoria).filter(Boolean) : [];
+        return {
+            nombre: String(f.nombre || 'Frente sin nombre'),
+            contratista: f.contratista || '',
+            categorias: cats,
+            fotos: Array.isArray(f.fotos) ? f.fotos : [],
+            observaciones: f.observaciones || '',
+            recomendaciones: f.recomendaciones || '',
+            fotoItems: (f.fotoItems && typeof f.fotoItems === 'object') ? f.fotoItems : {}
+        };
+    }
+    function ensureCategoriasBase(f) {
+        var idsExistentes = f.categorias.map(function(c) { return c.id; });
+        var categoriasFaltantes = CATEGORIAS_BASE.filter(function(cb) { return !idsExistentes.includes(cb.id); });
+        if (categoriasFaltantes.length > 0) {
+            f.categorias = f.categorias.concat(JSON.parse(JSON.stringify(categoriasFaltantes)));
+        }
+        if (f.categorias.length === 0) {
+            f.categorias = JSON.parse(JSON.stringify(CATEGORIAS_BASE));
+        }
+        return f;
+    }
+    function normalizeFrentes(arr) {
+        if (!Array.isArray(arr)) return [];
+        return arr.map(normalizeFrente).filter(Boolean).map(ensureCategoriasBase);
+    }
+    function ensureTipoVerificacion(frentesData) {
+        frentesData.forEach(function(f) {
+            f.categorias.forEach(function(cat) {
+                cat.items.forEach(function(item) {
+                    if (!item.tipoVerificacion) {
+                        var base = CATEGORIAS_BASE.find(function(cb) { return cb.id === cat.id; });
+                        var itemBase = base ? base.items.find(function(i) { return i.id === item.id; }) : null;
+                        item.tipoVerificacion = itemBase ? itemBase.tipoVerificacion : 'foto';
+                    }
+                });
+            });
+        });
+    }
+    function parseFrentesStorage(raw) {
+        var data = JSON.parse(raw);
+        if (!data || typeof data !== 'object') throw new Error('Datos inválidos');
+        var list = normalizeFrentes(data.frentes);
+        ensureTipoVerificacion(list);
+        return {
+            frentes: list,
+            proyecto: data.proyecto || '',
+            fecha: data.fecha || '',
+            ubicacion: data.ubicacion || '',
+            inspector: data.inspector || ''
+        };
+    }
+    function backupFrentesStorage(nextJson) {
+        try {
+            var prev = localStorage.getItem(FRENTES_STORAGE_KEY);
+            if (prev && prev !== nextJson) {
+                localStorage.setItem(FRENTES_BACKUP_KEY, prev);
+            }
+        } catch (e) { console.warn('Backup frentes:', e); }
+    }
     function extractCustomItems(frentesData) {
         var result = {};
+        if (!Array.isArray(frentesData)) return result;
         frentesData.forEach(function(fr) {
+            if (!fr || !Array.isArray(fr.categorias)) return;
             fr.categorias.forEach(function(cat) {
+                if (!cat || !Array.isArray(cat.items)) return;
                 var base = CATEGORIAS_BASE.find(function(cb) { return cb.id === cat.id; });
                 var idsBase = base ? base.items.map(function(i) { return i.id; }) : [];
                 var custom = cat.items.filter(function(it) { return !idsBase.includes(it.id); });
@@ -1666,17 +1754,22 @@ if ('serviceWorker' in navigator) {
 
     function saveToLocal() {
         const form = getFormValues();
+        frentes = normalizeFrentes(frentes);
         var itemsPersonalizados = extractCustomItems(frentes);
         try {
             const data = { frentes, ...form };
-            localStorage.setItem("inspectorFrentesData", JSON.stringify(data));
+            const dataJson = JSON.stringify(data);
+            backupFrentesStorage(dataJson);
+            localStorage.setItem(FRENTES_STORAGE_KEY, dataJson);
             showSavedMessage();
             try { localStorage.setItem("proyecar_items_custom", JSON.stringify(itemsPersonalizados)); } catch(e) {}
             return true;
         } catch(e) {
             try {
                 const dataNoFotos = { frentes: frentes.map(f => ({...f, fotos:[]})), ...form };
-                localStorage.setItem("inspectorFrentesData", JSON.stringify(dataNoFotos));
+                const dataJson = JSON.stringify(dataNoFotos);
+                backupFrentesStorage(dataJson);
+                localStorage.setItem(FRENTES_STORAGE_KEY, dataJson);
                 showSavedMessage();
                 try { localStorage.setItem("proyecar_items_custom", JSON.stringify(itemsPersonalizados)); } catch(e2) {}
             } catch(e2) {
@@ -1693,43 +1786,50 @@ if ('serviceWorker' in navigator) {
             todas.forEach(r => { window._fotoCache[r.id] = r.dataUrl; });
         } catch(e) { console.warn('IDB load error:', e); }
 
-        const saved = localStorage.getItem("inspectorFrentesData");
+        const saved = localStorage.getItem(FRENTES_STORAGE_KEY);
+        const backup = localStorage.getItem(FRENTES_BACKUP_KEY);
+        var loaded = null;
+
         if (saved) {
+            try { loaded = parseFrentesStorage(saved); }
+            catch (e) {
+                console.error('Error cargando frentes guardados:', e);
+                if (backup) {
+                    try {
+                        loaded = parseFrentesStorage(backup);
+                        console.warn('Datos restaurados desde respaldo automático');
+                    } catch (e2) { console.error('Respaldo también inválido:', e2); }
+                }
+            }
+        }
+
+        if (loaded && loaded.frentes.length === 0 && backup) {
             try {
-                const data = JSON.parse(saved);
-                if (data.frentes) frentes = data.frentes;
-                frentes = frentes.map(f => {
-                    const idsExistentes = f.categorias.map(c => c.id);
-                    const categoriasFaltantes = CATEGORIAS_BASE.filter(cb => !idsExistentes.includes(cb.id));
-                    if (categoriasFaltantes.length > 0) {
-                        f.categorias = [
-                            ...f.categorias,
-                            ...JSON.parse(JSON.stringify(categoriasFaltantes))
-                        ];
-                    }
-                    return f;
-                });
-                frentes.forEach(f => {
-                    f.categorias.forEach(cat => {
-                        cat.items.forEach(item => {
-                            if (!item.tipoVerificacion) {
-                                var base = CATEGORIAS_BASE.find(cb => cb.id === cat.id);
-                                var itemBase = base ? base.items.find(i => i.id === item.id) : null;
-                                item.tipoVerificacion = itemBase ? itemBase.tipoVerificacion : "foto";
-                            }
-                        });
-                    });
-                });
-                proyectoInput.value = data.proyecto || "";
-                fechaInput.value = data.fecha || "";
-                ubicacionInput.value = data.ubicacion || "";
-                inspectorInput.value = data.inspector || "";
-            } catch(e) { console.error(e); }
-        } else {
-            frentes = [
+                var fromBackup = parseFrentesStorage(backup);
+                if (fromBackup.frentes.length > 0) {
+                    loaded = fromBackup;
+                    console.warn('Lista vacía — se usó respaldo con frentes');
+                }
+            } catch (e) {}
+        }
+
+        if (loaded) {
+            frentes = loaded.frentes;
+            proyectoInput.value = loaded.proyecto || "";
+            fechaInput.value = loaded.fecha || "";
+            ubicacionInput.value = loaded.ubicacion || "";
+            inspectorInput.value = loaded.inspector || "";
+        } else if (!saved) {
+            frentes = normalizeFrentes([
                 { nombre: "Frente 1 - Arroyo Ají Molido", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" },
                 { nombre: "Frente 2 - Box Matagente", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" }
-            ];
+            ]);
+        } else {
+            console.warn('Datos dañados — usando valores por defecto');
+            frentes = normalizeFrentes([
+                { nombre: "Frente 1 - Arroyo Ají Molido", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" },
+                { nombre: "Frente 2 - Box Matagente", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" }
+            ]);
         }
         // Backfill item.obs para ítems calificados sin observación
         var obsBackfillChanged = false;
@@ -1761,6 +1861,8 @@ if ('serviceWorker' in navigator) {
         }
     };
     function renderFrentes() {
+        try {
+        frentes = normalizeFrentes(frentes);
         frentesContainer.innerHTML = "";
         const coloresCat = cargarColoresCategoria();
         frentes.forEach((frente, idx) => {
@@ -2318,6 +2420,12 @@ if ('serviceWorker' in navigator) {
             } catch(e) {}
         }
         if (typeof pcIconHydrateAll === 'function') pcIconHydrateAll();
+        } catch (e) {
+            console.error('renderFrentes:', e);
+            if (frentesContainer) {
+                frentesContainer.innerHTML = '<p style="color:#b91c1c;padding:12px;font-weight:600;">Error al mostrar frentes. Recarga la app o restaura desde el historial.</p>';
+            }
+        }
     }
 
     function generarResumenEjecutivo(idx) {
@@ -3495,7 +3603,7 @@ if ('serviceWorker' in navigator) {
         if (!confirm('¿Restaurar esta inspección? Se reemplazarán los datos actuales.')) return;
         const hist = getHistorial();
         const r = hist[idx];
-        frentes = r.frentes;
+        frentes = normalizeFrentes(r.frentes || []);
         proyectoInput.value = r.proyecto || '';
         fechaInput.value = r.fecha || '';
         ubicacionInput.value = r.ubicacion || '';

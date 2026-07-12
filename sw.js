@@ -1,5 +1,5 @@
-// build: 2026-07-12-action-buttons-contrast
-const APP_VERSION = '1.5.62';
+// build: 2026-07-12-frentes-areas-persistence-fix
+const APP_VERSION = '1.5.63';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {
