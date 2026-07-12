@@ -884,7 +884,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.64";
+const APP_VERSION = "1.5.65";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -1968,6 +1968,10 @@ if ('serviceWorker' in navigator) {
                     const iconBoxWrap = document.createElement("span");
                     iconBoxWrap.innerHTML = pcIconBox(cat.id);
                     catLabelWrap.appendChild(iconBoxWrap.firstChild);
+                } else {
+                    const iconBoxWrap = document.createElement("span");
+                    iconBoxWrap.innerHTML = '<span class="icon-box icon-box-gris">' + pcIcon('clipboard-list', 20, '#475569') + '</span>';
+                    catLabelWrap.appendChild(iconBoxWrap.firstChild);
                 }
                 const catNombre = document.createElement("span");
                 catNombre.innerText = cat.nombre.replace(/^[^\p{L}\p{N}]+\s*/u, '');
@@ -2207,13 +2211,15 @@ if ('serviceWorker' in navigator) {
                 setTimeout(() => {
                     const nombre = prompt("Nombre del área nueva:");
                     if (!nombre || !nombre.trim()) return;
+                    var newId = "custom_" + Date.now();
                     frentes[idx].categorias.push({
-                        id: "custom_" + Date.now(),
+                        id: newId,
                         nombre: nombre.trim(),
                         items: []
                     });
                     saveToLocal();
                     renderFrentes();
+                    aplicarFiltroCategoria(newId);
                 }, 10);
             };
             accionesCarruselBody.appendChild(btnAgregarCat);
@@ -2397,7 +2403,10 @@ if ('serviceWorker' in navigator) {
             // Body is open by default - no maxHeight restriction needed
             frentesContainer.appendChild(frenteDiv);
         });
-        aplicarFiltroUI(localStorage.getItem('proyecar_categoria_activa') || 'todos');
+        syncChipsCategorias();
+        var filtroActivo = localStorage.getItem('proyecar_categoria_activa') || 'todos';
+        if (filtroActivo !== 'todos' && !chipCategoriaExiste(filtroActivo)) filtroActivo = 'todos';
+        aplicarFiltroUI(filtroActivo);
         // Procesar importación pendiente si existe (modal HTML — evita confirm() bloqueado en iOS Safari)
         var pendingImport = sessionStorage.getItem('proyecar_import_pending');
         if (pendingImport) {
@@ -3377,6 +3386,7 @@ if ('serviceWorker' in navigator) {
     function renderMenuAreas() {
         const cont = document.getElementById('areas-menu-lista');
         if (!cont) return;
+        syncChipsCategorias();
         cont.innerHTML = '';
         const chips = document.querySelectorAll('#chips-categorias .chip');
         chips.forEach(chip => {
@@ -3402,8 +3412,44 @@ if ('serviceWorker' in navigator) {
         });
     }
 
+    // ── Chips dinámicos para áreas custom agregadas en frentes ──
+    function obtenerCategoriasCustom() {
+        var map = {};
+        frentes.forEach(function(f) {
+            (f.categorias || []).forEach(function(cat) {
+                if (!cat || !cat.id) return;
+                if (CATEGORIAS_BASE.some(function(cb) { return cb.id === cat.id; })) return;
+                if (!map[cat.id]) map[cat.id] = cat.nombre || cat.id;
+            });
+        });
+        return Object.keys(map).map(function(id) { return { id: id, nombre: map[id] }; });
+    }
+    function chipCategoriaExiste(catid) {
+        var chips = document.querySelectorAll('#chips-categorias .chip');
+        for (var i = 0; i < chips.length; i++) {
+            if (chips[i].dataset.catid === catid) return true;
+        }
+        return false;
+    }
+    function syncChipsCategorias() {
+        var grid = document.getElementById('chips-categorias');
+        if (!grid) return;
+        grid.querySelectorAll('.chip[data-custom="1"]').forEach(function(el) { el.remove(); });
+        obtenerCategoriasCustom().forEach(function(cat) {
+            var chip = document.createElement('div');
+            chip.className = 'chip';
+            chip.dataset.catid = cat.id;
+            chip.dataset.custom = '1';
+            var nombre = (cat.nombre || '').replace(/^[^\p{L}\p{N}]+\s*/u, '');
+            chip.innerHTML = '<span class="chip-icon">' + pcIcon('clipboard-list', 22, '#475569') + '</span><span class="chip-label">' + nombre + '</span>';
+            chip.addEventListener('click', function() { aplicarFiltroCategoria(cat.id); });
+            grid.appendChild(chip);
+        });
+    }
+
     // ── Chips de categoría (filtro rápido en tab Frentes) ──
     function aplicarFiltroUI(catid) {
+        if (catid !== 'todos' && !chipCategoriaExiste(catid)) catid = 'todos';
         document.querySelectorAll('#chips-categorias .chip').forEach(c => c.classList.toggle('active', c.dataset.catid === catid));
         document.querySelectorAll('#frentes-container .categoria').forEach(cat => {
             cat.style.display = (catid === 'todos' || cat.dataset.catid === catid) ? '' : 'none';

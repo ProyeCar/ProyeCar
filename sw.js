@@ -1,5 +1,5 @@
-// build: 2026-07-12-mas-filtrar-por-area
-const APP_VERSION = '1.5.64';
+// build: 2026-07-12-custom-area-cards-chips
+const APP_VERSION = '1.5.65';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {
