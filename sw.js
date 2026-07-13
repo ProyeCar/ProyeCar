@@ -1,5 +1,5 @@
-// build: 2026-07-12-fix-boton-eliminar-frente
-const APP_VERSION = '1.5.97';
+// build: 2026-07-12-fix-match-comparacion-semanal
+const APP_VERSION = '1.5.98';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {

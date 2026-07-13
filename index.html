@@ -1382,7 +1382,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.97";
+const APP_VERSION = "1.5.98";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -2553,35 +2553,95 @@ document.addEventListener('DOMContentLoaded', function() {
         return n ? (z + ' - ' + n) : z;
     }
     var MATCH_CONFIRM_LS = 'proyecar_frente_match_confirm';
+    var MATCH_LINKS_LS = 'proyecar_frente_match_links';
+    function limpiarNombreFrenteParaMatch(nombre) {
+        var nom = String(nombre || '').trim();
+        if (!nom) return '';
+        nom = nom.replace(/^frente\s*\d*\s*[-–—]\s*/i, '');
+        nom = nom.replace(/^frente\s*[-–—]\s*/i, '');
+        nom = nom.replace(/ci[eé]naga\s+de\s+la\s+virgen\s*[-–—]\s*/gi, '');
+        nom = nom.replace(/^ci[eé]naga\s+de\s+la\s+virgen\s*/gi, '');
+        nom = nom.replace(/\s*[-–—]\s*ci[eé]naga\s+de\s+la\s+virgen/gi, '');
+        return nom.trim() || String(nombre || '').trim();
+    }
+    function frenteMatchIdentityKey(f) {
+        if (!f) return '|||';
+        return frenteNormStr(limpiarNombreFrenteParaMatch(f.nombre)) + '|' + frenteNormStr(f.contratista) + '|' + frenteNormStr(f.numeroContrato);
+    }
     function loadMatchConfirmados() {
         try { return JSON.parse(localStorage.getItem(MATCH_CONFIRM_LS) || '[]'); } catch (e) { return []; }
     }
     function saveMatchConfirmados(arr) {
         try { localStorage.setItem(MATCH_CONFIRM_LS, JSON.stringify(arr)); } catch (e) {}
     }
+    function loadMatchLinks() {
+        try { return JSON.parse(localStorage.getItem(MATCH_LINKS_LS) || '[]'); } catch (e) { return []; }
+    }
+    function saveMatchLinks(arr) {
+        try { localStorage.setItem(MATCH_LINKS_LS, JSON.stringify(arr)); } catch (e) {}
+    }
     function matchConfirmKey(fActual, histId, histNombre) {
-        return frenteNormStr(fActual.nombre) + '|' + frenteNormStr(fActual.contratista) + '|' + frenteNormStr(fActual.numeroContrato) + '|' + histId + '|' + frenteNormStr(histNombre);
+        var idPart = (histId == null || histId === '' || (typeof histId === 'number' && isNaN(histId))) ? '' : String(histId);
+        return frenteMatchIdentityKey(fActual) + '|' + idPart + '|' + frenteNormStr(limpiarNombreFrenteParaMatch(histNombre));
     }
     function isMatchConfirmed(key) {
         return loadMatchConfirmados().indexOf(key) >= 0;
     }
-    function confirmarMatchFrente(key) {
+    function isMatchConfirmedFor(fActual, histF) {
+        if (!fActual || !histF) return false;
+        var identity = frenteMatchIdentityKey(fActual);
+        var histClean = frenteNormStr(limpiarNombreFrenteParaMatch(histF.nombre));
+        var links = loadMatchLinks();
+        for (var i = 0; i < links.length; i++) {
+            var l = links[i];
+            if (l.identity === identity && l.histNombreClean === histClean) return true;
+        }
+        var legacy = loadMatchConfirmados();
+        for (var j = 0; j < legacy.length; j++) {
+            var k = String(legacy[j] || '');
+            if (k.indexOf(identity + '|') === 0 && k.slice(-histClean.length) === histClean) return true;
+        }
+        return false;
+    }
+    function persistMatchConfirmado(key) {
         var arr = loadMatchConfirmados();
         if (arr.indexOf(key) < 0) { arr.push(key); saveMatchConfirmados(arr); }
+    }
+    function persistMatchLink(fActual, histF) {
+        var link = {
+            identity: frenteMatchIdentityKey(fActual),
+            histNombreClean: frenteNormStr(limpiarNombreFrenteParaMatch(histF.nombre)),
+            histNombreRaw: (histF.nombre || '').trim(),
+            contratista: frenteNormStr(fActual.contratista),
+            numeroContrato: frenteNormStr(fActual.numeroContrato),
+            confirmedAt: Date.now()
+        };
+        var arr = loadMatchLinks();
+        var dup = arr.some(function(l) {
+            return l.identity === link.identity && l.histNombreClean === link.histNombreClean;
+        });
+        if (!dup) { arr.push(link); saveMatchLinks(arr); }
     }
     function frenteContratoCoincide(f, ref) {
         return frenteNormStr(f.contratista) === frenteNormStr(ref.contratista)
             && frenteNormStr(f.numeroContrato) === frenteNormStr(ref.numeroContrato);
     }
+    function frenteContratoFuerteCoincide(f, ref) {
+        if (!frenteContratoCoincide(f, ref)) return false;
+        return !!(f.contratista || '').trim() && !!(f.numeroContrato || '').trim();
+    }
     function frenteNombreExacto(f, ref) {
-        return frenteNormStr(f.nombre) === frenteNormStr(ref.nombre);
+        return frenteNormStr(limpiarNombreFrenteParaMatch(f.nombre)) === frenteNormStr(limpiarNombreFrenteParaMatch(ref.nombre));
     }
     function frenteNombreLegacyCoincide(actual, histF) {
-        var actNom = (actual.nombre || '').trim();
-        var histNom = (histF.nombre || '').trim();
+        var actNom = limpiarNombreFrenteParaMatch(actual.nombre);
+        var histNom = limpiarNombreFrenteParaMatch(histF.nombre);
+        var actRaw = (actual.nombre || '').trim();
+        var histRaw = (histF.nombre || '').trim();
         if (!actNom || !histNom) return false;
-        if (frenteNormStr(histNom) === frenteNormStr(frenteNombreCombinado(actual))) return true;
-        if (histNom.length > actNom.length && histNom.toLowerCase().indexOf(actNom.toLowerCase()) >= 0 && actNom.length >= 4) return true;
+        if (frenteNormStr(histNom) === frenteNormStr(actNom)) return true;
+        if (frenteNormStr(histRaw) === frenteNormStr(frenteNombreCombinado(actual))) return true;
+        if (histRaw.length > actRaw.length && histRaw.toLowerCase().indexOf(actRaw.toLowerCase()) >= 0 && actRaw.length >= 4) return true;
         return false;
     }
     function clasificarMatchFrente(actual, histF) {
@@ -2589,9 +2649,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!frenteContratoCoincide(actual, histF)) return { level: 'none' };
         if (frenteNombreExacto(actual, histF)) return { level: 'exact' };
         if (frenteNombreLegacyCoincide(actual, histF)) {
-            if (frenteNormStr(actual.nombre) !== frenteNormStr(histF.nombre)) return { level: 'tentative', histF: histF };
+            if (!frenteNombreExacto(actual, histF) && frenteNormStr(actual.nombre) !== frenteNormStr(histF.nombre)) {
+                return { level: 'tentative', histF: histF };
+            }
             return { level: 'legacy' };
         }
+        if (frenteContratoFuerteCoincide(actual, histF)) return { level: 'contract', histF: histF };
         return { level: 'none' };
     }
     window.migrarZonaDesdeNombre = migrarZonaDesdeNombre;
@@ -2631,8 +2694,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         return { zona: '', nombre: nombre };
     }
+    window.limpiarNombreFrenteParaMatch = limpiarNombreFrenteParaMatch;
+    window.isMatchConfirmedFor = isMatchConfirmedFor;
     window.confirmarMatchFrente = function(fActual, histId, histNombre) {
-        confirmarMatchFrente(matchConfirmKey(fActual, histId, histNombre));
+        var histF = {
+            nombre: histNombre || '',
+            contratista: (fActual && fActual.contratista) || '',
+            numeroContrato: (fActual && fActual.numeroContrato) || ''
+        };
+        persistMatchLink(fActual, histF);
+        persistMatchConfirmado(matchConfirmKey(fActual, histId, histNombre));
         if (typeof csRefrescarSiAbierto === 'function') csRefrescarSiAbierto();
     };
     function normalizeFrente(f) {
@@ -6492,12 +6563,11 @@ function csBuscarHistorialCoincidente(frenteRef, contratistaArg, numeroContratoA
     hist.forEach(function(reg) {
         (reg.frentes || []).forEach(function(hf) {
             var mc = typeof clasificarMatchFrente === 'function' ? clasificarMatchFrente(fActual, hf) : { level: 'none' };
-            if (mc.level === 'exact' || mc.level === 'legacy') {
+            if (mc.level === 'exact' || mc.level === 'legacy' || mc.level === 'contract') {
                 confirmed.push({ insp: reg, frenteHist: hf, level: mc.level });
             } else if (mc.level === 'tentative') {
-                var key = matchConfirmKey(fActual, reg.id, hf.nombre);
-                if (isMatchConfirmed(key)) confirmed.push({ insp: reg, frenteHist: hf, level: 'confirmed' });
-                else tentative.push({ insp: reg, frenteHist: hf, key: key });
+                if (isMatchConfirmedFor(fActual, hf)) confirmed.push({ insp: reg, frenteHist: hf, level: 'confirmed' });
+                else tentative.push({ insp: reg, frenteHist: hf });
             }
         });
     });
@@ -6529,9 +6599,11 @@ function csResolverTodasComparaciones() {
     var filtroActivo = csObtenerFiltroAreasActivas();
     frentes.forEach(function(f) {
         var busqueda = csBuscarHistorialCoincidente(f);
-        busqueda.tentative.forEach(function(t) {
-            pendientes.push({ frente: f, tentative: t });
-        });
+        if (!busqueda.confirmed.length) {
+            busqueda.tentative.forEach(function(t) {
+                pendientes.push({ frente: f, tentative: t });
+            });
+        }
         if (!busqueda.confirmed.length) {
             omitidos.push({ nombre: f.nombre || 'Sin nombre', contratista: f.contratista, numeroContrato: f.numeroContrato, zona: f.zona || '', tienePendiente: busqueda.tentative.length > 0 });
             return;
@@ -6568,16 +6640,18 @@ function csActualizarResumenUI(res) {
                     return '<div class="cs-pendiente-item">'
                         + '<span style="flex:1;min-width:180px;"><strong>' + csEscHtml(p.frente.nombre) + '</strong>' + ct
                         + ' ↔ histórico «' + csEscHtml(p.tentative.frenteHist.nombre) + '» (' + csEscHtml(p.tentative.insp.fecha || '') + ')</span>'
-                        + '<button type="button" class="btn-confirmar-match" data-hist-id="' + p.tentative.insp.id + '" data-hist-nom="' + csEscHtml(p.tentative.frenteHist.nombre).replace(/"/g, '&quot;') + '" data-f-nom="' + csEscHtml(p.frente.nombre).replace(/"/g, '&quot;') + '" data-f-cont="' + csEscHtml(p.frente.contratista || '').replace(/"/g, '&quot;') + '" data-f-ctr="' + csEscHtml(p.frente.numeroContrato || '').replace(/"/g, '&quot;') + '">Confirmar</button>'
+                        + '<button type="button" class="btn-confirmar-match" data-hist-id="' + (p.tentative.insp.id != null ? p.tentative.insp.id : '') + '" data-hist-nom="' + csEscHtml(p.tentative.frenteHist.nombre).replace(/"/g, '&quot;') + '" data-f-nom="' + csEscHtml(p.frente.nombre).replace(/"/g, '&quot;') + '" data-f-cont="' + csEscHtml(p.frente.contratista || '').replace(/"/g, '&quot;') + '" data-f-ctr="' + csEscHtml(p.frente.numeroContrato || '').replace(/"/g, '&quot;') + '">Aceptar</button>'
                         + '</div>';
                 }).join('');
             pendientesEl.style.display = '';
             pendientesEl.querySelectorAll('.btn-confirmar-match').forEach(function(btn) {
                 btn.onclick = function() {
+                    var histIdAttr = btn.getAttribute('data-hist-id');
+                    var histId = histIdAttr ? parseInt(histIdAttr, 10) : null;
                     if (typeof window.confirmarMatchFrente === 'function') {
                         window.confirmarMatchFrente(
                             { nombre: btn.getAttribute('data-f-nom'), contratista: btn.getAttribute('data-f-cont'), numeroContrato: btn.getAttribute('data-f-ctr') },
-                            parseInt(btn.getAttribute('data-hist-id'), 10),
+                            isNaN(histId) ? null : histId,
                             btn.getAttribute('data-hist-nom')
                         );
                     }
