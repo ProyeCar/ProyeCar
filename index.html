@@ -1463,7 +1463,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.121";
+const APP_VERSION = "1.5.122";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 var _pwaRecargando = false;
@@ -3508,6 +3508,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         obsInput.style.background = '#f0fdf4';
                         setTimeout(() => { obsInput.style.background = ''; }, 2000);
                         saveToLocal();
+                        if (typeof csRefrescarSiAbierto === 'function') csRefrescarSiAbierto();
                     };
                     btnNo.onclick = (e) => {
                         e.preventDefault(); e.stopPropagation();
@@ -3527,6 +3528,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         obsInput.style.background = '#fefce8';
                         setTimeout(() => { obsInput.style.background = ''; }, 2000);
                         saveToLocal();
+                        if (typeof csRefrescarSiAbierto === 'function') csRefrescarSiAbierto();
                     };
                     estadoDiv.appendChild(btnSi); estadoDiv.appendChild(btnNo);
                     const editar = document.createElement("button"); editar.innerHTML = pcIconEdit(18); editar.className = "btn-editar";
@@ -5921,7 +5923,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 fotos: [],
                 observaciones: f.observaciones,
                 recomendaciones: f.recomendaciones,
-                categorias: f.categorias
+                categorias: JSON.parse(JSON.stringify(f.categorias || []))
             }))
         };
         const hist = getHistorial();
@@ -6140,10 +6142,12 @@ document.addEventListener('DOMContentLoaded', function() {
             return t > 0 ? Math.round(c / t * 100) : null;
         }
         function clasificarCambioItem(ant, rec) {
-            if (ant === false && rec === true) return 'mejoró';
-            if (ant === null && rec === true) return 'mejoró';
-            if (ant === true && rec === false) return 'empeoró';
-            if (ant === null && rec === false) return 'empeoró';
+            var a = ant === true ? true : (ant === false ? false : null);
+            var r = rec === true ? true : (rec === false ? false : null);
+            if (a === false && r === true) return 'mejoró';
+            if (a === null && r === true) return 'mejoró';
+            if (a === true && r === false) return 'empeoró';
+            if (a === null && r === false) return 'empeoró';
             return 'igual';
         }
         function compararItemsCategoria(catR, catA) {
@@ -7564,15 +7568,59 @@ function csFrenteMatch(f, nombre, contratista, numeroContrato) {
     return CompMotor.frenteMatch(f, { nombre: nombre, contratista: contratista, numeroContrato: numeroContrato });
 }
 
-function csSnapshotActual() {
+function csClonarInspeccion(insp) {
+    try { return JSON.parse(JSON.stringify(insp || {})); } catch (e) { return insp || {}; }
+}
+
+function csZonaFrenteRef(f) {
+    return (typeof esFrenteGrupoCienaga === 'function' && esFrenteGrupoCienaga(f)) ? ZONA_CIENAGA : (f.zona || '');
+}
+
+function csInspeccionActualParaComparar() {
+    if (typeof saveToLocal === 'function') saveToLocal();
+    var areasEval = csObtenerFiltroAreasActivas();
+    var frentesBase = typeof frentes !== 'undefined' ? frentes : [];
+    var frentesFiltrados = typeof window.frentesParaInspeccionActiva === 'function'
+        ? window.frentesParaInspeccionActiva(frentesBase, areasEval)
+        : frentesBase;
     return {
         proyecto: (document.getElementById('proyecto') || {}).value || '',
         fecha: (document.getElementById('fecha') || {}).value || '',
         ubicacion: (document.getElementById('ubicacion') || {}).value || '',
         inspector: (document.getElementById('inspector') || {}).value || '',
-        frentes: typeof frentes !== 'undefined' ? frentes : [],
-        areasEvaluadas: csObtenerFiltroAreasActivas()
+        frentes: csClonarInspeccion(frentesFiltrados),
+        areasEvaluadas: areasEval.slice()
     };
+}
+
+function csSnapshotActual() {
+    return csInspeccionActualParaComparar();
+}
+
+function csCumpleSnapshotFrente(insp, fRef) {
+    var inf = csFiltrarInspeccionPorFrente(insp, fRef.nombre, fRef.contratista, fRef.numeroContrato, csZonaFrenteRef(fRef));
+    var f = (inf.frentes || [])[0];
+    if (!f) return '';
+    var parts = [];
+    (f.categorias || []).forEach(function(cat) {
+        (cat.items || []).forEach(function(it) {
+            if (it && it.id) parts.push(it.id + ':' + String(it.cumple));
+        });
+    });
+    return parts.sort().join('|');
+}
+
+/** Elige inspección anterior: si la más reciente es idéntica a la actual, usa la previa (comparación semanal real). */
+function csSeleccionarMatchAnterior(confirmed, actualInsp, fRef) {
+    if (!confirmed || !confirmed.length) return null;
+    var snapActual = csCumpleSnapshotFrente(actualInsp, fRef);
+    for (var i = 0; i < confirmed.length; i++) {
+        var cand = confirmed[i];
+        var snapCand = csCumpleSnapshotFrente(cand.insp, fRef);
+        if (i === 0 && snapActual === snapCand && confirmed.length > 1) continue;
+        return cand;
+    }
+    return confirmed[0];
 }
 
 function csBuscarHistorialCoincidente(frenteRef, contratistaArg, numeroContratoArg) {
@@ -7601,11 +7649,11 @@ function csBuscarHistorialCoincidente(frenteRef, contratistaArg, numeroContratoA
 }
 
 function csFiltrarInspeccionPorFrente(insp, nombre, contratista, numeroContrato, zonaOpcional) {
+    var copia = csClonarInspeccion(insp);
     var ref = { zona: zonaOpcional || '', nombre: nombre, contratista: contratista, numeroContrato: numeroContrato };
-    var ff = (insp.frentes || []).filter(function(f) {
+    var ff = (copia.frentes || []).filter(function(f) {
         return csFrenteMatch(f, nombre, contratista, numeroContrato) || (typeof clasificarMatchFrente === 'function' && clasificarMatchFrente(ref, f).level !== 'none');
     });
-    var copia = Object.assign({}, insp);
     copia.frentes = ff.length ? ff : [{ zona: ref.zona, nombre: nombre, contratista: contratista, numeroContrato: numeroContrato, categorias: [] }];
     return copia;
 }
@@ -7621,10 +7669,8 @@ function csResolverTodasComparaciones() {
     if (typeof frentes === 'undefined' || !frentes.length) return { comparables: [], omitidos: [], pendientes: [] };
     var comparables = [], omitidos = [], pendientes = [];
     var filtroActivo = csObtenerFiltroAreasActivas();
-    var frentesActivos = typeof window.frentesParaInspeccionActiva === 'function'
-        ? window.frentesParaInspeccionActiva(frentes, filtroActivo)
-        : (typeof window.filtrarFrentesPorSeleccionInspeccion === 'function'
-            ? window.filtrarFrentesPorSeleccionInspeccion(frentes) : frentes);
+    var actualGlobal = csInspeccionActualParaComparar();
+    var frentesActivos = actualGlobal.frentes || [];
     frentesActivos.forEach(function(f) {
         var busqueda = csBuscarHistorialCoincidente(f);
         if (!busqueda.confirmed.length) {
@@ -7636,16 +7682,16 @@ function csResolverTodasComparaciones() {
             omitidos.push({ nombre: f.nombre || 'Sin nombre', contratista: f.contratista, numeroContrato: f.numeroContrato, zona: f.zona || '', tienePendiente: busqueda.tentative.length > 0 });
             return;
         }
-        var best = busqueda.confirmed[0];
-        var actual = csFiltrarInspeccionPorFrente(csSnapshotActual(), f.nombre, f.contratista, f.numeroContrato, esFrenteGrupoCienaga(f) ? ZONA_CIENAGA : '');
-        var anteriorInsp = csFiltrarInspeccionPorFrente(best.insp, f.nombre, f.contratista, f.numeroContrato, esFrenteGrupoCienaga(f) ? ZONA_CIENAGA : '');
+        var best = csSeleccionarMatchAnterior(busqueda.confirmed, actualGlobal, f);
+        if (!best) return;
+        var actual = csFiltrarInspeccionPorFrente(actualGlobal, f.nombre, f.contratista, f.numeroContrato, csZonaFrenteRef(f));
+        var anteriorInsp = csFiltrarInspeccionPorFrente(csClonarInspeccion(best.insp), f.nombre, f.contratista, f.numeroContrato, csZonaFrenteRef(f));
         var filtroIds = typeof areasEvaluadasParaComparacion === 'function'
             ? areasEvaluadasParaComparacion(actual, anteriorInsp, filtroActivo)
             : filtroActivo;
         var built = CompMotor.construirDesdePar(actual, anteriorInsp, [f], { modo: 'auto', filtroAreaIds: filtroIds });
         if (built.comparables[0]) comparables.push(built.comparables[0]);
     });
-    var actualGlobal = typeof csSnapshotActual === 'function' ? csSnapshotActual() : null;
     var anteriorGlobal = comparables.length ? comparables[0].anterior : null;
     return { modo: 'auto', comparables: comparables, omitidos: omitidos, pendientes: pendientes, reciente: actualGlobal, anterior: anteriorGlobal };
 }
