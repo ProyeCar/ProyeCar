@@ -1,5 +1,5 @@
-// build: 2026-07-12-comparacion-semanal-n-frentes
-const APP_VERSION = '1.5.89';
+// build: 2026-07-12-comparacion-semanal-auto-frentes
+const APP_VERSION = '1.5.90';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {
