@@ -383,6 +383,68 @@
             gap: 10px;
             width: 100%;
         }
+        .frente-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .btn-seleccionar-frente {
+            position: relative;
+            overflow: hidden;
+            background: rgba(255,255,255,0.92) !important;
+            color: #166534 !important;
+            border: 1.5px solid #86efac !important;
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.76rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 1px 4px rgba(22,101,52,0.12) !important;
+            flex-shrink: 0;
+            margin-top: 4px;
+            transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .btn-seleccionar-frente:hover { background: #f0fdf4 !important; border-color: #4ade80 !important; }
+        .btn-seleccionar-frente.activo {
+            background: linear-gradient(135deg, #16a34a, #22c55e) !important;
+            color: #fff !important;
+            border-color: #15803d !important;
+            box-shadow: 0 2px 10px rgba(22,163,74,0.35) !important;
+        }
+        .btn-seleccionar-frente.glow-once {
+            animation: frente-sel-glow 0.55s ease-out 1;
+        }
+        .btn-seleccionar-frente__ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(34, 197, 94, 0.38);
+            pointer-events: none;
+            transform: scale(0);
+            animation: frente-sel-ripple 0.45s ease-out forwards;
+        }
+        .btn-sel-ring {
+            width: 14px;
+            height: 14px;
+            border: 2px solid currentColor;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+        @keyframes frente-sel-ripple {
+            to { transform: scale(1); opacity: 0; }
+        }
+        @keyframes frente-sel-glow {
+            0% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.65); }
+            70% { box-shadow: 0 0 0 10px rgba(74, 222, 128, 0); }
+            100% { box-shadow: 0 2px 10px rgba(22,163,74,0.35); }
+        }
+        .frente-card.frente-seleccionado-inspeccion {
+            box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.28), var(--sombra);
+        }
         .frente-header:hover { background: linear-gradient(90deg, #0a2818 0%, #164e2c 100%); }
         .frente-body { display: block; padding: 0 14px 10px; }
         .frente-body.collapsed { display: none; }
@@ -1382,7 +1444,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.99";
+const APP_VERSION = "1.5.100";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -2568,6 +2630,84 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!f) return '|||';
         return frenteNormStr(limpiarNombreFrenteParaMatch(f.nombre)) + '|' + frenteNormStr(f.contratista) + '|' + frenteNormStr(f.numeroContrato);
     }
+    var FRENTE_SEL_INSP_LS = 'proyecar_frentes_inspeccion_sel';
+    function frenteInspeccionSelKey(f) { return frenteMatchIdentityKey(f); }
+    function loadFrentesInspeccionSel() {
+        try {
+            var raw = JSON.parse(localStorage.getItem(FRENTE_SEL_INSP_LS) || '[]');
+            return Array.isArray(raw) ? raw : [];
+        } catch (e) { return []; }
+    }
+    function saveFrentesInspeccionSel(keys) {
+        try { localStorage.setItem(FRENTE_SEL_INSP_LS, JSON.stringify(keys)); } catch (e) {}
+    }
+    function isFrenteSeleccionadoInspeccion(f) {
+        if (!f) return false;
+        return loadFrentesInspeccionSel().indexOf(frenteInspeccionSelKey(f)) >= 0;
+    }
+    function hayFrentesSeleccionadosInspeccion() {
+        return loadFrentesInspeccionSel().length > 0;
+    }
+    function toggleFrenteSeleccionInspeccion(f) {
+        var key = frenteInspeccionSelKey(f);
+        var arr = loadFrentesInspeccionSel();
+        var i = arr.indexOf(key);
+        if (i >= 0) arr.splice(i, 1);
+        else arr.push(key);
+        saveFrentesInspeccionSel(arr);
+        return i < 0;
+    }
+    function quitarFrenteSeleccionInspeccion(f) {
+        var key = frenteInspeccionSelKey(f);
+        saveFrentesInspeccionSel(loadFrentesInspeccionSel().filter(function(k) { return k !== key; }));
+    }
+    function filtrarFrentesPorSeleccionInspeccion(frentesArr) {
+        if (!hayFrentesSeleccionadosInspeccion()) return frentesArr || [];
+        var keys = loadFrentesInspeccionSel();
+        return (frentesArr || []).filter(function(f) { return keys.indexOf(frenteInspeccionSelKey(f)) >= 0; });
+    }
+    function isNombreFrenteSeleccionadoInspeccion(nombre) {
+        if (!hayFrentesSeleccionadosInspeccion()) return false;
+        return (frentes || []).some(function(f) {
+            return f.nombre === nombre && isFrenteSeleccionadoInspeccion(f);
+        });
+    }
+    function ordenarNombresFrentesConSeleccion(nombres) {
+        if (!hayFrentesSeleccionadosInspeccion()) return (nombres || []).slice();
+        var sel = [], rest = [];
+        (nombres || []).forEach(function(n) {
+            if (isNombreFrenteSeleccionadoInspeccion(n)) sel.push(n);
+            else rest.push(n);
+        });
+        return sel.concat(rest);
+    }
+    function spawnRippleSeleccion(btn, clientX, clientY) {
+        var rect = btn.getBoundingClientRect();
+        var ripple = document.createElement('span');
+        ripple.className = 'btn-seleccionar-frente__ripple';
+        var diam = Math.max(rect.width, rect.height) * 2.2;
+        ripple.style.width = diam + 'px';
+        ripple.style.height = diam + 'px';
+        ripple.style.left = (clientX - rect.left - diam / 2) + 'px';
+        ripple.style.top = (clientY - rect.top - diam / 2) + 'px';
+        btn.appendChild(ripple);
+        ripple.addEventListener('animationend', function() {
+            if (ripple.parentNode) ripple.parentNode.removeChild(ripple);
+        });
+    }
+    function aplicarEstadoBtnSeleccionInspeccion(btn, seleccionado, glow) {
+        btn.classList.toggle('activo', seleccionado);
+        btn.setAttribute('aria-pressed', seleccionado ? 'true' : 'false');
+        btn.title = seleccionado ? 'Deseleccionar frente' : 'Seleccionar para inspección';
+        btn.innerHTML = seleccionado
+            ? pcIconBtn('circle-check', 'Seleccionado', 14, '#fff')
+            : '<span class="btn-sel-ring" aria-hidden="true"></span><span>Seleccionar</span>';
+        if (glow && seleccionado) {
+            btn.classList.remove('glow-once');
+            void btn.offsetWidth;
+            btn.classList.add('glow-once');
+        }
+    }
     function loadMatchConfirmados() {
         try { return JSON.parse(localStorage.getItem(MATCH_CONFIRM_LS) || '[]'); } catch (e) { return []; }
     }
@@ -2696,6 +2836,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     window.limpiarNombreFrenteParaMatch = limpiarNombreFrenteParaMatch;
     window.isMatchConfirmedFor = isMatchConfirmedFor;
+    window.filtrarFrentesPorSeleccionInspeccion = filtrarFrentesPorSeleccionInspeccion;
+    window.hayFrentesSeleccionadosInspeccion = hayFrentesSeleccionadosInspeccion;
+    window.isNombreFrenteSeleccionadoInspeccion = isNombreFrenteSeleccionadoInspeccion;
+    window.ordenarNombresFrentesConSeleccion = ordenarNombresFrentesConSeleccion;
     window.confirmarMatchFrente = function(fActual, histId, histNombre) {
         var histF = {
             nombre: histNombre || '',
@@ -3066,6 +3210,7 @@ document.addEventListener('DOMContentLoaded', function() {
             var frenteUiId = frenteUiKey(frente, idx);
             const frenteDiv = document.createElement("div");
             frenteDiv.className = "frente-card" + (esCienaga ? " frente-en-zona" : "");
+            if (isFrenteSeleccionadoInspeccion(frente)) frenteDiv.classList.add("frente-seleccionado-inspeccion");
             const headerDiv = document.createElement("div");
             headerDiv.className = "frente-header";
             // Toggle arrow
@@ -3116,16 +3261,33 @@ document.addEventListener('DOMContentLoaded', function() {
                 camposCard.appendChild(metaRow);
             }
             tituloDiv.appendChild(camposCard);
+            const btnSeleccionar = document.createElement("button");
+            btnSeleccionar.type = "button";
+            btnSeleccionar.className = "btn-seleccionar-frente";
+            aplicarEstadoBtnSeleccionInspeccion(btnSeleccionar, isFrenteSeleccionadoInspeccion(frente), false);
+            btnSeleccionar.addEventListener("click", function(e) {
+                e.stopPropagation();
+                var pt = e.touches && e.touches[0] ? e.touches[0] : e;
+                if (pt.clientX != null && pt.clientY != null) spawnRippleSeleccion(btnSeleccionar, pt.clientX, pt.clientY);
+                var ahoraSel = toggleFrenteSeleccionInspeccion(frentes[idx]);
+                aplicarEstadoBtnSeleccionInspeccion(btnSeleccionar, ahoraSel, true);
+                frenteDiv.classList.toggle("frente-seleccionado-inspeccion", ahoraSel);
+                if (typeof csRefrescarSiAbierto === "function") csRefrescarSiAbierto();
+            });
             const btnEliminar = document.createElement("button");
             btnEliminar.innerHTML = pcActionBtn('delete', 'Eliminar frente', 14);
             btnEliminar.className = "btn-eliminar-frente";
-            btnEliminar.onclick = () => { setTimeout(() => { if (confirm("¿Eliminar este frente?")) { frentes.splice(idx, 1); saveToLocal(); renderFrentes(); } }, 10); };
+            btnEliminar.onclick = () => { setTimeout(() => { if (confirm("¿Eliminar este frente?")) { quitarFrenteSeleccionInspeccion(frentes[idx]); frentes.splice(idx, 1); saveToLocal(); renderFrentes(); } }, 10); };
             const btnEliminarPie = btnEliminar.cloneNode(true);
             btnEliminarPie.onclick = btnEliminar.onclick;
+            const accionesHeader = document.createElement("div");
+            accionesHeader.className = "frente-header-actions";
+            accionesHeader.appendChild(btnSeleccionar);
+            accionesHeader.appendChild(btnEliminar);
             const headerTop = document.createElement("div");
             headerTop.className = "frente-header-top";
             headerTop.appendChild(toggleArrow);
-            headerTop.appendChild(btnEliminar);
+            headerTop.appendChild(accionesHeader);
             headerDiv.appendChild(headerTop);
             headerDiv.appendChild(tituloDiv);
             frenteDiv.appendChild(headerDiv);
@@ -4055,7 +4217,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
         var areasEvalPdf = obtenerFiltroCategoriasActivas();
         var frentesPdf = frentesSoloAreasEvaluadas(frentes, areasEvalPdf);
+        frentesPdf = filtrarFrentesPorSeleccionInspeccion(frentesPdf);
         var etiquetasAreasPdf = etiquetasFiltroAreasActivas();
+
+        if (!frentesPdf.length) {
+            restoreBtn();
+            alert(hayFrentesSeleccionadosInspeccion()
+                ? 'Ningún frente seleccionado coincide con el filtro de áreas activo.'
+                : 'Sin frentes de obra.');
+            return;
+        }
 
         // ── 5. Cargar fotos desde IndexedDB ──
         var allIds = [];
@@ -5734,8 +5905,11 @@ document.addEventListener('DOMContentLoaded', function() {
         window._compManualData = CompMotor.construirManual(reciente, anterior);
         var meta = CompMotor.obtenerMetadatosFiltros(window._compManualData);
 
-        var selectorFrenteOpts = meta.frentes.map(function(n) {
-            return '<option value="' + CompMotor.escHtml(n).replace(/"/g,'&quot;') + '">' + CompMotor.escHtml(n) + '</option>';
+        var selectorFrenteOpts = (typeof ordenarNombresFrentesConSeleccion === 'function'
+            ? ordenarNombresFrentesConSeleccion(meta.frentes) : meta.frentes.slice()).map(function(n) {
+            var mark = typeof isNombreFrenteSeleccionadoInspeccion === 'function' && isNombreFrenteSeleccionadoInspeccion(n);
+            var label = (mark ? '✓ ' : '') + n;
+            return '<option value="' + CompMotor.escHtml(n).replace(/"/g,'&quot;') + '"' + (mark ? ' style="font-weight:700;color:#16a34a;"' : '') + '>' + CompMotor.escHtml(label) + '</option>';
         }).join('');
         var selectorOpts = Object.keys(meta.areas).map(function(id) {
             return '<option value="' + id + '">' + CompMotor.escHtml(meta.areas[id]) + '</option>';
@@ -5769,7 +5943,17 @@ document.addEventListener('DOMContentLoaded', function() {
             renderResultados(document.getElementById('filtro-frente').value, this.value);
         });
 
-        renderResultados('todos', 'todas');
+        var filtroInicialFrente = 'todos';
+        if (typeof hayFrentesSeleccionadosInspeccion === 'function' && hayFrentesSeleccionadosInspeccion()) {
+            var selEnMeta = meta.frentes.filter(function(n) {
+                return typeof isNombreFrenteSeleccionadoInspeccion === 'function' && isNombreFrenteSeleccionadoInspeccion(n);
+            });
+            if (selEnMeta.length === 1) filtroInicialFrente = selEnMeta[0];
+        }
+        var filtroFrenteEl = document.getElementById('filtro-frente');
+        if (filtroFrenteEl && filtroInicialFrente !== 'todos') filtroFrenteEl.value = filtroInicialFrente;
+
+        renderResultados(filtroInicialFrente, 'todas');
     };
 
     // ── Comparación semanal en PDF ──
@@ -6604,7 +6788,9 @@ function csResolverTodasComparaciones() {
     if (typeof frentes === 'undefined' || !frentes.length) return { comparables: [], omitidos: [], pendientes: [] };
     var comparables = [], omitidos = [], pendientes = [];
     var filtroActivo = csObtenerFiltroAreasActivas();
-    frentes.forEach(function(f) {
+    var frentesActivos = typeof window.filtrarFrentesPorSeleccionInspeccion === 'function'
+        ? window.filtrarFrentesPorSeleccionInspeccion(frentes) : frentes;
+    frentesActivos.forEach(function(f) {
         var busqueda = csBuscarHistorialCoincidente(f);
         if (!busqueda.confirmed.length) {
             busqueda.tentative.forEach(function(t) {
@@ -6680,8 +6866,10 @@ function csActualizarResumenUI(res) {
                     + csEscHtml(c.frente.nombre) + ct
                     + ' <span style="color:#94a3b8;">vs ' + csEscHtml(c.fechaAnterior) + '</span></div>';
             }).join('');
+            var selTxt = (typeof window.hayFrentesSeleccionadosInspeccion === 'function' && window.hayFrentesSeleccionadosInspeccion())
+                ? ' · Solo frentes seleccionados' : '';
             resumen.innerHTML = '<div style="font-weight:700;color:#1e3a2f;margin-bottom:6px;">Comparación automática — '
-                + res.comparables.length + ' frente(s)' + filtroTxt + '</div>' + lineas;
+                + res.comparables.length + ' frente(s)' + filtroTxt + selTxt + '</div>' + lineas;
             resumen.style.display = '';
         }
     }
@@ -6705,6 +6893,9 @@ function csActualizarResumenUI(res) {
 
 function csPoblarFiltrosPdf(res) {
     var nombres = res.comparables.map(function(c) { return c.frente.nombre; });
+    if (typeof window.ordenarNombresFrentesConSeleccion === 'function') {
+        nombres = window.ordenarNombresFrentesConSeleccion(nombres);
+    }
     var areasMap = {};
     res.comparables.forEach(function(c) {
         (c.areas || []).forEach(function(a) {
@@ -6716,10 +6907,18 @@ function csPoblarFiltrosPdf(res) {
     if (sff) {
         sff.innerHTML = '<option value="todos">Todos los frentes</option>'
             + nombres.map(function(n) {
-                return '<option value="' + csEscHtml(n).replace(/"/g,'&quot;') + '">' + csEscHtml(n) + '</option>';
+                var mark = typeof window.isNombreFrenteSeleccionadoInspeccion === 'function' && window.isNombreFrenteSeleccionadoInspeccion(n);
+                var label = (mark ? '✓ ' : '') + n;
+                return '<option value="' + csEscHtml(n).replace(/"/g,'&quot;') + '"' + (mark ? ' style="font-weight:700;color:#16a34a;"' : '') + '>' + csEscHtml(label) + '</option>';
             }).join('');
         if (nombres.length === 1) sff.value = nombres[0];
-        else if (prevF && prevF !== 'todos' && nombres.indexOf(prevF) >= 0) sff.value = prevF;
+        else if (typeof window.hayFrentesSeleccionadosInspeccion === 'function' && window.hayFrentesSeleccionadosInspeccion()) {
+            var selEnComp = nombres.filter(function(n) {
+                return window.isNombreFrenteSeleccionadoInspeccion(n);
+            });
+            if (selEnComp.length === 1) sff.value = selEnComp[0];
+            else if (prevF && prevF !== 'todos' && nombres.indexOf(prevF) >= 0) sff.value = prevF;
+        } else if (prevF && prevF !== 'todos' && nombres.indexOf(prevF) >= 0) sff.value = prevF;
     }
     var sfa = document.getElementById('filtro-area-pdf');
     var prevA = sfa ? sfa.value : 'todas';
