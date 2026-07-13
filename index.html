@@ -1463,7 +1463,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.110";
+const APP_VERSION = "1.5.111";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -1704,6 +1704,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
                 <div id="contenedor-graficas-pdf" style="margin-top:8px;"></div>
                 <button id="btn-listo-comparacion" onclick="generarInformeConComparacion()" style="display:none;width:100%;background:linear-gradient(135deg,#0d9488,#14b8a6);color:white;border:none;border-radius:12px;padding:13px;font-size:0.9rem;font-weight:700;cursor:pointer;margin-top:8px;align-items:center;justify-content:center;gap:6px;"><span class="pc-icon-hydrate" data-i="file-down" data-s="16" data-c="#fff"></span> Generar comparación semanal en PDF</button>
+                <button id="btn-dashboard-ejecutivo" onclick="generarDashboardEjecutivo()" style="display:none;width:100%;background:linear-gradient(135deg,#1e3a2f,#2b9348);color:white;border:none;border-radius:12px;padding:13px;font-size:0.9rem;font-weight:700;cursor:pointer;margin-top:8px;align-items:center;justify-content:center;gap:6px;"><span class="pc-icon-hydrate" data-i="clipboard-list" data-s="16" data-c="#fff"></span> Generar Dashboard Ejecutivo (1 página)</button>
             </div>
         </div>
     </div>
@@ -4374,6 +4375,181 @@ document.addEventListener('DOMContentLoaded', function() {
     window.htmlEncabezadoParComparacion = htmlEncabezadoParComparacion;
     window.construirHtmlPdfComparacionAuto = construirHtmlPdfComparacionAuto;
 
+    // ── Dashboard Ejecutivo (1 página) ──
+    function nombreAreaSimple(nombre) {
+        var n = (nombre || '').trim();
+        n = n.replace(/^[^A-Za-zÁÉÍÓÚáéíóúÑñ0-9]+/, '').trim();
+        return n || (nombre || 'Área');
+    }
+    function simplificarTextoEjecutivo(text) {
+        if (!text) return '';
+        return text
+            .replace(/Decreto\s+[\d/]+[^.]*\.?/gi, '')
+            .replace(/Resoluci[oó]n\s+[\d/]+[^.]*\.?/gi, '')
+            .replace(/Res\.\s*[\d/]+[^.]*\.?/gi, '')
+            .replace(/Manual[^.]*\./gi, '')
+            .replace(/PMT[^.]*\./gi, '')
+            .replace(/Incumple[^.]*\./gi, '')
+            .replace(/Cumple[^.]*normativa[^.]*\./gi, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+    function textoHallazgoItem(item) {
+        var base = simplificarTextoEjecutivo(item.texto || item.id || '');
+        base = base.replace(/\.$/, '').toLowerCase();
+        if (base.length > 50) base = base.substring(0, 47) + '…';
+        return base;
+    }
+    function resumirAreaEjecutiva(area) {
+        var nombre = nombreAreaSimple(area.nombre);
+        var detalle = area.detalle || [];
+        var pendientes = detalle.filter(function(d) { return d.rec === false; });
+        var mejoraron = detalle.filter(function(d) { return d.cambio === 'mejoró'; });
+        var empeoraron = detalle.filter(function(d) { return d.cambio === 'empeoró'; });
+        if (!pendientes.length && !empeoraron.length && (area.pctReciente === null || area.pctReciente >= 75)) {
+            return nombre + ': Sin hallazgos relevantes.';
+        }
+        if (mejoraron.length && !pendientes.length && !empeoraron.length) {
+            return nombre + ': Se observaron mejoras. Sin hallazgos críticos.';
+        }
+        if (pendientes.length) {
+            var temas = pendientes.slice(0, 2).map(textoHallazgoItem).join(' y ');
+            if (mejoraron.length) {
+                return nombre + ': Hubo avances, pero persisten fallas en ' + temas + '.';
+            }
+            return nombre + ': Persisten fallas en ' + temas + '.';
+        }
+        if (empeoraron.length) {
+            var tema = textoHallazgoItem(empeoraron[0]);
+            if (mejoraron.length) {
+                return nombre + ': Mejoró en algunos puntos, pero retrocedió en ' + tema + '.';
+            }
+            return nombre + ': Se registró retroceso en ' + tema + '.';
+        }
+        if ((area.empeorados || 0) > (area.mejorados || 0)) {
+            return nombre + ': Requiere atención; varios puntos empeoraron.';
+        }
+        if ((area.mejorados || 0) > 0) {
+            return nombre + ': Avance general con puntos por vigilar.';
+        }
+        return nombre + ': Sin hallazgos relevantes.';
+    }
+    function semaforoFrenteEjecutivo(comp) {
+        var rojo = false, todoVerde = true;
+        (comp.areas || []).forEach(function(a) {
+            var emp = a.empeorados || 0, mej = a.mejorados || 0;
+            var pct = a.pctReciente;
+            if (emp > mej || (pct !== null && pct < 50) || emp >= 3) { rojo = true; todoVerde = false; }
+            else if (emp > 0 || (pct !== null && pct < 70) || (a.diff !== null && a.diff < -5)) { todoVerde = false; }
+        });
+        if (rojo) return { color: '#dc2626', bg: '#fef2f2', label: 'Atención urgente', icon: '&#128308;' };
+        if (!todoVerde) return { color: '#d97706', bg: '#fffbeb', label: 'Vigilar', icon: '&#128993;' };
+        return { color: '#16a34a', bg: '#f0fdf4', label: 'En buen camino', icon: '&#128994;' };
+    }
+    function construirHtmlDashboardEjecutivo(compD) {
+        compD = compD || {};
+        function esc(s) { return (s || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+        var comparables = compD.comparables || [];
+        var filtroFrente = (document.getElementById('filtro-frente-pdf') || {}).value || 'todos';
+        var filtroArea = (document.getElementById('filtro-area-pdf') || {}).value || 'todas';
+        var visibles = comparables.filter(function(c) {
+            return filtroFrente === 'todos' || (c.frente && c.frente.nombre) === filtroFrente;
+        });
+        var n = visibles.length || 1;
+        var bodyFs = n <= 2 ? '9.5pt' : n <= 4 ? '8.5pt' : '7.5pt';
+        var frenteMb = n <= 3 ? '10px' : '6px';
+        var areaFs = n <= 3 ? '8pt' : '7pt';
+        var maxAreas = n > 5 ? 2 : n > 3 ? 3 : 5;
+        var par = resolverParComparacionPdf(compD);
+        var municipio = (document.getElementById('ubicacion') || {}).value || 'Jurisdicción CARDIQUE';
+        var inspector = (document.getElementById('inspector') || {}).value || 'No especificado';
+        comparables.forEach(function(c) {
+            if (c.frente && c.frente.municipio) municipio = c.frente.municipio;
+        });
+        var hayZona = comparables.some(function(c) {
+            return typeof esFrenteGrupoCienaga === 'function' && esFrenteGrupoCienaga(c.frente || {});
+        });
+        var CSS = '@page{size:A4;margin:1cm 1.1cm}*{box-sizing:border-box}'
+            + 'html,body{margin:0;padding:0;font-family:Calibri,Arial,sans-serif;color:#1e3a2f;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+            + '.dash-wrap{min-height:277mm;max-height:277mm;overflow:hidden;display:flex;flex-direction:column;padding:0}'
+            + '.dash-body{flex:1;overflow:hidden}'
+            + '.dash-footer{margin-top:auto;padding-top:6px;border-top:1px solid #d1d5db}'
+            + '@media print{.no-print-bar,.spacer-dash{display:none!important}}';
+        var h = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Dashboard Ejecutivo CARDIQUE</title><style>' + CSS + '</style></head><body>';
+        h += '<div class="no-print-bar" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#0d3321,#1a5c35);padding:10px 14px;display:flex;gap:10px;">'
+            + '<button onclick="window.close()" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:20px;padding:7px 14px;font-weight:700;cursor:pointer;font-family:inherit">&#8592; Volver</button>'
+            + '<button onclick="window.print()" style="background:#f59e0b;color:#fff;border:none;border-radius:20px;padding:8px 18px;font-weight:800;cursor:pointer;font-family:inherit">&#128424; Imprimir / Guardar PDF</button></div>';
+        h += '<div class="spacer-dash" style="height:48px"></div>';
+        h += '<div class="dash-wrap" style="font-size:' + bodyFs + '">';
+        h += '<div style="text-align:center;margin-bottom:8px;">'
+            + '<div style="font-size:13pt;font-weight:800;color:#1e3a2f;letter-spacing:.02em;">DASHBOARD EJECUTIVO</div>'
+            + '<div style="font-size:8pt;color:#64748b;margin-top:2px;">Resumen de comparación semanal — lectura rápida para Dirección</div></div>';
+        h += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;font-size:7.5pt;">'
+            + '<div style="flex:1;min-width:120px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:6px 9px;"><strong style="color:#166534;">Municipio:</strong> ' + esc(municipio) + '</div>';
+        if (hayZona) {
+            h += '<div style="flex:1;min-width:120px;background:#eff6ff;border:1px solid #93c5fd;border-radius:8px;padding:6px 9px;"><strong style="color:#1d4ed8;">Zona:</strong> ' + esc(ZONA_CIENAGA) + '</div>';
+        }
+        h += '</div>';
+        h += htmlEncabezadoParComparacion(par.reciente, par.anterior, { escFn: esc, pdfMode: true });
+        h += '<div class="dash-body">';
+        visibles.forEach(function(comp) {
+            var fNombre = (comp.frente && comp.frente.nombre) || 'Sin nombre';
+            var contratista = (comp.frente && comp.frente.contratista) || '';
+            var sem = semaforoFrenteEjecutivo(comp);
+            h += '<div style="margin-bottom:' + frenteMb + ';padding:7px 9px;background:' + sem.bg + ';border-left:5px solid ' + sem.color + ';border-radius:0 8px 8px 0;page-break-inside:avoid;">';
+            h += '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:3px;">'
+                + '<div style="font-weight:800;color:#1e3a2f;line-height:1.2;">' + esc(fNombre)
+                + (contratista ? ' <span style="font-weight:600;color:#475569;font-size:90%;">· ' + esc(contratista) + '</span>' : '') + '</div>'
+                + '<span style="font-size:7pt;font-weight:700;color:' + sem.color + ';white-space:nowrap;flex-shrink:0;">' + sem.icon + ' ' + esc(sem.label) + '</span></div>';
+            var areasShown = 0;
+            (comp.areas || []).forEach(function(area) {
+                if (filtroArea !== 'todas' && area.id !== filtroArea) return;
+                if (areasShown >= maxAreas) return;
+                areasShown++;
+                h += '<div style="font-size:' + areaFs + ';color:#374151;line-height:1.3;margin:1px 0 0 6px;">&#8226; ' + esc(resumirAreaEjecutiva(area)) + '</div>';
+            });
+            var totalAreas = (comp.areas || []).filter(function(a) {
+                return filtroArea === 'todas' || a.id === filtroArea;
+            }).length;
+            if (totalAreas > maxAreas) {
+                h += '<div style="font-size:6.5pt;color:#94a3b8;margin:1px 0 0 6px;">… y otras áreas evaluadas</div>';
+            }
+            h += '</div>';
+        });
+        h += '</div>';
+        var fechaGen = new Date().toLocaleString('es-CO', { dateStyle: 'long', timeStyle: 'short' });
+        h += '<div class="dash-footer" style="font-size:6.5pt;color:#64748b;">'
+            + '<div style="margin-bottom:2px;"><strong>Responsable:</strong> ' + esc(inspector) + '</div>'
+            + '<div>Generado el ' + esc(fechaGen) + ' &middot; CARDIQUE &mdash; Área Técnica de Planeación &middot; Documento ejecutivo (1 página)</div>'
+            + '</div></div></body></html>';
+        return h;
+    }
+    function generarDashboardEjecutivo() {
+        var compD = window._compPdfData;
+        if (!compD || !compD.comparables || !compD.comparables.length) {
+            alert('No hay datos de comparación semanal para generar el dashboard.');
+            return;
+        }
+        window._pdfWin = window.open('', '_blank');
+        var h = construirHtmlDashboardEjecutivo(compD);
+        if (window._pdfWin && !window._pdfWin.closed) {
+            try {
+                window._pdfWin.document.open('text/html', 'replace');
+                window._pdfWin.document.write(h);
+                window._pdfWin.document.close();
+                window._pdfWin.focus();
+            } catch (e) {
+                window._pdfWin.location.href = 'data:text/html;charset=utf-8,' + encodeURIComponent(h);
+            }
+        } else {
+            var w2 = window.open('data:text/html;charset=utf-8,' + encodeURIComponent(h), '_blank');
+            if (!w2) alert('Permite ventanas emergentes para ver el dashboard.');
+        }
+        window._pdfWin = null;
+    }
+    window.construirHtmlDashboardEjecutivo = construirHtmlDashboardEjecutivo;
+    window.generarDashboardEjecutivo = generarDashboardEjecutivo;
+
     // ===================== GENERACIÓN DEL INFORME PDF - VERSIÓN MEJORADA =====================
 
     // --- SVG: Gráfico de torta ---
@@ -6443,7 +6619,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 window.graficasComparacionPDF = [];
                 window.graficasComparacionPDF_todas = result.todas || [];
                 var btn = document.getElementById('btn-listo-comparacion');
+                var btnDash = document.getElementById('btn-dashboard-ejecutivo');
                 if (btn && result.todas && result.todas.length) btn.style.display = '';
+                if (btnDash && result.todas && result.todas.length) btnDash.style.display = '';
             }
         });
     }
@@ -7262,9 +7440,11 @@ function csSemanalGenerar() {
     var res = csActualizarResumenUI();
     var contenedor = document.getElementById('contenedor-graficas-pdf');
     var btnPdf = document.getElementById('btn-listo-comparacion');
+    var btnDash = document.getElementById('btn-dashboard-ejecutivo');
     if (!res.comparables.length) {
         if (contenedor) contenedor.innerHTML = '<div style="font-size:0.8rem;color:#6b7280;padding:8px 0;">No hay frentes comparables con historial previo.</div>';
         if (btnPdf) btnPdf.style.display = 'none';
+        if (btnDash) btnDash.style.display = 'none';
         window._compPdfData = null;
         return;
     }
@@ -7272,6 +7452,7 @@ function csSemanalGenerar() {
     window._compPdfData = res;
     if (contenedor) contenedor.innerHTML = '';
     if (btnPdf) btnPdf.style.display = 'none';
+    if (btnDash) btnDash.style.display = 'none';
     if (typeof _renderizarCompPdf === 'function') _renderizarCompPdf();
 }
 
