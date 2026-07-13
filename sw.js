@@ -1,5 +1,5 @@
-// build: 2026-07-13-historial-fecha-colombia
-const APP_VERSION = '1.5.123';
+// build: 2026-07-13-comp-semanal-hist-purge
+const APP_VERSION = '1.5.124';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {
