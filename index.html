@@ -1463,7 +1463,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.113";
+const APP_VERSION = "1.5.114";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -4231,7 +4231,9 @@ document.addEventListener('DOMContentLoaded', function() {
         pdfH: 320,
         pdfPreviewH: 190,
         pdfTick: 10,
-        pdfPctBar: 11
+        pdfPctBar: 11,
+        dashW: 660,
+        dashH: 330
     };
     window.COMP_CHART = COMP_CHART;
     window.COMP_GRAFICA_TYPO = COMP_GRAFICA_TYPO;
@@ -4378,69 +4380,95 @@ document.addEventListener('DOMContentLoaded', function() {
     // ── Dashboard Ejecutivo (2 páginas) ──
     function truncarEnPalabra(text, maxLen) {
         if (!text) return '';
-        text = text.trim();
+        text = String(text).trim();
         if (text.length <= maxLen) return text;
         var cut = text.substring(0, maxLen);
         var lastSpace = cut.lastIndexOf(' ');
-        if (lastSpace > Math.floor(maxLen * 0.55)) cut = cut.substring(0, lastSpace);
-        return cut.replace(/[\s,;]+$/, '') + '…';
+        if (lastSpace > Math.floor(maxLen * 0.6)) cut = cut.substring(0, lastSpace);
+        return cut.replace(/[\s,;:.\-]+$/, '') + '…';
     }
     function nombreAreaSimple(nombre) {
         var n = (nombre || '').trim();
         n = n.replace(/^[^A-Za-zÁÉÍÓÚáéíóúÑñ0-9]+/, '').trim();
         return n || (nombre || 'Área');
     }
-    function simplificarTextoEjecutivo(text) {
+    // Limpia el texto de un ítem para redacción ejecutiva: quita referencias
+    // normativas, espacios sobrantes y corrige espacios antes de puntuación.
+    function limpiarTextoHallazgo(text) {
         if (!text) return '';
-        return text
-            .replace(/Decreto\s+[\d/]+[^.]*\.?/gi, '')
-            .replace(/Resoluci[oó]n\s+[\d/]+[^.]*\.?/gi, '')
-            .replace(/Res\.\s*[\d/]+[^.]*\.?/gi, '')
-            .replace(/Manual[^.]*\./gi, '')
-            .replace(/PMT[^.]*\./gi, '')
-            .replace(/Incumple[^.]*\./gi, '')
-            .replace(/Cumple[^.]*normativa[^.]*\./gi, '')
-            .replace(/\s+/g, ' ')
+        var t = String(text)
+            // Referencia normativa con su conector: "según el Decreto 1076/2015",
+            // "conforme a la Resolución 0631", "de acuerdo con el PMT", etc.
+            .replace(/\s*(seg[uú]n|conforme a|de acuerdo con|de conformidad con|acorde a|en cumplimiento de)\s+(el|la|lo|los|las)?\s*(decreto|resoluci[oó]n|res\.?|manual|pmt|normativa|ley|norma)[^.,;]*/gi, '')
+            // Tokens de normativa sueltos.
+            .replace(/\s*(Decreto|Resoluci[oó]n|Res\.)\s*[\d/.\-]+[^.,;]*/gi, '')
+            .replace(/\s{2,}/g, ' ')
+            .replace(/\s+([,.;:])/g, '$1')
+            .replace(/[\s,;:]+$/, '')
             .trim();
+        // Elimina conectores/preposiciones que hayan quedado colgando al final.
+        for (var i = 0; i < 4; i++) {
+            var prev = t;
+            t = t.replace(/\s+(seg[uú]n|conforme|de acuerdo|de conformidad|acorde|el|la|lo|los|las|de|del|en|con|por|para|a|y|o)$/i, '').trim();
+            if (t === prev) break;
+        }
+        return t;
     }
-    function textoHallazgoItem(item) {
-        var base = simplificarTextoEjecutivo(item.texto || item.id || '');
-        base = base.replace(/\.$/, '').toLowerCase();
-        return truncarEnPalabra(base, 72);
+    // Devuelve una frase nominal limpia, en minúscula inicial, para incrustar
+    // dentro de una oración (sin punto final ni corte a mitad de palabra).
+    function fraseItem(item) {
+        var t = limpiarTextoHallazgo((item && (item.texto || item.id)) || '');
+        t = t.replace(/[.;,]+$/, '').trim();
+        if (t) t = t.charAt(0).toLowerCase() + t.slice(1);
+        return truncarEnPalabra(t, 90);
     }
+    // Une varias frases con puntuación correcta: "a", "a y b", "a, b y c".
+    function listaFrases(items, max) {
+        var fr = [];
+        for (var i = 0; i < items.length && fr.length < max; i++) {
+            var f = fraseItem(items[i]);
+            if (f && fr.indexOf(f) === -1) fr.push(f);
+        }
+        if (!fr.length) return '';
+        if (fr.length === 1) return fr[0];
+        if (fr.length === 2) return fr[0] + ' y ' + fr[1];
+        return fr.slice(0, -1).join(', ') + ' y ' + fr[fr.length - 1];
+    }
+    // Genera una oración ejecutiva, gramatical y bien puntuada, por área.
     function resumirAreaEjecutiva(area) {
         var nombre = nombreAreaSimple(area.nombre);
         var detalle = area.detalle || [];
         var pendientes = detalle.filter(function(d) { return d.rec === false; });
         var mejoraron = detalle.filter(function(d) { return d.cambio === 'mejoró'; });
         var empeoraron = detalle.filter(function(d) { return d.cambio === 'empeoró'; });
-        if (!pendientes.length && !empeoraron.length && (area.pctReciente === null || area.pctReciente >= 75)) {
-            return nombre + ': Sin hallazgos relevantes.';
-        }
-        if (mejoraron.length && !pendientes.length && !empeoraron.length) {
-            return nombre + ': Se observaron mejoras. Sin hallazgos críticos.';
-        }
-        if (pendientes.length) {
-            var temas = pendientes.slice(0, 2).map(textoHallazgoItem).join(' y ');
-            if (mejoraron.length) {
-                return nombre + ': Hubo avances, pero persisten fallas en ' + temas + '.';
+        var pct = area.pctReciente;
+        var frase;
+        if (!pendientes.length && !empeoraron.length && (pct === null || pct >= 75)) {
+            frase = mejoraron.length
+                ? 'se registraron mejoras y no se identificaron hallazgos pendientes.'
+                : 'sin hallazgos relevantes; se mantiene el nivel de cumplimiento.';
+        } else if (pendientes.length) {
+            var tp = listaFrases(pendientes, 2);
+            if (empeoraron.length) {
+                frase = 'persisten hallazgos por resolver en ' + tp + ', con retrocesos que requieren seguimiento.';
+            } else if (mejoraron.length) {
+                frase = 'se observaron avances, aunque persisten hallazgos en ' + tp + '.';
+            } else {
+                frase = 'se mantienen hallazgos pendientes en ' + tp + '.';
             }
-            return nombre + ': Persisten fallas en ' + temas + '.';
+        } else if (empeoraron.length) {
+            var te = listaFrases(empeoraron, 2);
+            frase = mejoraron.length
+                ? 'hubo mejoras parciales, pero se registró un retroceso en ' + te + '.'
+                : 'se identificó un retroceso en ' + te + ', que requiere atención.';
+        } else if ((area.empeorados || 0) > (area.mejorados || 0)) {
+            frase = 'requiere atención, ya que varios puntos presentaron retrocesos.';
+        } else if ((area.mejorados || 0) > 0) {
+            frase = 'muestra un avance general, con algunos puntos por vigilar.';
+        } else {
+            frase = 'sin hallazgos relevantes.';
         }
-        if (empeoraron.length) {
-            var tema = textoHallazgoItem(empeoraron[0]);
-            if (mejoraron.length) {
-                return nombre + ': Mejoró en algunos puntos, pero retrocedió en ' + tema + '.';
-            }
-            return nombre + ': Se registró retroceso en ' + tema + '.';
-        }
-        if ((area.empeorados || 0) > (area.mejorados || 0)) {
-            return nombre + ': Requiere atención; varios puntos empeoraron.';
-        }
-        if ((area.mejorados || 0) > 0) {
-            return nombre + ': Avance general con puntos por vigilar.';
-        }
-        return nombre + ': Sin hallazgos relevantes.';
+        return nombre + ': ' + frase;
     }
     function semaforoFrenteEjecutivo(comp) {
         var rojo = false, todoVerde = true;
@@ -4490,20 +4518,33 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         var chartSlots = seleccionarGraficasDashboard(graficas, 4);
         var fechaGen = new Date().toLocaleString('es-CO', { dateStyle: 'long', timeStyle: 'short' });
+        function esCienagaComp(c) {
+            return typeof esFrenteGrupoCienaga === 'function' && esFrenteGrupoCienaga((c && c.frente) || {});
+        }
+        var muniZona = municipio;
+        comparables.forEach(function(c) {
+            if (esCienagaComp(c) && c.frente && c.frente.municipio) muniZona = c.frente.municipio;
+        });
         var CSS = '@page{size:A4;margin:1.15cm 1.25cm}*{box-sizing:border-box}'
-            + 'html,body{margin:0;padding:0;font-family:Calibri,Arial,sans-serif;color:#1e3a2f;font-size:10pt;line-height:1.45;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+            + 'html,body{margin:0;padding:0;background:#ffffff;font-family:Calibri,Arial,sans-serif;color:#1e3a2f;font-size:10pt;line-height:1.45;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
             + '.dash-p1{page-break-after:always;break-after:page}'
             + '.dash-p2{page-break-before:always;break-before:page}'
-            + '.dash-chart-grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:12px;margin-top:12px}'
-            + '.dash-chart-cell{border:1px solid #e2e8f0;border-radius:10px;padding:10px;background:#fff;page-break-inside:avoid;min-height:200px;display:flex;flex-direction:column}'
+            // Títulos que no deben quedar huérfanos al final de una página.
+            + '.dash-title,.sec-h,.cat-h{page-break-after:avoid;break-after:avoid}'
+            // Encabezado de zona agrupando sectores (mismo estilo que el informe).
+            + '.sec-h{background:linear-gradient(135deg,#14532d,#166534);color:#ffffff;font-weight:800;font-size:10pt;padding:7px 12px;border-radius:8px;margin:4px 0 10px;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+            + '.cat-h{font-weight:700;font-size:9.5pt;color:#1e3a2f;margin:10px 0 4px}'
+            + '.dash-chart-grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:12px;margin-top:8px}'
+            + '.dash-chart-cell{border:1px solid #e2e8f0;border-radius:10px;padding:10px;background:#fff;page-break-inside:avoid;break-inside:avoid;min-height:200px;display:flex;flex-direction:column}'
             + '.dash-chart-lbl{font-size:9pt;font-weight:700;color:#1e3a2f;text-align:center;margin-bottom:6px;line-height:1.3;overflow-wrap:break-word;word-wrap:break-word;hyphens:none}'
             + '.dash-chart-img{width:100%;flex:1;min-height:155px;max-height:175px;object-fit:contain;display:block}'
-            + '.dash-frente{margin-bottom:10px;padding:10px 12px;border-radius:0 10px 10px 0;page-break-inside:avoid}'
+            // .frente-pg agrupa cada sector/frente y evita que se corte a la mitad.
+            + '.frente-pg,.dash-frente{margin-bottom:10px;padding:10px 12px;border-radius:0 10px 10px 0;page-break-inside:avoid;break-inside:avoid}'
             + '.dash-frente-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:6px}'
             + '.dash-frente-nom{font-size:10pt;font-weight:800;color:#1e3a2f;line-height:1.25;overflow-wrap:break-word;word-wrap:break-word;hyphens:none}'
             + '.dash-frente-sem{font-size:8.5pt;font-weight:700;white-space:nowrap;flex-shrink:0}'
             + '.dash-hallazgo{font-size:9pt;color:#374151;line-height:1.45;margin:3px 0 0 10px;overflow-wrap:break-word;word-wrap:break-word;word-break:normal;hyphens:none;-webkit-hyphens:none}'
-            + '.dash-footer{margin-top:14px;padding-top:8px;border-top:1px solid #d1d5db;font-size:8pt;color:#64748b}'
+            + '.dash-footer{margin-top:14px;padding-top:8px;border-top:1px solid #d1d5db;font-size:8pt;color:#64748b;page-break-inside:avoid}'
             + '@media print{.no-print-bar,.spacer-dash{display:none!important}}';
         var h = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Dashboard Ejecutivo CARDIQUE</title><style>' + CSS + '</style></head><body>';
         h += '<div class="no-print-bar" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#0d3321,#1a5c35);padding:10px 14px;display:flex;gap:10px;">'
@@ -4512,9 +4553,10 @@ document.addEventListener('DOMContentLoaded', function() {
         h += '<div class="spacer-dash" style="height:48px"></div>';
 
         h += '<div class="dash-p1">';
-        h += '<div style="text-align:center;margin-bottom:10px;">'
+        h += '<div class="dash-title" style="text-align:center;margin-bottom:10px;">'
             + '<div style="font-size:14pt;font-weight:800;color:#1e3a2f;letter-spacing:.02em;">DASHBOARD EJECUTIVO</div>'
             + '<div style="font-size:9pt;color:#64748b;margin-top:3px;">Comparación semanal — vista gráfica (pág. 1 de 2)</div></div>';
+        // Municipio y Zona: se muestran UNA sola vez agrupando la información.
         h += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;font-size:9pt;">'
             + '<div style="flex:1;min-width:140px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:8px 10px;"><strong style="color:#166534;">Municipio:</strong> ' + esc(municipio) + '</div>';
         if (hayZona) {
@@ -4522,7 +4564,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         h += '</div>';
         h += htmlEncabezadoParComparacion(par.reciente, par.anterior, { escFn: esc, pdfMode: true });
-        h += '<div style="font-size:9.5pt;font-weight:700;color:#1e3a2f;margin:12px 0 4px;">Comparación visual por área</div>';
+        h += '<div class="dash-title" style="font-size:9.5pt;font-weight:700;color:#1e3a2f;margin:12px 0 4px;">Comparación visual por área</div>';
         h += '<div class="dash-chart-grid">';
         chartSlots.forEach(function(slot) {
             h += '<div class="dash-chart-cell">';
@@ -4538,15 +4580,16 @@ document.addEventListener('DOMContentLoaded', function() {
         h += '</div></div>';
 
         h += '<div class="dash-p2">';
-        h += '<div style="text-align:center;margin-bottom:12px;">'
+        h += '<div class="dash-title" style="text-align:center;margin-bottom:12px;">'
             + '<div style="font-size:12pt;font-weight:800;color:#1e3a2f;">Resumen por Frente</div>'
-            + '<div style="font-size:9pt;color:#64748b;margin-top:2px;">Hallazgos en lenguaje simple (pág. 2 de 2)</div></div>';
-        visibles.forEach(function(comp) {
+            + '<div style="font-size:9pt;color:#64748b;margin-top:2px;">Hallazgos por área en lenguaje claro (pág. 2 de 2)</div></div>';
+        // Renderiza una tarjeta de sector/frente con su semáforo y hallazgos.
+        function tarjetaFrente(comp) {
             var fNombre = (comp.frente && comp.frente.nombre) || 'Sin nombre';
             var contratista = (comp.frente && comp.frente.contratista) || '';
             var sem = semaforoFrenteEjecutivo(comp);
-            h += '<div class="dash-frente" style="background:' + sem.bg + ';border-left:5px solid ' + sem.color + ';">';
-            h += '<div class="dash-frente-hdr">'
+            var b = '<div class="frente-pg" style="background:' + sem.bg + ';border-left:5px solid ' + sem.color + ';">';
+            b += '<div class="dash-frente-hdr">'
                 + '<div class="dash-frente-nom">' + esc(fNombre)
                 + (contratista ? ' <span style="font-weight:600;color:#475569;font-size:9pt;">· ' + esc(contratista) + '</span>' : '') + '</div>'
                 + '<span class="dash-frente-sem" style="color:' + sem.color + ';">' + sem.icon + ' ' + esc(sem.label) + '</span></div>';
@@ -4555,16 +4598,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (filtroArea !== 'todas' && area.id !== filtroArea) return;
                 if (areasShown >= maxAreas) return;
                 areasShown++;
-                h += '<div class="dash-hallazgo">&#8226; ' + esc(resumirAreaEjecutiva(area)) + '</div>';
+                b += '<div class="dash-hallazgo">&#8226; ' + esc(resumirAreaEjecutiva(area)) + '</div>';
             });
             var totalAreas = (comp.areas || []).filter(function(a) {
                 return filtroArea === 'todas' || a.id === filtroArea;
             }).length;
             if (totalAreas > maxAreas) {
-                h += '<div class="dash-hallazgo" style="color:#94a3b8;font-size:8.5pt;">&#8226; Otras áreas evaluadas — ver informe técnico completo.</div>';
+                b += '<div class="dash-hallazgo" style="color:#94a3b8;font-size:8.5pt;">&#8226; Otras áreas evaluadas se detallan en el informe técnico completo.</div>';
             }
-            h += '</div>';
-        });
+            b += '</div>';
+            return b;
+        }
+        // Frentes sin zona primero; luego los sectores de Ciénaga agrupados bajo
+        // un único encabezado de Zona/Municipio (no se repite por cada sector).
+        var otros = visibles.filter(function(c) { return !esCienagaComp(c); });
+        var cienaga = visibles.filter(esCienagaComp);
+        otros.forEach(function(comp) { h += tarjetaFrente(comp); });
+        if (cienaga.length) {
+            h += '<div class="sec-h">Zona: ' + esc(ZONA_CIENAGA)
+                + '<span style="font-weight:600;font-size:9pt;"> &nbsp;&middot;&nbsp; Municipio: ' + esc(muniZona) + '</span></div>';
+            cienaga.forEach(function(comp) { h += tarjetaFrente(comp); });
+        }
         h += '<div class="dash-footer">'
             + '<div style="margin-bottom:3px;"><strong>Responsable:</strong> ' + esc(inspector) + '</div>'
             + '<div>Generado el ' + esc(fechaGen) + ' &middot; CARDIQUE &mdash; Área Técnica de Planeación &middot; Documento ejecutivo (2 páginas)</div>'
@@ -4624,7 +4678,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         CompMotor.capturarGraficasParaPdf(compD, {
             filtroFrente: (document.getElementById('filtro-frente-pdf') || {}).value || 'todos',
-            filtroArea: (document.getElementById('filtro-area-pdf') || {}).value || 'todas'
+            filtroArea: (document.getElementById('filtro-area-pdf') || {}).value || 'todas',
+            // Misma tipografía que la vista previa de "Incluir comparación semanal"
+            // (tickX 11 / tickY 10 / pctBar 10), capturada a 2× para nitidez en el
+            // grid 2×2: al mostrarse en celdas ~320px el tamaño aparente coincide.
+            canvasW: COMP_GRAFICA_TYPO.dashW,
+            canvasH: COMP_GRAFICA_TYPO.dashH,
+            tickSizeX: COMP_GRAFICA_TYPO.tickX * 2,
+            tickSizeY: COMP_GRAFICA_TYPO.tickY * 2,
+            pctFontSize: COMP_GRAFICA_TYPO.pctBar * 2
         }).then(function(graficas) {
             restaurarBtn();
             var h;
@@ -6458,20 +6520,25 @@ document.addEventListener('DOMContentLoaded', function() {
                     resuelto = true;
                     resolve(capturas);
                 }
+                var capW = opts.canvasW || COMP_GRAFICA_TYPO.pdfW;
+                var capH = opts.canvasH || COMP_GRAFICA_TYPO.pdfH;
+                var tX = opts.tickSizeX != null ? opts.tickSizeX : COMP_GRAFICA_TYPO.pdfTick;
+                var tY = opts.tickSizeY != null ? opts.tickSizeY : COMP_GRAFICA_TYPO.pdfTick;
+                var pctF = opts.pctFontSize != null ? opts.pctFontSize : COMP_GRAFICA_TYPO.pdfPctBar;
                 chartQueue.forEach(function(item) {
                     var tempDiv = document.createElement('div');
-                    tempDiv.style.cssText = 'position:absolute;left:-9999px;top:0;width:' + COMP_GRAFICA_TYPO.pdfW + 'px;';
+                    tempDiv.style.cssText = 'position:absolute;left:-9999px;top:0;width:' + capW + 'px;';
                     document.body.appendChild(tempDiv);
                     var canvas = document.createElement('canvas');
-                    canvas.width = COMP_GRAFICA_TYPO.pdfW;
-                    canvas.height = COMP_GRAFICA_TYPO.pdfH;
+                    canvas.width = capW;
+                    canvas.height = capH;
                     tempDiv.appendChild(canvas);
                     var ch = crearGraficaBarras(canvas, item.pA, item.pR, {
                         responsive: false,
                         labels: ['Anterior', 'Reciente'],
-                        tickSizeX: COMP_GRAFICA_TYPO.pdfTick,
-                        tickSizeY: COMP_GRAFICA_TYPO.pdfTick,
-                        pctFontSize: COMP_GRAFICA_TYPO.pdfPctBar,
+                        tickSizeX: tX,
+                        tickSizeY: tY,
+                        pctFontSize: pctF,
                         animation: false
                     });
                     window._compPdfCharts = window._compPdfCharts || [];
