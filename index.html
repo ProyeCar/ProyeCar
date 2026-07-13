@@ -1840,6 +1840,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 Comparar inspecciones
             </button>
         </div>
+        <div class="menu-titulo" style="margin-top:18px;color:#b45309;">Diagnóstico temporal</div>
+        <div class="menu-lista">
+            <button class="menu-item" type="button" onclick="proyecarDiagnosticoAlmacenamiento()" style="border-color:#fde68a;background:#fffbeb;">
+                <span style="font-size:1.2rem;line-height:1;">🔍</span>
+                Diagnóstico de almacenamiento
+            </button>
+        </div>
     </div>
 </div></div>
 
@@ -1869,6 +1876,209 @@ document.addEventListener('DOMContentLoaded', function() {
 <script type="module" src="supabase-pdfs.js"></script>
 <script>
     console.log('ProyeCar v' + APP_VERSION + ' cargado');
+
+    // ── TEMPORAL: diagnóstico de almacenamiento (buscar rastro de inspecciones eliminadas) ──
+    function proyecarEscHtmlDiag(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    function proyecarMarcaSospechosa(texto) {
+        var t = String(texto || '');
+        return /2026-07-12|12\/07\/2026|07\/12\/2026|12\/7\/2026|7\/12\/2026|"fecha"\s*:\s*"2026-07-12"|Archivado:.*12/.test(t)
+            || (/\b12\b/.test(t) && /historial|inspeccion|fecha|frente|cardique_historial|inspectorFrentes/i.test(t));
+    }
+    async function proyecarLeerIndexedDBDiag() {
+        var out = [];
+        if (!window.indexedDB) {
+            out.push({ db: '(sin indexedDB)', stores: [] });
+            return out;
+        }
+        var dbs = [];
+        try {
+            if (indexedDB.databases) dbs = await indexedDB.databases();
+            else dbs = [{ name: 'cardique_fotos', version: 2 }];
+        } catch (e) {
+            dbs = [{ name: 'cardique_fotos', version: 2 }];
+        }
+        for (var i = 0; i < dbs.length; i++) {
+            var dbName = dbs[i] && dbs[i].name;
+            if (!dbName) continue;
+            var dbInfo = { db: dbName + '@' + (dbs[i].version || '?'), stores: [] };
+            try {
+                var db = await new Promise(function(resolve, reject) {
+                    var req = indexedDB.open(dbName);
+                    req.onsuccess = function() { resolve(req.result); };
+                    req.onerror = function() { reject(req.error); };
+                });
+                var storeNames = Array.from(db.objectStoreNames || []);
+                for (var s = 0; s < storeNames.length; s++) {
+                    var sn = storeNames[s];
+                    var rows = await new Promise(function(resolve, reject) {
+                        try {
+                            var tx = db.transaction(sn, 'readonly');
+                            var r = tx.objectStore(sn).getAll();
+                            r.onsuccess = function() { resolve(r.result || []); };
+                            r.onerror = function() { reject(r.error); };
+                        } catch (err) { resolve([{ _error: String(err) }]); }
+                    });
+                    var summaries = (rows || []).slice(0, 20).map(function(row, idx) {
+                        var raw = '';
+                        try { raw = JSON.stringify(row); } catch (e2) { raw = String(row); }
+                        if (raw.length > 200) raw = raw.slice(0, 200) + '…';
+                        return { idx: idx, len: (rows[idx] && JSON.stringify(rows[idx]) || '').length, preview: raw, sospechoso: proyecarMarcaSospechosa(raw) };
+                    });
+                    dbInfo.stores.push({ name: sn, count: (rows || []).length, rows: summaries });
+                }
+                db.close();
+            } catch (e) {
+                dbInfo.stores.push({ name: '(error)', count: 0, rows: [{ preview: String(e), sospechoso: false }] });
+            }
+            out.push(dbInfo);
+        }
+        return out;
+    }
+    async function proyecarDiagnosticoAlmacenamiento() {
+        var lsKeys = [];
+        for (var i = 0; i < localStorage.length; i++) lsKeys.push(localStorage.key(i));
+        lsKeys.sort();
+        var lsBlocks = lsKeys.map(function(k) {
+            var raw = localStorage.getItem(k) || '';
+            var preview = raw.length > 200 ? raw.slice(0, 200) + '…' : raw;
+            return {
+                key: k,
+                length: raw.length,
+                preview: preview,
+                sospechoso: proyecarMarcaSospechosa(k + ' ' + raw)
+            };
+        });
+        var ssKeys = [];
+        for (var j = 0; j < sessionStorage.length; j++) ssKeys.push(sessionStorage.key(j));
+        var ssBlocks = ssKeys.map(function(k) {
+            var raw = sessionStorage.getItem(k) || '';
+            var preview = raw.length > 200 ? raw.slice(0, 200) + '…' : raw;
+            return { key: k, length: raw.length, preview: preview, sospechoso: proyecarMarcaSospechosa(k + ' ' + raw) };
+        });
+        var mem = {
+            APP_VERSION: (typeof APP_VERSION !== 'undefined' ? APP_VERSION : null),
+            _csAbierto: !!window._csAbierto,
+            has_compPdfData: !!window._compPdfData,
+            _compPdfAnterior: window._compPdfData && window._compPdfData.anterior
+                ? { id: window._compPdfData.anterior.id, fecha: window._compPdfData.anterior.fecha }
+                : null,
+            comparables: ((window._compPdfData && window._compPdfData.comparables) || []).map(function(c) {
+                return {
+                    frente: c.frente && c.frente.nombre,
+                    fechaAnterior: c.fechaAnterior,
+                    anteriorId: c.anterior && c.anterior.id,
+                    anteriorFecha: c.anterior && c.anterior.fecha
+                };
+            }),
+            comparacionSemanal: window.comparacionSemanal ? {
+                i1: window.comparacionSemanal.inspeccion1 && { id: window.comparacionSemanal.inspeccion1.id, fecha: window.comparacionSemanal.inspeccion1.fecha },
+                i2: window.comparacionSemanal.inspeccion2 && { id: window.comparacionSemanal.inspeccion2.id, fecha: window.comparacionSemanal.inspeccion2.fecha }
+            } : null,
+            _comparisonData: window._comparisonData ? {
+                reciente: window._comparisonData.reciente && { id: window._comparisonData.reciente.id, fecha: window._comparisonData.reciente.fecha },
+                anterior: window._comparisonData.anterior && { id: window._comparisonData.anterior.id, fecha: window._comparisonData.anterior.fecha }
+            } : null
+        };
+        var idb = await proyecarLeerIndexedDBDiag();
+        var histResumen = [];
+        try {
+            histResumen = JSON.parse(localStorage.getItem('cardique_historial') || '[]').map(function(r) {
+                return { id: r.id, fecha: r.fecha, archivedAt: r.archivedAt, proyecto: r.proyecto, nFrentes: (r.frentes || []).length };
+            });
+        } catch (e) { histResumen = [{ error: String(e) }]; }
+
+        var html = '';
+        html += '<div style="font-size:0.78rem;line-height:1.45;">';
+        html += '<div style="margin-bottom:10px;padding:8px 10px;background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;">';
+        html += '<b>TEMPORAL</b> — Diagnóstico de almacenamiento · v' + proyecarEscHtmlDiag(mem.APP_VERSION);
+        html += '<br>Historial parseado: ' + histResumen.length + ' registro(s)<br>';
+        html += '<code style="font-size:0.7rem;word-break:break-all;">' + proyecarEscHtmlDiag(JSON.stringify(histResumen)) + '</code></div>';
+
+        function renderBlocks(titulo, blocks) {
+            html += '<div style="font-weight:700;margin:12px 0 6px;color:#1e3a2f;">' + proyecarEscHtmlDiag(titulo) + ' (' + blocks.length + ')</div>';
+            if (!blocks.length) {
+                html += '<div style="color:#94a3b8;font-size:0.72rem;">(vacío)</div>';
+                return;
+            }
+            blocks.forEach(function(b) {
+                var bg = b.sospechoso ? '#fee2e2' : '#f8fafc';
+                var bd = b.sospechoso ? '#fca5a5' : '#e2e8f0';
+                html += '<div style="margin-bottom:8px;padding:8px 10px;border-radius:8px;border:1px solid ' + bd + ';background:' + bg + ';">';
+                if (b.sospechoso) html += '<div style="color:#b91c1c;font-weight:800;margin-bottom:4px;">⚠ POSIBLE RASTRO DÍA 12 / INSPECCIÓN</div>';
+                html += '<div style="font-weight:700;word-break:break-all;">' + proyecarEscHtmlDiag(b.key) + ' <span style="color:#64748b;font-weight:500;">(' + b.length + ' chars)</span></div>';
+                html += '<pre style="margin:6px 0 0;white-space:pre-wrap;word-break:break-all;font-size:0.68rem;color:#334155;">' + proyecarEscHtmlDiag(b.preview) + '</pre>';
+                html += '</div>';
+            });
+        }
+        renderBlocks('localStorage', lsBlocks);
+        renderBlocks('sessionStorage', ssBlocks);
+
+        html += '<div style="font-weight:700;margin:12px 0 6px;color:#1e3a2f;">Memoria comparación semanal</div>';
+        html += '<pre style="padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;white-space:pre-wrap;word-break:break-all;font-size:0.68rem;">'
+            + proyecarEscHtmlDiag(JSON.stringify(mem, null, 2)) + '</pre>';
+
+        html += '<div style="font-weight:700;margin:12px 0 6px;color:#1e3a2f;">IndexedDB</div>';
+        idb.forEach(function(db) {
+            html += '<div style="margin-bottom:8px;font-weight:600;">DB: ' + proyecarEscHtmlDiag(db.db) + '</div>';
+            (db.stores || []).forEach(function(st) {
+                html += '<div style="margin:4px 0 8px 8px;padding:8px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;">';
+                html += '<div>store <b>' + proyecarEscHtmlDiag(st.name) + '</b> · ' + st.count + ' fila(s)</div>';
+                (st.rows || []).forEach(function(row) {
+                    var bg = row.sospechoso ? '#fee2e2' : 'transparent';
+                    html += '<div style="margin-top:6px;padding:6px;background:' + bg + ';border-radius:6px;">';
+                    if (row.sospechoso) html += '<div style="color:#b91c1c;font-weight:800;">⚠ SOSPECHOSO</div>';
+                    html += '<pre style="margin:0;white-space:pre-wrap;word-break:break-all;font-size:0.66rem;">' + proyecarEscHtmlDiag(row.preview) + '</pre>';
+                    html += '</div>';
+                });
+                html += '</div>';
+            });
+        });
+        html += '</div>';
+
+        var prev = document.getElementById('modal-diag-storage');
+        if (prev) prev.remove();
+        var overlay = document.createElement('div');
+        overlay.id = 'modal-diag-storage';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:10050;display:flex;align-items:flex-end;justify-content:center;padding:12px;';
+        overlay.innerHTML = '<div style="background:#fff;width:100%;max-width:560px;max-height:88vh;border-radius:16px 16px 12px 12px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'
+            + '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #e5e7eb;background:#fffbeb;">'
+            + '<div style="font-weight:800;color:#92400e;font-size:0.92rem;">🔍 Diagnóstico de almacenamiento</div>'
+            + '<button type="button" id="diag-storage-close" style="border:none;background:#e5e7eb;border-radius:8px;padding:6px 10px;cursor:pointer;font-weight:700;">Cerrar</button></div>'
+            + '<div id="diag-storage-body" style="overflow:auto;padding:12px 14px;flex:1;-webkit-overflow-scrolling:touch;"></div>'
+            + '<div style="padding:10px 14px;border-top:1px solid #e5e7eb;display:flex;gap:8px;">'
+            + '<button type="button" id="diag-storage-copy" style="flex:1;padding:10px;border:none;border-radius:10px;background:#1a5c35;color:#fff;font-weight:700;cursor:pointer;">Copiar texto</button>'
+            + '</div></div>';
+        document.body.appendChild(overlay);
+        document.getElementById('diag-storage-body').innerHTML = html;
+        document.getElementById('diag-storage-close').onclick = function() { overlay.remove(); };
+        overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+        document.getElementById('diag-storage-copy').onclick = function() {
+            var plain = [
+                '=== ProyeCar diagnóstico almacenamiento ===',
+                'APP_VERSION=' + mem.APP_VERSION,
+                'historial=' + JSON.stringify(histResumen),
+                'localStorage keys=' + lsKeys.join(', '),
+                lsBlocks.map(function(b) { return (b.sospechoso ? '[SOSPECHOSO] ' : '') + b.key + ' (' + b.length + '):\n' + b.preview; }).join('\n\n'),
+                'sessionStorage:\n' + JSON.stringify(ssBlocks, null, 2),
+                'memory:\n' + JSON.stringify(mem, null, 2),
+                'indexedDB:\n' + JSON.stringify(idb, null, 2)
+            ].join('\n\n');
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(plain).then(function() {
+                    alert('Diagnóstico copiado al portapapeles. Pégalo en el chat.');
+                }).catch(function() {
+                    prompt('Copia este diagnóstico:', plain.slice(0, 1500));
+                });
+            } else {
+                prompt('Copia este diagnóstico:', plain.slice(0, 1500));
+            }
+        };
+        console.log('[ProyeCar DIAG]', { histResumen: histResumen, localStorage: lsBlocks, sessionStorage: ssBlocks, memory: mem, indexedDB: idb });
+    }
+    window.proyecarDiagnosticoAlmacenamiento = proyecarDiagnosticoAlmacenamiento;
 
     const PLANTILLAS_AUTO = [
         {
