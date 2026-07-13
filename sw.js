@@ -1,5 +1,5 @@
-// build: 2026-07-12-comparacion-semanal-auto-frentes
-const APP_VERSION = '1.5.90';
+// build: 2026-07-12-comp-motor-unificado
+const APP_VERSION = '1.5.91';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {
