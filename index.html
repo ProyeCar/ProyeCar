@@ -1463,7 +1463,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.116";
+const APP_VERSION = "1.5.117";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -4527,9 +4527,6 @@ document.addEventListener('DOMContentLoaded', function() {
         var inspector = (document.getElementById('inspector') || {}).value || 'No especificado';
         comparables.forEach(function(c) {
             if (c.frente && c.frente.municipio) municipio = c.frente.municipio;
-        });
-        var hayZona = comparables.some(function(c) {
-            return typeof esFrenteGrupoCienaga === 'function' && esFrenteGrupoCienaga(c.frente || {});
         });
         var chartSlots = seleccionarGraficasDashboard(graficas);
         var fechaGen = new Date().toLocaleString('es-CO', { dateStyle: 'long', timeStyle: 'short' });
