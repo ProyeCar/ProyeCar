@@ -1463,7 +1463,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.124";
+const APP_VERSION = "1.5.125";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 var _pwaRecargando = false;
@@ -2998,15 +2998,21 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!fActual || !histF) return false;
         var identity = frenteMatchIdentityKey(fActual);
         var histClean = frenteNormStr(limpiarNombreFrenteParaMatch(histF.nombre));
+        var contrato = frenteNumeroContratoNorm(fActual);
         var links = loadMatchLinks();
         for (var i = 0; i < links.length; i++) {
             var l = links[i];
             if (l.identity === identity && l.histNombreClean === histClean) return true;
+            // Confirmación estable por N° de contrato (sobrevive cambios de formato de nombre)
+            if (contrato && l.numeroContratoNorm && l.numeroContratoNorm === contrato && l.histNombreClean === histClean) return true;
+            if (contrato && l.numeroContratoNorm && l.numeroContratoNorm === contrato && l.histNombreRaw
+                && frenteNormSinAcentos(l.histNombreRaw) === frenteNormSinAcentos(histF.nombre || '')) return true;
         }
         var legacy = loadMatchConfirmados();
         for (var j = 0; j < legacy.length; j++) {
             var k = String(legacy[j] || '');
             if (k.indexOf(identity + '|') === 0 && k.slice(-histClean.length) === histClean) return true;
+            if (contrato && k.indexOf('|' + contrato + '|') >= 0 && k.slice(-histClean.length) === histClean) return true;
         }
         return false;
     }
@@ -3021,11 +3027,15 @@ document.addEventListener('DOMContentLoaded', function() {
             histNombreRaw: (histF.nombre || '').trim(),
             contratista: frenteNormStr(fActual.contratista),
             numeroContrato: frenteNormStr(fActual.numeroContrato),
+            numeroContratoNorm: frenteNumeroContratoNorm(fActual),
+            zona: (fActual && fActual.zona) || '',
             confirmedAt: Date.now()
         };
         var arr = loadMatchLinks();
         var dup = arr.some(function(l) {
-            return l.identity === link.identity && l.histNombreClean === link.histNombreClean;
+            if (l.identity === link.identity && l.histNombreClean === link.histNombreClean) return true;
+            if (link.numeroContratoNorm && l.numeroContratoNorm === link.numeroContratoNorm && l.histNombreClean === link.histNombreClean) return true;
+            return false;
         });
         if (!dup) { arr.push(link); saveMatchLinks(arr); }
     }
@@ -3051,37 +3061,145 @@ document.addEventListener('DOMContentLoaded', function() {
         return frenteNormStr(f.contratista) === frenteNormStr(ref.contratista)
             && frenteNormStr(f.numeroContrato) === frenteNormStr(ref.numeroContrato);
     }
+    function frenteNumeroContratoNorm(f) {
+        var n = frenteNormStr(f && f.numeroContrato);
+        if (!n) return '';
+        n = n.replace(/^n[°ºo]\.?\s*/i, '');
+        n = n.replace(/[^a-z0-9]/gi, '');
+        return n;
+    }
+    function frenteContratoNumeroCoincide(f, ref) {
+        var a = frenteNumeroContratoNorm(f);
+        var b = frenteNumeroContratoNorm(ref);
+        return !!(a && b && a === b);
+    }
     function frenteContratoFuerteCoincide(f, ref) {
-        if (!frenteContratoCoincide(f, ref)) return false;
-        return !!(f.contratista || '').trim() && !!(f.numeroContrato || '').trim();
+        return frenteContratoNumeroCoincide(f, ref);
+    }
+    function frenteTextoMatchCompleto(f) {
+        if (!f) return '';
+        var parts = [];
+        if (f.zona) parts.push(f.zona);
+        if (f.municipio) parts.push(f.municipio);
+        if (f.nombre) parts.push(f.nombre);
+        parts.push(limpiarNombreFrenteParaMatch(f.nombre));
+        if (esFrenteGrupoCienaga(f) || nombreContieneCienaga(f.nombre) || nombreContieneCienaga(f.zona)) {
+            parts.push(ZONA_CIENAGA);
+        }
+        return parts.join(' ');
+    }
+    function frenteNormSinAcentos(s) {
+        return frenteNormStr(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    }
+    var FRENTE_MATCH_STOPWORDS = {
+        frente: 1, de: 1, la: 1, el: 1, los: 1, las: 1, del: 1, y: 1, a: 1, en: 1,
+        un: 1, una: 1, unos: 1, unas: 1, the: 1, and: 1, sector: 1, zona: 1
+    };
+    function tokensNombreFrente(f) {
+        var text = frenteNormSinAcentos(frenteTextoMatchCompleto(f));
+        var raw = text.split(/[^a-z0-9]+/).filter(function(w) {
+            return w.length >= 3 && !FRENTE_MATCH_STOPWORDS[w];
+        });
+        var seen = {}, out = [];
+        raw.forEach(function(w) {
+            if (!seen[w]) { seen[w] = true; out.push(w); }
+        });
+        return out;
+    }
+    function tokensOverlapCount(a, b) {
+        if (!a.length || !b.length) return 0;
+        var setB = {};
+        b.forEach(function(w) { setB[w] = true; });
+        var n = 0;
+        a.forEach(function(w) { if (setB[w]) n++; });
+        return n;
     }
     function frenteNombreExacto(f, ref) {
-        return frenteNormStr(limpiarNombreFrenteParaMatch(f.nombre)) === frenteNormStr(limpiarNombreFrenteParaMatch(ref.nombre));
-    }
-    function frenteNombreLegacyCoincide(actual, histF) {
-        var actNom = limpiarNombreFrenteParaMatch(actual.nombre);
-        var histNom = limpiarNombreFrenteParaMatch(histF.nombre);
-        var actRaw = (actual.nombre || '').trim();
-        var histRaw = (histF.nombre || '').trim();
-        if (!actNom || !histNom) return false;
-        if (frenteNormStr(histNom) === frenteNormStr(actNom)) return true;
-        if (frenteNormStr(histRaw) === frenteNormStr(frenteNombreCombinado(actual))) return true;
-        if (histRaw.length > actRaw.length && histRaw.toLowerCase().indexOf(actRaw.toLowerCase()) >= 0 && actRaw.length >= 4) return true;
+        var a = frenteNormSinAcentos(limpiarNombreFrenteParaMatch(f && f.nombre));
+        var b = frenteNormSinAcentos(limpiarNombreFrenteParaMatch(ref && ref.nombre));
+        if (a && b && a === b) return true;
+        // Mismo sector limpio aunque uno traiga zona en otro campo
+        if (esFrenteGrupoCienaga(f) || esFrenteGrupoCienaga(ref) || nombreContieneCienaga((f && f.nombre) || '') || nombreContieneCienaga((ref && ref.nombre) || '')) {
+            return !!(a && b && a === b);
+        }
         return false;
     }
+    function frenteNombreFlexibleCoincide(actual, histF) {
+        if (!actual || !histF) return false;
+        if (frenteNombreExacto(actual, histF)) return true;
+
+        var actClean = frenteNormSinAcentos(limpiarNombreFrenteParaMatch(actual.nombre));
+        var histClean = frenteNormSinAcentos(limpiarNombreFrenteParaMatch(histF.nombre));
+        var histFull = frenteNormSinAcentos(frenteTextoMatchCompleto(histF));
+        var actFull = frenteNormSinAcentos(frenteTextoMatchCompleto(actual));
+
+        // Contención parcial del nombre limpio (mín. 4 chars)
+        if (actClean && histClean && Math.min(actClean.length, histClean.length) >= 4) {
+            if (actClean.indexOf(histClean) >= 0 || histClean.indexOf(actClean) >= 0) return true;
+        }
+        if (actClean && histFull && actClean.length >= 4 && histFull.indexOf(actClean) >= 0) return true;
+        if (histClean && actFull && histClean.length >= 4 && actFull.indexOf(histClean) >= 0) return true;
+
+        var actCienaga = esFrenteGrupoCienaga(actual) || nombreContieneCienaga(actual.nombre) || nombreContieneCienaga(actual.zona);
+        var histCienaga = esFrenteGrupoCienaga(histF) || nombreContieneCienaga(histF.nombre) || nombreContieneCienaga(histF.zona);
+        if (actCienaga || histCienaga) {
+            // Ciénaga: debe haber señal de la zona en al menos un lado y el sector actual en el histórico
+            if (actCienaga && (histCienaga || nombreContieneCienaga(histFull))) {
+                var sector = actClean;
+                if (sector && sector.length >= 3 && histFull.indexOf(sector) >= 0) return true;
+            }
+            if (histCienaga && (actCienaga || nombreContieneCienaga(actFull))) {
+                if (histClean && histClean.length >= 3 && actFull.indexOf(histClean) >= 0) return true;
+            }
+        }
+
+        // Coincidencia por palabras clave significativas
+        return tokensOverlapCount(tokensNombreFrente(actual), tokensNombreFrente(histF)) >= 1;
+    }
+    function frenteNombreLegacyCoincide(actual, histF) {
+        return frenteNombreFlexibleCoincide(actual, histF);
+    }
+    /**
+     * Motor único de matching (Comparar Inspecciones + comparación semanal).
+     * Prioridad: 1) N° contrato  2) nombre flexible  3) tentative si solo contrato.
+     */
     function clasificarMatchFrente(actual, histF) {
         if (!actual || !histF) return { level: 'none' };
-        if (!frenteContratoCoincide(actual, histF)) return { level: 'none' };
-        if (frenteNombreExacto(actual, histF)) return { level: 'exact' };
-        if (frenteNombreLegacyCoincide(actual, histF)) {
-            if (!frenteNombreExacto(actual, histF) && frenteNormStr(actual.nombre) !== frenteNormStr(histF.nombre)) {
-                return { level: 'tentative', histF: histF };
-            }
-            return { level: 'legacy' };
+        var sameContract = frenteContratoNumeroCoincide(actual, histF);
+        var nameExact = frenteNombreExacto(actual, histF);
+        var nameFlex = frenteNombreFlexibleCoincide(actual, histF);
+
+        if (sameContract) {
+            if (nameExact) return { level: 'exact' };
+            if (nameFlex) return { level: 'legacy' };
+            // Mismo contrato, sin palabras en común → confirmar manualmente
+            return { level: 'tentative', histF: histF };
         }
-        if (frenteContratoFuerteCoincide(actual, histF)) return { level: 'contract', histF: histF };
+
+        // Sin N° de contrato en ambos lados: permitir match por nombre (+ contratista si existe)
+        var ca = frenteNumeroContratoNorm(actual);
+        var cb = frenteNumeroContratoNorm(histF);
+        if (!ca && !cb) {
+            var sameContratista = frenteNormStr(actual.contratista) === frenteNormStr(histF.contratista);
+            var contratistaVacio = !frenteNormStr(actual.contratista) && !frenteNormStr(histF.contratista);
+            if (nameExact && (sameContratista || contratistaVacio)) return { level: 'exact' };
+            if (nameFlex && (sameContratista || contratistaVacio)) return { level: 'legacy' };
+            if (nameFlex) return { level: 'tentative', histF: histF };
+        }
         return { level: 'none' };
     }
+    function frenteMatchUnificado(f, ref) {
+        if (!f || !ref) return false;
+        var mc = clasificarMatchFrente(f, ref);
+        if (mc.level === 'exact' || mc.level === 'legacy') return true;
+        if (mc.level === 'tentative' && isMatchConfirmedFor(f, ref)) return true;
+        return false;
+    }
+    window.frenteNumeroContratoNorm = frenteNumeroContratoNorm;
+    window.frenteContratoNumeroCoincide = frenteContratoNumeroCoincide;
+    window.frenteNombreFlexibleCoincide = frenteNombreFlexibleCoincide;
+    window.frenteMatchUnificado = frenteMatchUnificado;
+    window.tokensNombreFrente = tokensNombreFrente;
     window.migrarZonaDesdeNombre = migrarZonaDesdeNombre;
     window.esFrenteGrupoCienaga = esFrenteGrupoCienaga;
     window.frenteUiKey = frenteUiKey;
@@ -3096,7 +3214,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 for (var j = 0; j < frentesH.length; j++) {
                     var hf = frentesH[j];
                     if (!nombreContieneCienaga(hf.nombre)) continue;
-                    if (!frenteContratoCoincide(f, hf)) continue;
+                    if (!frenteContratoNumeroCoincide(f, hf) && !frenteContratoCoincide(f, hf)) continue;
                     var mig = migrarZonaDesdeNombre(hf.nombre);
                     if (frenteNormStr(mig.nombre) === nomF) return true;
                     if (hf.nombre.toLowerCase().indexOf((f.nombre || '').toLowerCase()) >= 0 && (f.nombre || '').length >= 4) return true;
@@ -3125,15 +3243,26 @@ document.addEventListener('DOMContentLoaded', function() {
     window.hayFrentesSeleccionadosInspeccion = hayFrentesSeleccionadosInspeccion;
     window.isNombreFrenteSeleccionadoInspeccion = isNombreFrenteSeleccionadoInspeccion;
     window.ordenarNombresFrentesConSeleccion = ordenarNombresFrentesConSeleccion;
-    window.confirmarMatchFrente = function(fActual, histId, histNombre) {
+    window.confirmarMatchFrente = function(fActual, histId, histNombre, histExtra) {
+        histExtra = histExtra || {};
         var histF = {
-            nombre: histNombre || '',
-            contratista: (fActual && fActual.contratista) || '',
-            numeroContrato: (fActual && fActual.numeroContrato) || ''
+            zona: histExtra.zona || '',
+            nombre: histNombre || histExtra.nombre || '',
+            contratista: histExtra.contratista != null ? histExtra.contratista : ((fActual && fActual.contratista) || ''),
+            numeroContrato: histExtra.numeroContrato != null ? histExtra.numeroContrato : ((fActual && fActual.numeroContrato) || '')
         };
+        if (!fActual) fActual = {};
+        // Asegurar contrato en el frente actual para anclar la confirmación
+        if (!fActual.numeroContrato && histF.numeroContrato) fActual.numeroContrato = histF.numeroContrato;
         persistMatchLink(fActual, histF);
-        persistMatchConfirmado(matchConfirmKey(fActual, histId, histNombre));
-        if (typeof csRefrescarSiAbierto === 'function') csRefrescarSiAbierto();
+        persistMatchConfirmado(matchConfirmKey(fActual, histId, histF.nombre));
+        // Clave extra por contrato puro (por si el nombre del frente vivo cambia de formato)
+        var cNorm = frenteNumeroContratoNorm(fActual);
+        if (cNorm) {
+            persistMatchConfirmado('contrato|' + cNorm + '|' + (histId != null ? String(histId) : '') + '|' + frenteNormStr(limpiarNombreFrenteParaMatch(histF.nombre)));
+        }
+        if (typeof window.csInvalidarComparacionSemanal === 'function') window.csInvalidarComparacionSemanal();
+        else if (typeof csRefrescarSiAbierto === 'function') csRefrescarSiAbierto();
     };
     function normalizeFrente(f) {
         if (!f || typeof f !== 'object') return null;
@@ -6384,10 +6513,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         function frenteMatch(f, ref) {
             if (!f || !ref) return false;
-            if (typeof frenteContratoCoincide === 'function' && typeof frenteNombreExacto === 'function') {
-                if (!frenteContratoCoincide(f, ref)) return false;
-                if (frenteNombreExacto(f, ref)) return true;
-                if (typeof frenteNombreLegacyCoincide === 'function') return frenteNombreLegacyCoincide(f, ref);
+            if (typeof window.frenteMatchUnificado === 'function') return window.frenteMatchUnificado(f, ref);
+            if (typeof clasificarMatchFrente === 'function') {
+                var mc = clasificarMatchFrente(f, ref);
+                if (mc.level === 'exact' || mc.level === 'legacy') return true;
+                if (mc.level === 'tentative' && typeof isMatchConfirmedFor === 'function') return isMatchConfirmedFor(f, ref);
+                return false;
             }
             return normStr(f.nombre) === normStr(ref.nombre)
                 && normStr(f.contratista) === normStr(ref.contratista)
@@ -7832,8 +7963,10 @@ window._csAbierto = false;
 
 function csNormStr(s) { return CompMotor.normStr(s); }
 
-function csFrenteMatch(f, nombre, contratista, numeroContrato) {
-    return CompMotor.frenteMatch(f, { nombre: nombre, contratista: contratista, numeroContrato: numeroContrato });
+function csFrenteMatch(f, nombre, contratista, numeroContrato, zonaOpcional) {
+    var ref = { zona: zonaOpcional || '', nombre: nombre, contratista: contratista, numeroContrato: numeroContrato };
+    if (typeof window.frenteMatchUnificado === 'function') return window.frenteMatchUnificado(f, ref);
+    return CompMotor.frenteMatch(f, ref);
 }
 
 function csClonarInspeccion(insp) {
@@ -7956,11 +8089,14 @@ function csBuscarHistorialCoincidente(frenteRef, contratistaArg, numeroContratoA
         if (!reg || reg.id == null || !idsVivos[reg.id]) return;
         (reg.frentes || []).forEach(function(hf) {
             var mc = typeof clasificarMatchFrente === 'function' ? clasificarMatchFrente(fActual, hf) : { level: 'none' };
-            if (mc.level === 'exact' || mc.level === 'legacy' || mc.level === 'contract') {
+            if (mc.level === 'exact' || mc.level === 'legacy') {
                 confirmed.push({ insp: reg, frenteHist: hf, level: mc.level });
             } else if (mc.level === 'tentative') {
-                if (isMatchConfirmedFor(fActual, hf)) confirmed.push({ insp: reg, frenteHist: hf, level: 'confirmed' });
-                else tentative.push({ insp: reg, frenteHist: hf });
+                if (typeof isMatchConfirmedFor === 'function' && isMatchConfirmedFor(fActual, hf)) {
+                    confirmed.push({ insp: reg, frenteHist: hf, level: 'confirmed' });
+                } else {
+                    tentative.push({ insp: reg, frenteHist: hf });
+                }
             }
         });
     });
@@ -7973,7 +8109,7 @@ function csFiltrarInspeccionPorFrente(insp, nombre, contratista, numeroContrato,
     var copia = csClonarInspeccion(insp);
     var ref = { zona: zonaOpcional || '', nombre: nombre, contratista: contratista, numeroContrato: numeroContrato };
     var ff = (copia.frentes || []).filter(function(f) {
-        return csFrenteMatch(f, nombre, contratista, numeroContrato) || (typeof clasificarMatchFrente === 'function' && clasificarMatchFrente(ref, f).level !== 'none');
+        return csFrenteMatch(f, nombre, contratista, numeroContrato, zonaOpcional);
     });
     copia.frentes = ff.length ? ff : [{ zona: ref.zona, nombre: nombre, contratista: contratista, numeroContrato: numeroContrato, categorias: [] }];
     return copia;
@@ -8033,13 +8169,27 @@ function csActualizarResumenUI() {
             pendientesEl.style.display = 'none';
             pendientesEl.innerHTML = '';
         } else {
-            pendientesEl.innerHTML = '<div style="font-weight:700;margin-bottom:8px;">Posible coincidencia no confirmada</div>'
+            pendientesEl.innerHTML = '<div style="font-weight:700;margin-bottom:8px;">Posible coincidencia — confirmar</div>'
                 + listaPend.map(function(p) {
                     var ct = p.frente.numeroContrato ? ' · Contrato ' + csEscHtml(p.frente.numeroContrato) : '';
+                    var nomNuevo = (p.frente.zona ? (p.frente.zona + ' · ') : '') + (p.frente.nombre || '');
+                    var nomAnt = p.tentative.frenteHist.nombre || '';
                     return '<div class="cs-pendiente-item">'
-                        + '<span style="flex:1;min-width:180px;"><strong>' + csEscHtml(p.frente.nombre) + '</strong>' + ct
-                        + ' ↔ histórico «' + csEscHtml(p.tentative.frenteHist.nombre) + '» (' + csEscHtml(p.tentative.insp.fecha || '') + ')</span>'
-                        + '<button type="button" class="btn-confirmar-match" data-hist-id="' + (p.tentative.insp.id != null ? p.tentative.insp.id : '') + '" data-hist-nom="' + csEscHtml(p.tentative.frenteHist.nombre).replace(/"/g, '&quot;') + '" data-f-nom="' + csEscHtml(p.frente.nombre).replace(/"/g, '&quot;') + '" data-f-cont="' + csEscHtml(p.frente.contratista || '').replace(/"/g, '&quot;') + '" data-f-ctr="' + csEscHtml(p.frente.numeroContrato || '').replace(/"/g, '&quot;') + '">Aceptar</button>'
+                        + '<span style="flex:1;min-width:180px;">'
+                        + '<div><strong>Actual:</strong> ' + csEscHtml(nomNuevo) + ct + '</div>'
+                        + '<div style="margin-top:2px;"><strong>Histórico:</strong> «' + csEscHtml(nomAnt) + '» (' + csEscHtml(p.tentative.insp.fecha || '') + ')</div>'
+                        + '</span>'
+                        + '<button type="button" class="btn-confirmar-match"'
+                        + ' data-hist-id="' + (p.tentative.insp.id != null ? p.tentative.insp.id : '') + '"'
+                        + ' data-hist-nom="' + csEscHtml(nomAnt).replace(/"/g, '&quot;') + '"'
+                        + ' data-hist-cont="' + csEscHtml(p.tentative.frenteHist.contratista || '').replace(/"/g, '&quot;') + '"'
+                        + ' data-hist-ctr="' + csEscHtml(p.tentative.frenteHist.numeroContrato || p.frente.numeroContrato || '').replace(/"/g, '&quot;') + '"'
+                        + ' data-hist-zona="' + csEscHtml(p.tentative.frenteHist.zona || '').replace(/"/g, '&quot;') + '"'
+                        + ' data-f-nom="' + csEscHtml(p.frente.nombre || '').replace(/"/g, '&quot;') + '"'
+                        + ' data-f-zona="' + csEscHtml(p.frente.zona || '').replace(/"/g, '&quot;') + '"'
+                        + ' data-f-cont="' + csEscHtml(p.frente.contratista || '').replace(/"/g, '&quot;') + '"'
+                        + ' data-f-ctr="' + csEscHtml(p.frente.numeroContrato || '').replace(/"/g, '&quot;') + '"'
+                        + '>Aceptar</button>'
                         + '</div>';
                 }).join('');
             pendientesEl.style.display = '';
@@ -8049,9 +8199,20 @@ function csActualizarResumenUI() {
                     var histId = histIdAttr ? parseInt(histIdAttr, 10) : null;
                     if (typeof window.confirmarMatchFrente === 'function') {
                         window.confirmarMatchFrente(
-                            { nombre: btn.getAttribute('data-f-nom'), contratista: btn.getAttribute('data-f-cont'), numeroContrato: btn.getAttribute('data-f-ctr') },
+                            {
+                                zona: btn.getAttribute('data-f-zona') || '',
+                                nombre: btn.getAttribute('data-f-nom'),
+                                contratista: btn.getAttribute('data-f-cont'),
+                                numeroContrato: btn.getAttribute('data-f-ctr')
+                            },
                             isNaN(histId) ? null : histId,
-                            btn.getAttribute('data-hist-nom')
+                            btn.getAttribute('data-hist-nom'),
+                            {
+                                zona: btn.getAttribute('data-hist-zona') || '',
+                                nombre: btn.getAttribute('data-hist-nom'),
+                                contratista: btn.getAttribute('data-hist-cont'),
+                                numeroContrato: btn.getAttribute('data-hist-ctr')
+                            }
                         );
                     }
                     csSemanalGenerar();
