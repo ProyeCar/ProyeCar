@@ -1,5 +1,5 @@
-// build: 2026-07-12-fix-zona-solo-cienaga
-const APP_VERSION = '1.5.96';
+// build: 2026-07-12-fix-boton-eliminar-frente
+const APP_VERSION = '1.5.97';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {

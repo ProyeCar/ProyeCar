@@ -367,9 +367,8 @@
         }
         .frente-header {
             display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            flex-wrap: wrap;
+            flex-direction: column;
+            align-items: stretch;
             gap: 10px;
             padding: 14px 18px;
             cursor: pointer;
@@ -377,10 +376,17 @@
             background: linear-gradient(90deg, var(--verde-oscuro) 0%, #1a5c35 70%, #226b3e 100%);
             border-radius: 16px;
         }
+        .frente-header-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            width: 100%;
+        }
         .frente-header:hover { background: linear-gradient(90deg, #0a2818 0%, #164e2c 100%); }
         .frente-body { display: block; padding: 0 14px 10px; }
         .frente-body.collapsed { display: none; }
-        .frente-toggle { font-size:1rem; margin-top: 14px; margin-right: 4px; display:inline-block; color:#86efac; flex-shrink: 0; }
+        .frente-toggle { font-size:1rem; display:inline-flex; align-items:center; color:#86efac; flex-shrink: 0; }
         .frente-toggle.open svg, .cat-toggle.open svg { transform: rotate(90deg); }
         .frente-summary { font-size:0.76rem; color:#86efac; margin-left:8px; }
         .frente-titulo { flex: 1; min-width: 0; width: 100%; }
@@ -1376,7 +1382,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.96";
+const APP_VERSION = "1.5.97";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -3042,9 +3048,12 @@ document.addEventListener('DOMContentLoaded', function() {
             btnEliminar.onclick = () => { setTimeout(() => { if (confirm("¿Eliminar este frente?")) { frentes.splice(idx, 1); saveToLocal(); renderFrentes(); } }, 10); };
             const btnEliminarPie = btnEliminar.cloneNode(true);
             btnEliminarPie.onclick = btnEliminar.onclick;
-            headerDiv.appendChild(toggleArrow);
+            const headerTop = document.createElement("div");
+            headerTop.className = "frente-header-top";
+            headerTop.appendChild(toggleArrow);
+            headerTop.appendChild(btnEliminar);
+            headerDiv.appendChild(headerTop);
             headerDiv.appendChild(tituloDiv);
-            headerDiv.appendChild(btnEliminar);
             frenteDiv.appendChild(headerDiv);
 
             // Body wrapper for collapse
@@ -3059,7 +3068,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (_fSt.open === true) { toggleArrow.classList.add("open"); } else { frenteBody.classList.add("collapsed"); }
 
             headerDiv.addEventListener("click", (e) => {
-                if (e.target.closest('.frente-campos-card') || e.target.tagName === "BUTTON") return;
+                if (e.target.closest('.frente-campos-card') || e.target.closest('button')) return;
                 frenteBody.classList.toggle("collapsed");
                 toggleArrow.classList.toggle("open");
                 var st = loadUiState();
