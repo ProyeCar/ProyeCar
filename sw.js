@@ -1,5 +1,5 @@
-// build: 2026-07-12-pdf-comparacion-ficha-zona
-const APP_VERSION = '1.5.101';
+// build: 2026-07-12-fix-salto-pagina-zona-pdf
+const APP_VERSION = '1.5.102';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {

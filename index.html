@@ -1444,7 +1444,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.101";
+const APP_VERSION = "1.5.102";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -4163,14 +4163,17 @@ document.addEventListener('DOMContentLoaded', function() {
             + '<tr><td>N&deg; Contrato:</td><td>' + e(contrato) + '</td></tr>';
         return '<table class="portada-ficha" style="display:block;width:100%;max-width:480px;min-width:0;margin:0 0 14px;text-align:left;"><tbody>' + rows + '</tbody></table>';
     }
-    function htmlPdfBloqueZona(zona, escFn) {
+    // Encabezado de zona SIN envoltura .frente-pg: se inserta DENTRO del
+    // .frente-pg del primer sector para que haya un solo salto de página
+    // (zona + primer sector juntos), evitando saltos duplicados y páginas en blanco.
+    function htmlPdfEncabezadoZona(zona, escFn) {
         if (!zona) return '';
         var e = escFn || function(v) { return (v || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
-        return '<div class="frente-pg"><div class="sec-h" style="background:linear-gradient(135deg,#14532d,#166534);margin-top:0;">Zona: ' + e(zona) + '</div></div>';
+        return '<div class="sec-h" style="background:linear-gradient(135deg,#14532d,#166534);margin-top:0;">Zona: ' + e(zona) + '</div>';
     }
     window.resolverFrentePdf = resolverFrentePdf;
     window.htmlPdfFichaUbicacionFrente = htmlPdfFichaUbicacionFrente;
-    window.htmlPdfBloqueZona = htmlPdfBloqueZona;
+    window.htmlPdfEncabezadoZona = htmlPdfEncabezadoZona;
 
     // ===================== GENERACIÓN DEL INFORME PDF - VERSIÓN MEJORADA =====================
 
@@ -4436,12 +4439,10 @@ document.addEventListener('DOMContentLoaded', function() {
         for(var fi=0;fi<frentesPdf.length;fi++){
             var fr=frentesPdf[fi],st=stats[fi],bc=st.pct>=80?'#16a34a':st.pct>=50?'#d97706':'#dc2626';
             var esCienagaPdf = esFrenteGrupoCienaga(fr);
-            if (esCienagaPdf && ZONA_CIENAGA !== pdfZonaActual) {
-                h += htmlPdfBloqueZona(ZONA_CIENAGA, esc);
-                pdfZonaActual = ZONA_CIENAGA;
-            }
-            if (!esCienagaPdf) pdfZonaActual = null;
+            var abreZonaPdf = esCienagaPdf && ZONA_CIENAGA !== pdfZonaActual;
+            if (esCienagaPdf) pdfZonaActual = ZONA_CIENAGA; else pdfZonaActual = null;
             h += '<div class="frente-pg">';
+            if (abreZonaPdf) h += htmlPdfEncabezadoZona(ZONA_CIENAGA, esc);
             h += htmlPdfFichaUbicacionFrente(fr, esc);
             h += '<div class="frente-banner"><h2>'+esc(fr.nombre)+'</h2>'
                 +'<p>Secci&oacute;n '+(fi+2)+' de '+(frentesPdf.length+1)+' &nbsp;|&nbsp; Profesional: '+esc(inspector)
@@ -5741,12 +5742,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 if (opts.pdfMode) {
                     if (!opts._pdfZonaActual) opts._pdfZonaActual = null;
-                    if (esCienagaComp && ZONA_CIENAGA !== opts._pdfZonaActual) {
-                        html += typeof htmlPdfBloqueZona === 'function' ? htmlPdfBloqueZona(ZONA_CIENAGA, escHtml) : '';
-                        opts._pdfZonaActual = ZONA_CIENAGA;
-                    }
-                    if (!esCienagaComp) opts._pdfZonaActual = null;
+                    var abreZonaComp = esCienagaComp && ZONA_CIENAGA !== opts._pdfZonaActual;
+                    if (esCienagaComp) opts._pdfZonaActual = ZONA_CIENAGA; else opts._pdfZonaActual = null;
                     html += '<div class="frente-pg">';
+                    if (abreZonaComp) html += typeof htmlPdfEncabezadoZona === 'function' ? htmlPdfEncabezadoZona(ZONA_CIENAGA, escHtml) : '';
                     html += typeof htmlPdfFichaUbicacionFrente === 'function' ? htmlPdfFichaUbicacionFrente(frData, escHtml) : '';
                 } else {
                     var hdrStyle = opts.compacto
@@ -6507,12 +6506,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     ? resolverFrentePdf(comp.frente, comp.reciente)
                     : (comp.frente || {});
                 var esCienagaPdf = typeof esFrenteGrupoCienaga === 'function' && esFrenteGrupoCienaga(frData);
-                if (esCienagaPdf && ZONA_CIENAGA !== pdfZonaActual) {
-                    h += htmlPdfBloqueZona(ZONA_CIENAGA, eH);
-                    pdfZonaActual = ZONA_CIENAGA;
-                }
-                if (!esCienagaPdf) pdfZonaActual = null;
+                var abreZonaAuto = esCienagaPdf && ZONA_CIENAGA !== pdfZonaActual;
+                if (esCienagaPdf) pdfZonaActual = ZONA_CIENAGA; else pdfZonaActual = null;
                 h += '<div class="frente-pg">';
+                if (abreZonaAuto) h += htmlPdfEncabezadoZona(ZONA_CIENAGA, eH);
                 h += htmlPdfFichaUbicacionFrente(frData, eH);
                 (comp.areas || []).forEach(function(area) {
                     if (filtroAreaPdf !== 'todas' && area.id !== filtroAreaPdf) return;
@@ -6617,12 +6614,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 ? resolverFrentePdf({ nombre: fNombre }, inspecciones[0])
                 : { nombre: fNombre };
             var esCienagaMan = typeof esFrenteGrupoCienaga === 'function' && esFrenteGrupoCienaga(frData);
-            if (esCienagaMan && ZONA_CIENAGA !== pdfZonaMan) {
-                h += htmlPdfBloqueZona(ZONA_CIENAGA, eH);
-                pdfZonaMan = ZONA_CIENAGA;
-            }
-            if (!esCienagaMan) pdfZonaMan = null;
+            var abreZonaMan = esCienagaMan && ZONA_CIENAGA !== pdfZonaMan;
+            if (esCienagaMan) pdfZonaMan = ZONA_CIENAGA; else pdfZonaMan = null;
             h += '<div class="frente-pg">';
+            if (abreZonaMan) h += htmlPdfEncabezadoZona(ZONA_CIENAGA, eH);
             h += htmlPdfFichaUbicacionFrente(frData, eH);
             items.forEach(function(g) {
             var dLabel = '', dStyle = '';
