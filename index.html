@@ -1463,7 +1463,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.122";
+const APP_VERSION = "1.5.123";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 var _pwaRecargando = false;
@@ -3907,9 +3907,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         var impAreasEval = areasEvaluadasDeInspeccion(impData);
                         var impFrentes = frentesSoloAreasEvaluadas(impData.frentes, impAreasEval);
                         var impPct = (typeof calcularPct === 'function') ? calcularPct(impFrentes, impAreasEval).pct : (typeof impData.pct === 'number' ? impData.pct : 0);
+                        var ahoraImp = new Date();
                         historial.unshift({
                             id: Date.now(),
-                            fecha: impData.fecha || new Date().toISOString().split('T')[0],
+                            archivedAt: fechaHoraArchivoColombia(ahoraImp),
+                            fecha: fechaArchivoColombia(ahoraImp),
+                            fechaInspeccionCampo: impData.fecha || '',
                             proyecto: impData.proyecto || 'Sin nombre',
                             ubicacion: impData.ubicacion || '',
                             inspector: impData.inspector || 'No especificado',
@@ -4138,9 +4141,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     var historial = getHistorial();
                     var entradaPct = (typeof data.pct === 'number') ? data.pct : (typeof calcularPct === 'function' ? calcularPct(data.frentes).pct : 0);
+                    var ahoraJson = new Date();
                     var entrada = {
                         id: Date.now(),
-                        fecha: data.fecha || new Date().toISOString().split('T')[0],
+                        archivedAt: fechaHoraArchivoColombia(ahoraJson),
+                        fecha: fechaArchivoColombia(ahoraJson),
+                        fechaInspeccionCampo: data.fecha || '',
                         proyecto: data.proyecto || "Sin nombre",
                         ubicacion: data.ubicacion || "",
                         inspector: data.inspector || "No especificado",
@@ -5865,6 +5871,29 @@ document.addEventListener('DOMContentLoaded', function() {
         try { return JSON.parse(localStorage.getItem('cardique_historial') || '[]'); } catch(e) { return []; }
     }
 
+    var HIST_TZ_COLOMBIA = 'America/Bogota';
+
+    /** Fecha YYYY-MM-DD en Colombia al momento del guardado (no UTC ni campo diligenciado). */
+    function fechaArchivoColombia(now) {
+        return new Intl.DateTimeFormat('en-CA', {
+            timeZone: HIST_TZ_COLOMBIA,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        }).format(now || new Date());
+    }
+
+    /** Fecha y hora legible en Colombia al archivar. */
+    function fechaHoraArchivoColombia(now) {
+        return (now || new Date()).toLocaleString('es-CO', {
+            timeZone: HIST_TZ_COLOMBIA,
+            hour12: false
+        });
+    }
+
+    window.fechaArchivoColombia = fechaArchivoColombia;
+    window.fechaHoraArchivoColombia = fechaHoraArchivoColombia;
+
     function historialIndicePorId(hist, id) {
         if (id == null) return -1;
         return (hist || []).findIndex(function(r) { return r.id === id; });
@@ -5901,11 +5930,13 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         const stats = calcularPct(data.frentes, areasEval);
+        const ahoraArchivo = new Date();
         const registro = {
             id: Date.now(),
-            archivedAt: new Date().toLocaleString('es-CO'),
+            archivedAt: fechaHoraArchivoColombia(ahoraArchivo),
             proyecto: data.proyecto,
-            fecha: data.fecha,
+            fecha: fechaArchivoColombia(ahoraArchivo),
+            fechaInspeccionCampo: data.fecha || '',
             inspector: data.inspector,
             ubicacion: data.ubicacion,
             areasEvaluadas: areasEval,
