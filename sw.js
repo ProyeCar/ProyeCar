@@ -1,5 +1,5 @@
-// build: 2026-07-13-fix-items-generar-obs-dashboard-pdf
-const APP_VERSION = '1.5.118';
+// build: 2026-07-13-pwa-update-fix
+const APP_VERSION = '1.5.119';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {
@@ -10,27 +10,49 @@ self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(names => Promise.all(
       names.filter(name => name !== CACHE_NAME).map(name => caches.delete(name))
-    ))
+    )).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-self.addEventListener('fetch', e => {
-  if (e.request.mode === 'navigate' || e.request.url.includes('index.html')) {
-    e.respondWith(
-      fetch(e.request, { cache: 'no-store' }).then(res => {
-        const resClone = res.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(e.request, resClone));
-        return res;
-      }).catch(() => caches.match(e.request))
-    );
-  } else if (e.request.url.includes('version.json')) {
-    e.respondWith(
-      fetch(e.request, { cache: 'no-store' }).catch(() => caches.match(e.request))
-    );
-  } else {
-    e.respondWith(
-      caches.match(e.request).then(cached => cached || fetch(e.request))
-    );
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
   }
+});
+
+function esNavegacionPrincipal(request) {
+  if (request.mode === 'navigate') return true;
+  try {
+    var url = new URL(request.url);
+    return url.pathname.endsWith('index.html') || url.pathname.endsWith('/');
+  } catch (e) {
+    return request.url.includes('index.html');
+  }
+}
+
+self.addEventListener('fetch', e => {
+  var req = e.request;
+  var url = req.url || '';
+
+  // version.json e index.html: siempre red primero, sin re-cachear en cada visita
+  if (url.includes('version.json') || esNavegacionPrincipal(req)) {
+    e.respondWith(
+      fetch(req, { cache: 'no-store' }).catch(function() {
+        return caches.match(req);
+      })
+    );
+    return;
+  }
+
+  // sw.js: nunca desde caché del SW
+  if (url.includes('sw.js')) {
+    e.respondWith(fetch(req, { cache: 'no-store' }));
+    return;
+  }
+
+  e.respondWith(
+    caches.match(req).then(function(cached) {
+      return cached || fetch(req);
+    })
+  );
 });
