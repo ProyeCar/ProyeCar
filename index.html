@@ -1463,7 +1463,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.117";
+const APP_VERSION = "1.5.118";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -2558,15 +2558,22 @@ document.addEventListener('DOMContentLoaded', function() {
             var ex = dest.items.find(function(it) { return it.id === item.id; });
             if (!ex) {
                 dest.items.push(item);
-            } else if (item.cumple !== null && item.cumple !== undefined && (ex.cumple === null || ex.cumple === undefined)) {
-                ex.cumple = item.cumple;
-                if (item.obs) ex.obs = item.obs;
-                if (item.tipoVerificacion) ex.tipoVerificacion = item.tipoVerificacion;
-                if (item.verificacionVerbal) ex.verificacionVerbal = item.verificacionVerbal;
-            } else if (item.obs && (!ex.obs || !ex.obs.trim())) {
-                ex.obs = item.obs;
+            } else {
+                if (item.cumple !== null && item.cumple !== undefined && (ex.cumple === null || ex.cumple === undefined)) {
+                    ex.cumple = item.cumple;
+                }
+                if (item.obs && item.obs.trim() && (!ex.obs || !ex.obs.trim())) ex.obs = item.obs;
+                if (item.tipoVerificacion && !ex.tipoVerificacion) ex.tipoVerificacion = item.tipoVerificacion;
+                if (item.verificacionVerbal && !ex.verificacionVerbal) ex.verificacionVerbal = item.verificacionVerbal;
             }
         });
+    }
+    function actualizarCampoTextoFrente(fIdx, areaSelector, valor) {
+        if (!frentesContainer) return;
+        var card = frentesContainer.querySelector('.frente-card[data-frente-idx="' + fIdx + '"]');
+        if (!card) return;
+        var ta = card.querySelector(areaSelector);
+        if (ta) ta.value = valor;
     }
     function deduplicateCategorias(f) {
         var porId = {};
@@ -3250,6 +3257,7 @@ document.addEventListener('DOMContentLoaded', function() {
             var frenteUiId = frenteUiKey(frente, idx);
             const frenteDiv = document.createElement("div");
             frenteDiv.className = "frente-card" + (esCienaga ? " frente-en-zona" : "");
+            frenteDiv.dataset.frenteIdx = String(idx);
             if (isFrenteSeleccionadoInspeccion(frente)) frenteDiv.classList.add("frente-seleccionado-inspeccion");
             const headerDiv = document.createElement("div");
             headerDiv.className = "frente-header";
@@ -3448,18 +3456,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     const obsInput = document.createElement("textarea"); obsInput.placeholder = "Observación del ítem (auto-completa al marcar No cumple)"; obsInput.value = item.obs || "";
                     obsInput.id = "obs-item-" + idx + "-" + cat.id + "-" + item.id;
                     obsInput.style.cssText = "width:100%;box-sizing:border-box;";
-                    obsInput.addEventListener('input', (e) => { item.obs = e.target.value; saveToLocal(); });
+                    obsInput.addEventListener('input', (e) => {
+                        var itLive = frentes[idx].categorias[catIdx].items[itemIdx];
+                        if (itLive) itLive.obs = e.target.value;
+                        saveToLocal();
+                    });
 
                     btnSi.onclick = (e) => {
                         e.preventDefault(); e.stopPropagation();
-                        item.cumple = true;
+                        var itLive = frentes[idx].categorias[catIdx].items[itemIdx];
+                        if (!itLive) return;
+                        itLive.cumple = true;
                         btnSi.classList.add('activo'); btnNo.classList.remove('activo');
-                        const sugC = getSugerenciaCumple(item.id);
-                        if (sugC) { item.obs = sugC; obsInput.value = sugC; }
-                        else if (!item.obs || item.obs.trim() === "") {
-                            item.obs = "Verificado en campo.";
-                            var taObsSi = document.getElementById("obs-item-" + idx + "-" + cat.id + "-" + item.id);
-                            if (taObsSi) taObsSi.value = item.obs;
+                        const sugC = getSugerenciaCumple(itLive.id);
+                        if (sugC) { itLive.obs = sugC; obsInput.value = sugC; }
+                        else if (!itLive.obs || itLive.obs.trim() === "") {
+                            itLive.obs = "Verificado en campo.";
+                            var taObsSi = document.getElementById("obs-item-" + idx + "-" + cat.id + "-" + itLive.id);
+                            if (taObsSi) taObsSi.value = itLive.obs;
                         }
                         obsInput.style.background = '#f0fdf4';
                         setTimeout(() => { obsInput.style.background = ''; }, 2000);
@@ -3467,16 +3481,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     };
                     btnNo.onclick = (e) => {
                         e.preventDefault(); e.stopPropagation();
-                        item.cumple = false;
+                        var itLive = frentes[idx].categorias[catIdx].items[itemIdx];
+                        if (!itLive) return;
+                        itLive.cumple = false;
                         btnNo.classList.add('activo'); btnSi.classList.remove('activo');
-                        const sugN = getSugerencia(item.id);
-                        if (sugN) { item.obs = sugN; obsInput.value = sugN; }
-                        else if (!item.obs || item.obs.trim() === "") {
-                            var p = buscarPlantilla(item.texto);
+                        const sugN = getSugerencia(itLive.id);
+                        if (sugN) { itLive.obs = sugN; obsInput.value = sugN; }
+                        else if (!itLive.obs || itLive.obs.trim() === "") {
+                            var p = buscarPlantilla(itLive.texto);
                             var noCumpleTexto = p.noCumple.length > 180 ? p.noCumple.substring(0, 180) : p.noCumple;
-                            item.obs = noCumpleTexto + " (" + p.norma + ")";
-                            var taObsNo = document.getElementById("obs-item-" + idx + "-" + cat.id + "-" + item.id);
-                            if (taObsNo) taObsNo.value = item.obs;
+                            itLive.obs = noCumpleTexto + " (" + p.norma + ")";
+                            var taObsNo = document.getElementById("obs-item-" + idx + "-" + cat.id + "-" + itLive.id);
+                            if (taObsNo) taObsNo.value = itLive.obs;
                         }
                         obsInput.style.background = '#fefce8';
                         setTimeout(() => { obsInput.style.background = ''; }, 2000);
@@ -3486,24 +3502,26 @@ document.addEventListener('DOMContentLoaded', function() {
                     const editar = document.createElement("button"); editar.innerHTML = pcIconEdit(18); editar.className = "btn-editar";
                     editar.onclick = () => {
                         setTimeout(() => {
-                            const nuevo = prompt("Editar ítem:", item.texto);
+                            var itLive = frentes[idx].categorias[catIdx].items[itemIdx];
+                            if (!itLive) return;
+                            const nuevo = prompt("Editar ítem:", itLive.texto);
                             if (nuevo && nuevo.trim()) {
-                                item.texto = nuevo.trim();
+                                itLive.texto = nuevo.trim();
                                 desc.innerText = nuevo.trim();
-                                var tipoActual = {"foto":"1","documento":"2","verbal":"3"}[item.tipoVerificacion] || "1";
+                                var tipoActual = {"foto":"1","documento":"2","verbal":"3"}[itLive.tipoVerificacion] || "1";
                                 var tipoSel = prompt("Tipo de verificación:\n1 = Foto (condición física visible)\n2 = Documento (se sube foto del documento)\n3 = Verbal (gestión externa, sin foto)", tipoActual);
                                 var tipoMap = {"1":"foto","2":"documento","3":"verbal"};
-                                item.tipoVerificacion = tipoMap[tipoSel] || item.tipoVerificacion;
+                                itLive.tipoVerificacion = tipoMap[tipoSel] || itLive.tipoVerificacion;
                                 // Propagar texto/tipo a todos los demás frentes si es ítem custom
                                 var baseParaCat = CATEGORIAS_BASE.find(function(cb) { return cb.id === cat.id; });
-                                var esCustomEdit = !baseParaCat || !baseParaCat.items.find(function(i) { return i.id === item.id; });
+                                var esCustomEdit = !baseParaCat || !baseParaCat.items.find(function(i) { return i.id === itLive.id; });
                                 if (esCustomEdit) {
-                                    frentes.forEach(function(fr) {
-                                        if (fr === frente) return;
+                                    frentes.forEach(function(fr, frIdx) {
+                                        if (frIdx === idx) return;
                                         var otherCat = fr.categorias.find(function(c) { return c.id === cat.id; });
                                         if (otherCat) {
-                                            var otherItem = otherCat.items.find(function(it) { return it.id === item.id; });
-                                            if (otherItem) { otherItem.texto = item.texto; otherItem.tipoVerificacion = item.tipoVerificacion; }
+                                            var otherItem = otherCat.items.find(function(it) { return it.id === itLive.id; });
+                                            if (otherItem) { otherItem.texto = itLive.texto; otherItem.tipoVerificacion = itLive.tipoVerificacion; }
                                         }
                                     });
                                 }
@@ -3515,17 +3533,20 @@ document.addEventListener('DOMContentLoaded', function() {
                     const eliminar = document.createElement("button"); eliminar.innerHTML = pcIconDelete(18); eliminar.className = "btn-eliminar";
                     eliminar.onclick = () => {
                         setTimeout(() => {
+                            var itLive = frentes[idx].categorias[catIdx].items[itemIdx];
+                            if (!itLive) return;
                             if (confirm("¿Eliminar ítem?")) {
-                                cat.items.splice(itemIdx, 1);
+                                var itemId = itLive.id;
+                                frentes[idx].categorias[catIdx].items.splice(itemIdx, 1);
                                 // Propagar eliminación a todos los frentes si es ítem custom
                                 var baseParaCat2 = CATEGORIAS_BASE.find(function(cb) { return cb.id === cat.id; });
-                                var esCustomDel = !baseParaCat2 || !baseParaCat2.items.find(function(i) { return i.id === item.id; });
+                                var esCustomDel = !baseParaCat2 || !baseParaCat2.items.find(function(i) { return i.id === itemId; });
                                 if (esCustomDel) {
-                                    frentes.forEach(function(fr) {
-                                        if (fr === frente) return;
+                                    frentes.forEach(function(fr, frIdx) {
+                                        if (frIdx === idx) return;
                                         var otherCat = fr.categorias.find(function(c) { return c.id === cat.id; });
                                         if (otherCat) {
-                                            var otherIdx = otherCat.items.findIndex(function(it) { return it.id === item.id; });
+                                            var otherIdx = otherCat.items.findIndex(function(it) { return it.id === itemId; });
                                             if (otherIdx !== -1) otherCat.items.splice(otherIdx, 1);
                                         }
                                     });
@@ -3544,7 +3565,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (item.tipoVerificacion === "verbal") {
                         const vvInput = document.createElement("input"); vvInput.placeholder = "Verificado con (nombre/cargo) el (fecha)..."; vvInput.value = item.verificacionVerbal || "";
                         vvInput.style.cssText = "width:100%;box-sizing:border-box;";
-                        vvInput.addEventListener('input', (e) => { item.verificacionVerbal = e.target.value; saveToLocal(); });
+                        vvInput.addEventListener('input', (e) => {
+                            var itLive = frentes[idx].categorias[catIdx].items[itemIdx];
+                            if (itLive) itLive.verificacionVerbal = e.target.value;
+                            saveToLocal();
+                        });
                         obsDiv.appendChild(vvInput);
                     }
                     itemCard.appendChild(row); itemCard.appendChild(obsDiv);
@@ -3568,16 +3593,17 @@ document.addEventListener('DOMContentLoaded', function() {
                             var nombreSinEmoji = cat.nombre.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ]/g, '');
                             prefijo = nombreSinEmoji.substring(0, 3).toUpperCase() || cat.id.substring(0, 3).toUpperCase();
                         }
-                        var numsExistentes = cat.items
+                        var catLive = frentes[idx].categorias[catIdx];
+                        var numsExistentes = catLive.items
                             .map(function(it){ return it.id.match(new RegExp("^" + prefijo.toLowerCase() + "(\\d+)$")); })
                             .filter(function(m){ return m; })
                             .map(function(m){ return parseInt(m[1]); });
                         var siguienteNum = numsExistentes.length ? Math.max(...numsExistentes) + 1 : 1;
                         var nuevoId = prefijo.toLowerCase() + siguienteNum;
-                        cat.items.push({ id: nuevoId, texto: nuevoTexto, cumple: null, obs: "", tipoVerificacion: tipoFinal });
+                        catLive.items.push({ id: nuevoId, texto: nuevoTexto, cumple: null, obs: "", tipoVerificacion: tipoFinal });
                         // Propagar ítem custom a todos los demás frentes (mismo cat.id)
-                        frentes.forEach(function(fr) {
-                            if (fr === frente) return;
+                        frentes.forEach(function(fr, frIdx) {
+                            if (frIdx === idx) return;
                             var otherCat = fr.categorias.find(function(c) { return c.id === cat.id; });
                             if (otherCat && !otherCat.items.find(function(it) { return it.id === nuevoId; })) {
                                 otherCat.items.push({ id: nuevoId, texto: nuevoTexto, cumple: null, obs: "", tipoVerificacion: tipoFinal });
@@ -3903,7 +3929,7 @@ document.addEventListener('DOMContentLoaded', function() {
             + '. Se requiere atención prioritaria en los aspectos señalados para garantizar el cumplimiento de las obligaciones contractuales y normativas vigentes.';
         frentes[idx].observaciones = texto;
         saveToLocal();
-        renderFrentes();
+        actualizarCampoTextoFrente(idx, '.frente-obs-area textarea', texto);
     }
 
     function generarRecomendaciones(idx) {
@@ -3938,7 +3964,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         frentes[idx].recomendaciones = texto;
         saveToLocal();
-        renderFrentes();
+        actualizarCampoTextoFrente(idx, '.frente-recomendaciones-area textarea', texto);
     }
 
     document.getElementById('exportar-items-custom').onclick = function() {
@@ -4293,6 +4319,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         return h + '</div>';
     }
+    function htmlCompPorcentajesPantalla(pctAnt, pctRec) {
+        var h = '<div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:8px;flex-wrap:wrap;page-break-inside:avoid;break-inside:avoid;">';
+        if (pctAnt !== null && pctAnt !== undefined) {
+            h += '<div style="text-align:center;min-width:72px;"><div style="font-size:22px;font-weight:800;color:' + COMP_CHART.ANT + ';">' + pctAnt + '%</div>'
+                + '<div style="font-size:0.65rem;font-weight:700;color:' + COMP_CHART.ANT + ';text-transform:uppercase;">Anterior</div></div>';
+        }
+        if (pctRec !== null && pctRec !== undefined && pctAnt !== null && pctAnt !== undefined) {
+            h += '<div style="font-size:1rem;color:#94a3b8;font-weight:300;">vs</div>';
+        }
+        if (pctRec !== null && pctRec !== undefined) {
+            h += '<div style="text-align:center;min-width:72px;"><div style="font-size:22px;font-weight:800;color:' + COMP_CHART.REC + ';">' + pctRec + '%</div>'
+                + '<div style="font-size:0.65rem;font-weight:700;color:' + COMP_CHART.REC + ';text-transform:uppercase;">Reciente</div></div>';
+        }
+        return h + '</div>';
+    }
     function construirHtmlPdfComparacionAuto(compD, graficas) {
         compD = compD || {};
         graficas = graficas || [];
@@ -4304,12 +4345,12 @@ document.addEventListener('DOMContentLoaded', function() {
             + todasG.length + ' área(s) evaluada(s). '
             + 'Ítems: ' + totalMej + ' mejoraron, ' + totalEmp + ' empeoraron, ' + totalIg + ' iguales.';
         var par = resolverParComparacionPdf(compD);
-        var h = '<div style="page-break-before:always;margin-top:20px;">';
-        h += '<h3 style="font-size:12pt;font-weight:700;color:#1e3a2f;margin-bottom:12px;page-break-after:avoid;break-after:avoid;">Comparación Semanal por Frente</h3>';
+        var h = '<div style="page-break-before:always;margin-top:20px;font-size:16px;">';
+        h += '<h3 style="font-size:1rem;font-weight:700;color:#1e3a2f;margin-bottom:12px;page-break-after:avoid;break-after:avoid;">Comparación Semanal por Frente</h3>';
         h += htmlEncabezadoParComparacion(par.reciente, par.anterior, { escFn: eH, pdfMode: true });
-        h += '<div style="background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;padding:12px;margin-bottom:14px;font-size:9pt;">' + eH(resumen) + '</div>';
+        h += '<div style="background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;padding:12px;margin-bottom:14px;font-size:0.78rem;line-height:1.45;">' + eH(resumen) + '</div>';
         if (compD.omitidos && compD.omitidos.length) {
-            h += '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px;margin-bottom:14px;font-size:8.5pt;color:#b45309;">';
+            h += '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px;margin-bottom:14px;font-size:0.78rem;color:#b45309;line-height:1.45;">';
             compD.omitidos.forEach(function(o) {
                 h += '<div>Frente ' + eH(o.nombre) + ' sin historial previo — no incluido en comparación</div>';
             });
@@ -4336,33 +4377,38 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (filtroAreaPdf !== 'todas' && area.id !== filtroAreaPdf) return;
                 var g = graficas.find(function(x) { return x.frenteNombre === fNombre && x.areaNombre === area.nombre; }) || area;
                 var diff = (area.pctReciente !== null && area.pctAnterior !== null) ? area.pctReciente - area.pctAnterior : null;
-                var dLabel = '', dStyle = '';
-                if (diff !== null) {
-                    if (diff > 0)      { dLabel = '↑ +' + diff + ' pp'; dStyle = 'background:#dcfce7;color:#15803d;'; }
-                    else if (diff < 0) { dLabel = '↓ ' + diff + ' pp';  dStyle = 'background:#fee2e2;color:#b91c1c;'; }
-                    else                 { dLabel = '= Sin cambio';           dStyle = 'background:#f3f4f6;color:#6b7280;'; }
+                h += '<div style="margin-bottom:14px;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;page-break-inside:avoid;break-inside:avoid;background:#fff;">';
+                h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px;">';
+                h += '<span style="font-weight:700;font-size:0.85rem;color:#1e3a2f;">' + eH(area.nombre) + '</span>';
+                if (typeof CompMotor !== 'undefined' && CompMotor.htmlDiffBadge) {
+                    h += CompMotor.htmlDiffBadge(diff);
                 }
-                h += '<div style="margin-bottom:14px;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;page-break-inside:avoid;">';
-                h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:6px;">';
-                h += '<span style="font-size:9.5pt;font-weight:700;color:#1e3a2f;">' + eH(area.nombre) + '</span>';
-                if (dLabel) h += '<span style="font-size:7.5pt;font-weight:700;padding:2px 8px;border-radius:20px;' + dStyle + '">' + dLabel + '</span>';
                 h += '</div>';
-                h += '<div style="font-size:8pt;color:#64748b;margin-bottom:6px;">↑ ' + (area.mejorados || 0) + ' mejoraron · ↓ ' + (area.empeorados || 0) + ' empeoraron · = ' + (area.iguales || 0) + ' iguales</div>';
+                h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;font-size:0.72rem;font-weight:600;">'
+                    + '<span style="color:#16a34a;background:#f0fdf4;padding:3px 8px;border-radius:12px;">↑ ' + (area.mejorados || 0) + ' mejoraron</span>'
+                    + '<span style="color:#dc2626;background:#fef2f2;padding:3px 8px;border-radius:12px;">↓ ' + (area.empeorados || 0) + ' empeoraron</span>'
+                    + '<span style="color:#6b7280;background:#f3f4f6;padding:3px 8px;border-radius:12px;">= ' + (area.iguales || 0) + ' iguales</span></div>';
                 if (area.pctReciente !== null && area.pctReciente !== undefined) {
-                    h += htmlPdfPorcentajesPar(area.pctAnterior, area.pctReciente);
+                    h += htmlCompPorcentajesPantalla(area.pctAnterior, area.pctReciente);
                 }
-                if (g.imgData) h += '<img src="' + g.imgData + '" style="width:100%;border:1px solid #e2e8f0;border-radius:6px;display:block;margin-bottom:6px;"/>';
-                if (area.detalle && area.detalle.length) {
+                if (g.imgData) h += '<img src="' + g.imgData + '" style="width:100%;height:auto;border:1px solid #e2e8f0;border-radius:6px;display:block;margin-bottom:8px;object-fit:contain;"/>';
+                if (area.detalle && area.detalle.length && typeof CompMotor !== 'undefined' && CompMotor.htmlDetalleItems) {
+                    h += CompMotor.htmlDetalleItems(area.detalle);
+                } else if (area.detalle && area.detalle.length) {
                     var cambios = area.detalle.filter(function(d) { return d.cambio !== 'igual'; });
                     if (cambios.length) {
-                        h += '<table style="width:100%;border-collapse:collapse;font-size:7.5pt;margin-top:4px;">';
+                        h += '<div style="margin-top:8px;border-top:1px solid #e2e8f0;padding-top:6px;">';
                         cambios.forEach(function(d) {
+                            var col = d.cambio === 'mejoró' ? '#16a34a' : (d.cambio === 'empeoró' ? '#dc2626' : '#6b7280');
+                            var icon = d.cambio === 'mejoró' ? '↑' : (d.cambio === 'empeoró' ? '↓' : '·');
                             var antTxt = d.ant === true ? 'Cumple' : (d.ant === false ? 'No cumple' : '—');
                             var recTxt = d.rec === true ? 'Cumple' : (d.rec === false ? 'No cumple' : '—');
-                            h += '<tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:3px 4px;color:#374151;">' + eH(d.texto || d.id) + '</td>'
-                                + '<td style="padding:3px 4px;text-align:right;color:#64748b;white-space:nowrap;">' + antTxt + ' → ' + recTxt + '</td></tr>';
+                            h += '<div style="font-size:0.72rem;padding:4px 0;border-bottom:1px dashed #f1f5f9;display:flex;gap:6px;align-items:flex-start;">'
+                                + '<span style="color:' + col + ';font-weight:700;flex-shrink:0;">' + icon + '</span>'
+                                + '<span style="flex:1;color:#374151;">' + eH(d.texto || d.id || 'Ítem') + '</span>'
+                                + '<span style="color:#94a3b8;flex-shrink:0;white-space:nowrap;">' + antTxt + ' → ' + recTxt + '</span></div>';
                         });
-                        h += '</table>';
+                        h += '</div>';
                     }
                 }
                 h += '</div>';
@@ -4547,10 +4593,11 @@ document.addEventListener('DOMContentLoaded', function() {
             // Encabezado de zona agrupando sectores (mismo estilo que el informe).
             + '.sec-h{background:linear-gradient(135deg,#14532d,#166534);color:#ffffff;font-weight:800;font-size:10pt;padding:7px 12px;border-radius:8px;margin:4px 0 10px;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
             + '.cat-h{font-weight:700;font-size:9.5pt;color:#1e3a2f;margin:10px 0 4px}'
-            + '.dash-chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}'
-            + '.dash-chart-cell{border:1px solid #e2e8f0;border-radius:10px;padding:10px;background:#fff;page-break-inside:avoid;break-inside:avoid;min-height:198px;display:flex;flex-direction:column}'
-            + '.dash-chart-lbl{font-size:9pt;font-weight:700;color:#1e3a2f;text-align:center;margin-bottom:6px;line-height:1.3;overflow-wrap:break-word;word-wrap:break-word;hyphens:none}'
-            + '.dash-chart-img{width:100%;flex:1;min-height:150px;max-height:172px;object-fit:contain;display:block}'
+            + '.dash-chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px;align-items:stretch}'
+            + '.dash-chart-cell{border:1px solid #e2e8f0;border-radius:10px;padding:12px;background:#fff;page-break-inside:avoid;break-inside:avoid;-webkit-column-break-inside:avoid;display:flex;flex-direction:column;min-height:260px;overflow:visible}'
+            + '.dash-chart-lbl{font-size:9pt;font-weight:700;color:#1e3a2f;text-align:center;margin-bottom:8px;line-height:1.3;overflow-wrap:break-word;word-wrap:break-word;hyphens:none;flex-shrink:0}'
+            + '.dash-chart-img-wrap{flex:1;display:flex;align-items:center;justify-content:center;min-height:200px;overflow:visible;page-break-inside:avoid;break-inside:avoid}'
+            + '.dash-chart-img{width:100%;height:auto;max-width:100%;object-fit:contain;display:block;page-break-inside:avoid;break-inside:avoid}'
             // .frente-pg agrupa cada sector/frente y evita que se corte a la mitad.
             + '.frente-pg,.dash-frente{margin-bottom:10px;padding:10px 12px;border-radius:0 10px 10px 0;page-break-inside:avoid;break-inside:avoid}'
             + '.dash-frente-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:6px}'
@@ -4582,7 +4629,7 @@ document.addEventListener('DOMContentLoaded', function() {
         chartSlots.forEach(function(slot) {
             h += '<div class="dash-chart-cell">';
             h += '<div class="dash-chart-lbl">' + esc(slot.titulo) + badgeDiffDashboard(slot.diff) + '</div>'
-                + '<img class="dash-chart-img" src="' + slot.imgData + '" alt="' + esc(slot.titulo) + '"/>';
+                + '<div class="dash-chart-img-wrap"><img class="dash-chart-img" src="' + slot.imgData + '" alt="' + esc(slot.titulo) + '"/></div>';
             h += '</div>';
         });
         h += '</div></div>';
