@@ -1,5 +1,5 @@
-// build: 2026-07-12-no-repetir-zona-municipio-grupo
-const APP_VERSION = '1.5.103';
+// build: 2026-07-12-pdf-comp-semanal-titulo-contraste-tipografia
+const APP_VERSION = '1.5.104';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {
