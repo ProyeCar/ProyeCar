@@ -1444,7 +1444,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.100";
+const APP_VERSION = "1.5.101";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -4122,6 +4122,56 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (nuevoNombre !== null) alert("Debe ingresar un nombre.");
     }, 10); };
 
+    function resolverFrentePdf(fPartial, insp) {
+        var base = Object.assign({}, fPartial || {});
+        var found = null;
+        if (insp && insp.frentes) {
+            found = insp.frentes.find(function(fr) {
+                if (typeof frenteContratoCoincide === 'function' && (base.contratista || base.numeroContrato)) {
+                    return fr.nombre === base.nombre && frenteContratoCoincide(fr, base);
+                }
+                return fr.nombre === base.nombre;
+            });
+        }
+        if (!found && typeof frentes !== 'undefined') {
+            found = frentes.find(function(fr) {
+                if (typeof frenteContratoCoincide === 'function' && (base.contratista || base.numeroContrato)) {
+                    return fr.nombre === base.nombre && frenteContratoCoincide(fr, base);
+                }
+                return fr.nombre === base.nombre;
+            });
+        }
+        if (found) base = Object.assign({}, found, base);
+        if (!base.zona && typeof esFrenteGrupoCienaga === 'function' && esFrenteGrupoCienaga(base)) {
+            base.zona = ZONA_CIENAGA;
+        }
+        return base;
+    }
+    function htmlPdfFichaUbicacionFrente(f, escFn) {
+        f = f || {};
+        var e = escFn || function(v) { return (v || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+        var esCienaga = typeof esFrenteGrupoCienaga === 'function' && esFrenteGrupoCienaga(f);
+        var zona = (f.zona || '').trim() || (esCienaga ? ZONA_CIENAGA : '');
+        var municipio = (f.municipio || '').trim();
+        var sector = (f.nombre || '').trim() || 'Sin nombre';
+        var contratista = (f.contratista || '').trim() || 'No especificado';
+        var contrato = (f.numeroContrato || '').trim() || 'No especificado';
+        var rows = '<tr><td>Municipio:</td><td>' + (municipio ? e(municipio) : '<em style="color:#6b7280">—</em>') + '</td></tr>';
+        if (zona && esCienaga) rows += '<tr><td>Zona:</td><td>' + e(zona) + '</td></tr>';
+        rows += '<tr><td>Sector/Frente:</td><td>' + e(sector) + '</td></tr>'
+            + '<tr><td>Contratista:</td><td>' + e(contratista) + '</td></tr>'
+            + '<tr><td>N&deg; Contrato:</td><td>' + e(contrato) + '</td></tr>';
+        return '<table class="portada-ficha" style="display:block;width:100%;max-width:480px;min-width:0;margin:0 0 14px;text-align:left;"><tbody>' + rows + '</tbody></table>';
+    }
+    function htmlPdfBloqueZona(zona, escFn) {
+        if (!zona) return '';
+        var e = escFn || function(v) { return (v || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+        return '<div class="frente-pg"><div class="sec-h" style="background:linear-gradient(135deg,#14532d,#166534);margin-top:0;">Zona: ' + e(zona) + '</div></div>';
+    }
+    window.resolverFrentePdf = resolverFrentePdf;
+    window.htmlPdfFichaUbicacionFrente = htmlPdfFichaUbicacionFrente;
+    window.htmlPdfBloqueZona = htmlPdfBloqueZona;
+
     // ===================== GENERACIÓN DEL INFORME PDF - VERSIÓN MEJORADA =====================
 
     // --- SVG: Gráfico de torta ---
@@ -4387,17 +4437,14 @@ document.addEventListener('DOMContentLoaded', function() {
             var fr=frentesPdf[fi],st=stats[fi],bc=st.pct>=80?'#16a34a':st.pct>=50?'#d97706':'#dc2626';
             var esCienagaPdf = esFrenteGrupoCienaga(fr);
             if (esCienagaPdf && ZONA_CIENAGA !== pdfZonaActual) {
-                h += '<div style="page-break-before:always;break-before:page;"></div>';
-                h += '<div class="sec-h" style="background:linear-gradient(135deg,#14532d,#166534);margin-top:0;">Zona: '+esc(ZONA_CIENAGA)+'</div>';
+                h += htmlPdfBloqueZona(ZONA_CIENAGA, esc);
                 pdfZonaActual = ZONA_CIENAGA;
             }
             if (!esCienagaPdf) pdfZonaActual = null;
             h += '<div class="frente-pg">';
+            h += htmlPdfFichaUbicacionFrente(fr, esc);
             h += '<div class="frente-banner"><h2>'+esc(fr.nombre)+'</h2>'
                 +'<p>Secci&oacute;n '+(fi+2)+' de '+(frentesPdf.length+1)+' &nbsp;|&nbsp; Profesional: '+esc(inspector)
-                +(fr.municipio ? ' &nbsp;|&nbsp; Municipio: '+esc(fr.municipio) : '')
-                +' &nbsp;|&nbsp; Contratista: '+esc(fr.contratista||'No especificado')
-                +' &nbsp;|&nbsp; N° Contrato: '+esc(fr.numeroContrato||'No especificado')
                 +' &nbsp;|&nbsp; Fecha: '+esc(fecha)+'</p></div>';
             h += '<div class="mini-kpi-row">'
                 +'<div class="mini-kpi"><div class="num" style="color:#1e3a2f">'+st.tot+'</div><div class="lbl">Total</div></div>'
@@ -5526,7 +5573,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     return compararArea(catR, catA);
                 });
                 comparables.push({
-                    frente: { nombre: fRef.nombre, contratista: fRef.contratista, numeroContrato: fRef.numeroContrato },
+                    frente: {
+                        nombre: fRef.nombre,
+                        contratista: fRef.contratista,
+                        numeroContrato: fRef.numeroContrato,
+                        municipio: fRef.municipio || '',
+                        zona: fRef.zona || (typeof esFrenteGrupoCienaga === 'function' && esFrenteGrupoCienaga(fRef) ? ZONA_CIENAGA : '')
+                    },
                     reciente: reciente,
                     anterior: anterior,
                     fechaReciente: reciente.fecha || '',
@@ -5681,20 +5734,37 @@ document.addEventListener('DOMContentLoaded', function() {
                 var fNombre = f.nombre || ('Frente ' + (fi + 1));
                 if (filtroFrente !== 'todos' && fNombre !== filtroFrente) return;
 
-                var hdrStyle = opts.compacto
-                    ? 'font-size:0.85rem;font-weight:700;color:#1e3a2f;margin:14px 0 6px;padding:8px 10px;background:#e8f5e9;border-radius:8px;'
-                    : 'font-size:1rem;font-weight:700;color:#1e3a2f;margin:16px 0 8px;padding-bottom:6px;border-bottom:2px solid #e2e8f0;display:flex;align-items:center;gap:8px;';
-                html += '<div style="' + hdrStyle + '">' + pcIcon('construction', opts.compacto ? 16 : 18, '#1e3a2f') + ' ' + escHtml(fNombre)
-                    + (f.contratista ? ' · ' + escHtml(f.contratista) : '')
-                    + (f.numeroContrato ? ' · Contrato ' + escHtml(f.numeroContrato) : '');
-                if (opts.compacto) {
-                    html += '<div style="font-size:0.68rem;font-weight:500;color:#64748b;margin-top:4px;">Actual: ' + escHtml(comp.fechaReciente || data.reciente && data.reciente.fecha || '')
-                        + ' vs Anterior: ' + escHtml(comp.fechaAnterior || data.anterior && data.anterior.fecha || '') + '</div>';
+                var frData = typeof resolverFrentePdf === 'function'
+                    ? resolverFrentePdf(f, comp.reciente || data.reciente)
+                    : f;
+                var esCienagaComp = typeof esFrenteGrupoCienaga === 'function' && esFrenteGrupoCienaga(frData);
+
+                if (opts.pdfMode) {
+                    if (!opts._pdfZonaActual) opts._pdfZonaActual = null;
+                    if (esCienagaComp && ZONA_CIENAGA !== opts._pdfZonaActual) {
+                        html += typeof htmlPdfBloqueZona === 'function' ? htmlPdfBloqueZona(ZONA_CIENAGA, escHtml) : '';
+                        opts._pdfZonaActual = ZONA_CIENAGA;
+                    }
+                    if (!esCienagaComp) opts._pdfZonaActual = null;
+                    html += '<div class="frente-pg">';
+                    html += typeof htmlPdfFichaUbicacionFrente === 'function' ? htmlPdfFichaUbicacionFrente(frData, escHtml) : '';
+                } else {
+                    var hdrStyle = opts.compacto
+                        ? 'font-size:0.85rem;font-weight:700;color:#1e3a2f;margin:14px 0 6px;padding:8px 10px;background:#e8f5e9;border-radius:8px;'
+                        : 'font-size:1rem;font-weight:700;color:#1e3a2f;margin:16px 0 8px;padding-bottom:6px;border-bottom:2px solid #e2e8f0;display:flex;align-items:center;gap:8px;';
+                    html += '<div style="' + hdrStyle + '">' + pcIcon('construction', opts.compacto ? 16 : 18, '#1e3a2f') + ' ' + escHtml(fNombre)
+                        + (f.contratista ? ' · ' + escHtml(f.contratista) : '')
+                        + (f.numeroContrato ? ' · Contrato ' + escHtml(f.numeroContrato) : '');
+                    if (opts.compacto) {
+                        html += '<div style="font-size:0.68rem;font-weight:500;color:#64748b;margin-top:4px;">Actual: ' + escHtml(comp.fechaReciente || data.reciente && data.reciente.fecha || '')
+                            + ' vs Anterior: ' + escHtml(comp.fechaAnterior || data.anterior && data.anterior.fecha || '') + '</div>';
+                    }
+                    html += '</div>';
                 }
-                html += '</div>';
 
                 if (comp.sinAnterior) {
                     html += '<div style="background:#f8fafc;border-radius:12px;padding:12px;color:#6b7280;font-size:0.85rem;margin-bottom:10px;">Solo en inspección reciente — sin datos anteriores para comparar</div>';
+                    if (opts.pdfMode) html += '</div>';
                     return;
                 }
 
@@ -5755,6 +5825,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     html += htmlDetalleItems(area.detalle);
                     html += '</div>';
                 });
+                if (opts.pdfMode) html += '</div>';
             });
 
             if (!html) html = '<div style="font-size:0.8rem;color:#6b7280;padding:8px 0;">Sin datos para mostrar con los filtros actuales.</div>';
@@ -6359,6 +6430,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 window.graficasComparacionPDF.push({
                                     frenteNombre: fNombre,
                                     areaNombre: areaNombre,
+                                    areaId: areaId,
                                     pcts: pcts,
                                     labels: chartLabels,
                                     pctReciente: p0,
@@ -6425,16 +6497,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 h += '</div>';
             }
 
-            var frenteActual = '';
             var filtroFrentePdf = (document.getElementById('filtro-frente-pdf') || {}).value || 'todos';
             var filtroAreaPdf = (document.getElementById('filtro-area-pdf') || {}).value || 'todas';
+            var pdfZonaActual = null;
             (compD.comparables || []).forEach(function(comp) {
                 var fNombre = comp.frente.nombre || 'Sin nombre';
                 if (filtroFrentePdf !== 'todos' && fNombre !== filtroFrentePdf) return;
-                if (fNombre !== frenteActual) {
-                    frenteActual = fNombre;
-                    h += '<div style="font-size:11pt;font-weight:700;color:#1e3a2f;margin:16px 0 8px;padding:6px 10px;background:#e8f5e9;border-radius:6px;">' + eH(frenteActual) + '</div>';
+                var frData = typeof resolverFrentePdf === 'function'
+                    ? resolverFrentePdf(comp.frente, comp.reciente)
+                    : (comp.frente || {});
+                var esCienagaPdf = typeof esFrenteGrupoCienaga === 'function' && esFrenteGrupoCienaga(frData);
+                if (esCienagaPdf && ZONA_CIENAGA !== pdfZonaActual) {
+                    h += htmlPdfBloqueZona(ZONA_CIENAGA, eH);
+                    pdfZonaActual = ZONA_CIENAGA;
                 }
+                if (!esCienagaPdf) pdfZonaActual = null;
+                h += '<div class="frente-pg">';
+                h += htmlPdfFichaUbicacionFrente(frData, eH);
                 (comp.areas || []).forEach(function(area) {
                     if (filtroAreaPdf !== 'todas' && area.id !== filtroAreaPdf) return;
                     var g = graficas.find(function(x) { return x.frenteNombre === fNombre && x.areaNombre === area.nombre; }) || area;
@@ -6472,6 +6551,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     h += '</div>';
                 });
+                h += '</div>';
             });
             h += '</div>';
             window._compPdfHtml = h;
@@ -6519,7 +6599,32 @@ document.addEventListener('DOMContentLoaded', function() {
         h += '<div style="background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;padding:12px;margin:16px 0;font-size:9pt;">'
             + 'Resumen de tendencia: ' + eH(resumen) + '</div>';
 
+        var filtroFrentePdfMan = (document.getElementById('filtro-frente-pdf') || {}).value || 'todos';
+        var filtroAreaPdfMan = (document.getElementById('filtro-area-pdf') || {}).value || 'todas';
+        var frenteGroups = {};
         graficas.forEach(function(g) {
+            if (filtroFrentePdfMan !== 'todos' && g.frenteNombre !== filtroFrentePdfMan) return;
+            if (filtroAreaPdfMan !== 'todas' && g.areaId !== filtroAreaPdfMan && g.areaNombre !== filtroAreaPdfMan) return;
+            var key = g.frenteNombre || 'Sin nombre';
+            if (!frenteGroups[key]) frenteGroups[key] = [];
+            frenteGroups[key].push(g);
+        });
+        var pdfZonaMan = null;
+        Object.keys(frenteGroups).forEach(function(fNombre) {
+            var items = frenteGroups[fNombre];
+            if (!items.length) return;
+            var frData = typeof resolverFrentePdf === 'function'
+                ? resolverFrentePdf({ nombre: fNombre }, inspecciones[0])
+                : { nombre: fNombre };
+            var esCienagaMan = typeof esFrenteGrupoCienaga === 'function' && esFrenteGrupoCienaga(frData);
+            if (esCienagaMan && ZONA_CIENAGA !== pdfZonaMan) {
+                h += htmlPdfBloqueZona(ZONA_CIENAGA, eH);
+                pdfZonaMan = ZONA_CIENAGA;
+            }
+            if (!esCienagaMan) pdfZonaMan = null;
+            h += '<div class="frente-pg">';
+            h += htmlPdfFichaUbicacionFrente(frData, eH);
+            items.forEach(function(g) {
             var dLabel = '', dStyle = '';
             if (g.diff !== null) {
                 if (g.diff > 0)      { dLabel = '↑ +' + g.diff + ' pp'; dStyle = 'background:#dcfce7;color:#15803d;'; }
@@ -6528,7 +6633,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             h += '<div style="margin-bottom:16px;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;page-break-inside:avoid;">';
             h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px;">';
-            h += '<span style="font-size:9.5pt;font-weight:700;color:#1e3a2f;">' + eH(g.frenteNombre) + ' — ' + eH(g.areaNombre) + '</span>';
+            h += '<span style="font-size:9.5pt;font-weight:700;color:#1e3a2f;">' + eH(g.areaNombre) + '</span>';
             if (dLabel) h += '<span style="font-size:7.5pt;font-weight:700;padding:2px 8px;border-radius:20px;' + dStyle + '">' + dLabel + '</span>';
             h += '</div>';
             h += '<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">';
@@ -6542,6 +6647,8 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             h += '</div>';
             h += '<img src="' + g.imgData + '" style="width:100%;border:1px solid #e2e8f0;border-radius:6px;display:block;"/>';
+            h += '</div>';
+            });
             h += '</div>';
         });
 
