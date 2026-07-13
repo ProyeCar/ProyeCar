@@ -1463,7 +1463,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.105";
+const APP_VERSION = "1.5.106";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -4218,9 +4218,38 @@ document.addEventListener('DOMContentLoaded', function() {
         return '<div class="sec-h" style="background:linear-gradient(135deg,#14532d,#166534);color:#ffffff;-webkit-print-color-adjust:exact;print-color-adjust:exact;margin-top:0;">Zona: ' + e(zona)
             + '<span style="font-weight:600;font-size:10pt;color:#ffffff;"> &nbsp;&middot;&nbsp; Municipio: ' + e(muni) + '</span></div>';
     }
+    // Encabezado "Anterior vs Más Reciente" para PDF de Comparar Inspecciones.
+    // Réplica visual de pantalla (htmlEncabezadoPar) usando clases del documento.
+    function htmlPdfEncabezadoParComparacion(reciente, anterior, escFn) {
+        if (!reciente || !anterior) return '';
+        var e = escFn || function(v) { return (v || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+        var colAnt = '#BA7517', colRec = '#27500A';
+        var contratoAnt = (anterior.proyecto || '').trim() || 'Sin contrato';
+        var contratoRec = (reciente.proyecto || '').trim() || 'Sin contrato';
+        var fechaAnt = (anterior.fecha || '').trim() || '—';
+        var fechaRec = (reciente.fecha || '').trim() || '—';
+        return '<div class="sub-t" style="page-break-after:avoid;break-after:avoid;">Anterior vs M&aacute;s Reciente</div>'
+            + '<div class="kpi-row" style="page-break-inside:avoid;break-inside:avoid;margin-bottom:14px;">'
+            + '<div class="kpi-card" style="text-align:left;border:2px solid ' + colAnt + ';background:#fff7ed;padding:12px 14px;">'
+            + '<div class="kpi-lbl" style="color:' + colAnt + ';font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-top:0;">Anterior</div>'
+            + '<div class="kpi-lbl" style="font-weight:700;color:#166534;margin-top:8px;">N&deg; de Contrato:</div>'
+            + '<div style="font-weight:700;font-size:10pt;color:#1e3a2f;margin:2px 0 6px;">' + e(contratoAnt) + '</div>'
+            + '<div class="kpi-lbl" style="font-weight:700;color:#166534;margin-top:0;">Fecha:</div>'
+            + '<div class="kpi-lbl" style="margin-top:2px;">' + e(fechaAnt) + '</div>'
+            + '</div>'
+            + '<div class="kpi-card" style="text-align:left;border:2px solid ' + colRec + ';background:#f0fdf4;padding:12px 14px;">'
+            + '<div class="kpi-lbl" style="color:' + colRec + ';font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-top:0;">M&aacute;s Reciente</div>'
+            + '<div class="kpi-lbl" style="font-weight:700;color:#166534;margin-top:8px;">N&deg; de Contrato:</div>'
+            + '<div style="font-weight:700;font-size:10pt;color:#1e3a2f;margin:2px 0 6px;">' + e(contratoRec) + '</div>'
+            + '<div class="kpi-lbl" style="font-weight:700;color:#166534;margin-top:0;">Fecha:</div>'
+            + '<div class="kpi-lbl" style="margin-top:2px;">' + e(fechaRec) + '</div>'
+            + '</div>'
+            + '</div>';
+    }
     window.resolverFrentePdf = resolverFrentePdf;
     window.htmlPdfFichaUbicacionFrente = htmlPdfFichaUbicacionFrente;
     window.htmlPdfEncabezadoZona = htmlPdfEncabezadoZona;
+    window.htmlPdfEncabezadoParComparacion = htmlPdfEncabezadoParComparacion;
 
     // ===================== GENERACIÓN DEL INFORME PDF - VERSIÓN MEJORADA =====================
 
@@ -6611,7 +6640,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         var inspecciones = _compPdfInspeccionesActivas();
         var labels = compD.labels || inspecciones.map(function(insp) { return insp.fecha || 'Sin fecha'; });
-        var coloresHdr = ['#16a34a', '#f59e0b', '#0369a1', '#7c3aed', '#dc2626', '#0891b2'];
 
         var todasG = (window.graficasComparacionPDF_todas && window.graficasComparacionPDF_todas.length > 0)
             ? window.graficasComparacionPDF_todas : graficas;
@@ -6635,16 +6663,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
         var h = '<div style="page-break-before:always;margin-top:20px;">';
         h += '<h3 style="font-size:12pt;font-weight:700;color:#1e3a2f;margin-bottom:12px;page-break-after:avoid;break-after:avoid;">Comparación Semanal de Cumplimiento</h3>';
-        h += '<div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">';
-        inspecciones.forEach(function(insp, i) {
-            var col = coloresHdr[i % coloresHdr.length];
-            var bg = i === 0 ? '#f0fdf4' : '#f8fafc';
-            h += '<div style="flex:1;min-width:140px;background:' + bg + ';border:2px solid ' + col + ';border-radius:10px;padding:10px 14px;">'
-                + '<div style="font-size:7.5pt;font-weight:700;color:' + col + ';letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px;">' + eH(labels[i] || ('Inspección ' + (i + 1))) + '</div>'
-                + '<div style="font-weight:700;font-size:10pt;color:#1e3a2f;">' + eH(insp.proyecto || 'Sin nombre') + '</div>'
-                + '<div style="font-size:8.5pt;color:#6b7280;">' + pcIcon('calendar', 10, '#6b7280') + ' ' + eH(insp.fecha || '') + '</div></div>';
-        });
-        h += '</div>';
+        var inspReciente = compD.reciente || (inspecciones.length ? inspecciones[0] : null);
+        var inspAnterior = compD.anterior || (inspecciones.length ? inspecciones[inspecciones.length - 1] : null);
+        if (inspReciente && inspAnterior) {
+            h += htmlPdfEncabezadoParComparacion(inspReciente, inspAnterior, eH);
+        }
         h += '<div style="background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;padding:12px;margin:16px 0;font-size:9pt;">'
             + 'Resumen de tendencia: ' + eH(resumen) + '</div>';
 
