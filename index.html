@@ -1463,7 +1463,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.115";
+const APP_VERSION = "1.5.116";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -4573,13 +4573,9 @@ document.addEventListener('DOMContentLoaded', function() {
         h += '<div class="dash-title" style="text-align:center;margin-bottom:10px;">'
             + '<div style="font-size:14pt;font-weight:800;color:#1e3a2f;letter-spacing:.02em;">DASHBOARD EJECUTIVO</div>'
             + '<div style="font-size:9pt;color:#64748b;margin-top:3px;">Comparación semanal — vista gráfica</div></div>';
-        // Municipio y Zona: se muestran UNA sola vez agrupando la información.
-        h += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;font-size:9pt;">'
-            + '<div style="flex:1;min-width:140px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:8px 10px;"><strong style="color:#166534;">Municipio:</strong> ' + esc(municipio) + '</div>';
-        if (hayZona) {
-            h += '<div style="flex:1;min-width:140px;background:#eff6ff;border:1px solid #93c5fd;border-radius:8px;padding:8px 10px;"><strong style="color:#1d4ed8;">Zona:</strong> ' + esc(ZONA_CIENAGA) + '</div>';
-        }
-        h += '</div>';
+        // Municipio y Zona NO se muestran aquí: se aclaran una sola vez más abajo,
+        // en el encabezado agrupado de la zona (Ciénaga de la Virgen). Las tarjetas
+        // ANTERIOR / MÁS RECIENTE quedan con su contenido original (nombre + fecha).
         h += htmlEncabezadoParComparacion(par.reciente, par.anterior, { escFn: esc, pdfMode: true });
         h += '<div class="dash-title" style="font-size:9.5pt;font-weight:700;color:#1e3a2f;margin:12px 0 4px;">Comparación visual por área <span style="font-weight:500;color:#94a3b8;">(' + totalGraficas + ' gráfico' + (totalGraficas === 1 ? '' : 's') + ')</span></div>';
         h += '<div class="dash-chart-grid">';

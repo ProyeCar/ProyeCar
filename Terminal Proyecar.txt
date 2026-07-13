@@ -1,0 +1,6 @@
+
+Nota: PUEDES ABRIR CALUDE CODE EN VS CODE, CDM O WINDOWS POWERSHELL
+para entrar en la terminal de ProyeCar:
+1. cd "C:\Users\DAIRON NARVAEZ\OneDrive\Documentos Generales\CARDIQUE - AREA DE PLANEACIÓN\ProyeCar"
+2. Claude
+3. Enter
