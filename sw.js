@@ -1,5 +1,5 @@
-// build: 2026-07-12-fix-match-comparacion-semanal
-const APP_VERSION = '1.5.98';
+// build: 2026-07-12-campo-municipio-frente
+const APP_VERSION = '1.5.99';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {

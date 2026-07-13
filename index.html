@@ -1382,7 +1382,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.98";
+const APP_VERSION = "1.5.99";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -2279,8 +2279,8 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.removeItem("inspectorFrentesData");
         localStorage.removeItem("cardique_ui_state");
         frentes = [
-            { nombre: "Frente 1 - Arroyo Ají Molido", contratista: "", numeroContrato: "", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" },
-            { nombre: "Frente 2 - Box Matagente", contratista: "", numeroContrato: "", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" }
+            { nombre: "Frente 1 - Arroyo Ají Molido", contratista: "", numeroContrato: "", municipio: "", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" },
+            { nombre: "Frente 2 - Box Matagente", contratista: "", numeroContrato: "", municipio: "", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" }
         ];
         proyectoInput.value = "";
         fechaInput.valueAsDate = new Date();
@@ -2715,6 +2715,7 @@ document.addEventListener('DOMContentLoaded', function() {
             nombre: resuelto.nombre,
             contratista: f.contratista || '',
             numeroContrato: f.numeroContrato || '',
+            municipio: f.municipio || '',
             categorias: cats,
             fotos: Array.isArray(f.fotos) ? f.fotos : [],
             observaciones: f.observaciones || '',
@@ -3103,6 +3104,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 metaRow.appendChild(zonaGrupo);
                 metaRow.appendChild(crearCampoFrente('building-2', 'Contratista:', 'Nombre del contratista', frente.contratista, (v) => { frentes[idx].contratista = v; }, false));
                 metaRow.appendChild(crearCampoFrente('file-text', 'N° de Contrato:', 'Número de contrato', frente.numeroContrato, (v) => { frentes[idx].numeroContrato = v; }, false));
+                metaRow.appendChild(crearCampoFrente('map-pin', 'Municipio:', 'Ej: Mahates, Cartagena', frente.municipio, (v) => { frentes[idx].municipio = v; }, false));
                 camposCard.appendChild(metaRow);
             } else {
                 camposCard.appendChild(crearCampoFrente('construction', 'Nombre del frente:', 'Nombre del frente de obra', frente.nombre, (v) => { frentes[idx].nombre = v; }, true));
@@ -3110,6 +3112,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 metaRow.className = "frente-campos-meta";
                 metaRow.appendChild(crearCampoFrente('building-2', 'Contratista:', 'Nombre del contratista', frente.contratista, (v) => { frentes[idx].contratista = v; }, false));
                 metaRow.appendChild(crearCampoFrente('file-text', 'N° de Contrato:', 'Número de contrato', frente.numeroContrato, (v) => { frentes[idx].numeroContrato = v; }, false));
+                metaRow.appendChild(crearCampoFrente('map-pin', 'Municipio:', 'Ej: Mahates, Cartagena', frente.municipio, (v) => { frentes[idx].municipio = v; }, false));
                 camposCard.appendChild(metaRow);
             }
             tituloDiv.appendChild(camposCard);
@@ -3822,6 +3825,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         nombre: fr.nombre,
                         contratista: fr.contratista,
                         numeroContrato: fr.numeroContrato || '',
+                        municipio: fr.municipio || '',
                         obsGlobal: fr.obsGlobal,
                         recomendaciones: fr.recomendaciones,
                         categorias: fr.categorias.map(function(cat) {
@@ -3939,7 +3943,7 @@ document.addEventListener('DOMContentLoaded', function() {
     btnAgregarFrente.onclick = () => { setTimeout(() => {
         const nuevoNombre = prompt("Nombre del nuevo frente:", "Nuevo frente");
         if (nuevoNombre && nuevoNombre.trim() !== "") {
-            frentes.push({ nombre: nuevoNombre.trim(), contratista: "", numeroContrato: "", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" });
+            frentes.push({ nombre: nuevoNombre.trim(), contratista: "", numeroContrato: "", municipio: "", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" });
             // Inyectar ítems custom existentes en el nuevo frente
             var customExistente = extractCustomItems(frentes.slice(0, frentes.length - 1));
             var nuevoFrente = frentes[frentes.length - 1];
@@ -4076,7 +4080,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (it.cumple===true) c++; else if (it.cumple===false) n++; else s++;
                 }
             var tot=c+n+s, pct=tot>0?parseFloat((c/tot*100).toFixed(1)):0;
-            stats.push({nombre:fr.nombre,c:c,n:n,s:s,tot:tot,pct:pct,cont:fr.contratista||'No especificado',contrato:fr.numeroContrato||'No especificado'});
+            stats.push({nombre:fr.nombre,muni:fr.municipio||'',c:c,n:n,s:s,tot:tot,pct:pct,cont:fr.contratista||'No especificado',contrato:fr.numeroContrato||'No especificado'});
             gC+=c; gN+=n; gS+=s;
         }
         var gTot=gC+gN+gS, gPct=gTot>0?parseFloat((gC/gTot*100).toFixed(1)):0;
@@ -4193,10 +4197,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 + '<div style="font-size:8pt;color:#6b7280;margin-top:2px">'+st.c+' cumple &middot; '+st.n+' no cumple &middot; '+st.s+' sin calificar</div></div>';
         }
         h += '</td></tr></table>';
-        h += '<table class="t-res"><thead><tr><th>Frente</th><th>Contratista</th><th>N° Contrato</th><th>Total</th><th>Cumple</th><th>No Cumple</th><th>Sin Cal.</th><th>%</th></tr></thead><tbody>';
+        h += '<table class="t-res"><thead><tr><th>Frente</th><th>Municipio</th><th>Contratista</th><th>N° Contrato</th><th>Total</th><th>Cumple</th><th>No Cumple</th><th>Sin Cal.</th><th>%</th></tr></thead><tbody>';
         for(var si=0;si<stats.length;si++){
             var st=stats[si],rbc=st.pct>=80?'#f0fdf4':st.pct>=50?'#fffbeb':'#fff1f2',tbc=st.pct>=80?'#16a34a':st.pct>=50?'#d97706':'#dc2626';
-            h += '<tr style="background:'+rbc+'"><td>'+esc(st.nombre)+'</td><td style="font-size:8.5pt;color:#475569">'+esc(st.cont)+'</td>'
+            h += '<tr style="background:'+rbc+'"><td>'+esc(st.nombre)+'</td><td style="font-size:8.5pt;color:#475569">'+esc(st.muni||'—')+'</td><td style="font-size:8.5pt;color:#475569">'+esc(st.cont)+'</td>'
                 +'<td style="font-size:8.5pt;color:#475569">'+esc(st.contrato)+'</td>'
                 +'<td style="text-align:center">'+st.tot+'</td>'
                 +'<td style="text-align:center;color:#166534;font-weight:700">'+st.c+'</td>'
@@ -4220,6 +4224,7 @@ document.addEventListener('DOMContentLoaded', function() {
             h += '<div class="frente-pg">';
             h += '<div class="frente-banner"><h2>'+esc(fr.nombre)+'</h2>'
                 +'<p>Secci&oacute;n '+(fi+2)+' de '+(frentesPdf.length+1)+' &nbsp;|&nbsp; Profesional: '+esc(inspector)
+                +(fr.municipio ? ' &nbsp;|&nbsp; Municipio: '+esc(fr.municipio) : '')
                 +' &nbsp;|&nbsp; Contratista: '+esc(fr.contratista||'No especificado')
                 +' &nbsp;|&nbsp; N° Contrato: '+esc(fr.numeroContrato||'No especificado')
                 +' &nbsp;|&nbsp; Fecha: '+esc(fecha)+'</p></div>';
@@ -5031,6 +5036,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 nombre: f.nombre,
                 contratista: f.contratista || '',
                 numeroContrato: f.numeroContrato || '',
+                municipio: f.municipio || '',
                 fotos: [],
                 observaciones: f.observaciones,
                 recomendaciones: f.recomendaciones,
@@ -5070,7 +5076,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const hTotal = hc + hn;
             const pctCalc = hTotal > 0 ? parseFloat((hc / hTotal * 100).toFixed(1)) : (r.pct || 0);
             const color = pctCalc >= 80 ? '#16a34a' : pctCalc >= 50 ? '#d97706' : '#dc2626';
-            const tags = frentesHist.map(f => `<span class="hist-tag">${f.nombre}</span>`).join('');
+            const tags = frentesHist.map(f => `<span class="hist-tag">${f.nombre}${f.municipio ? ' · ' + f.municipio : ''}</span>`).join('');
             const numFrentes = frentesHist.length;
             const areasHistLabel = areasEval.length
                 ? areasEval.map(function(id) { return FILTRO_AREA_LABELS[id] || id; }).join(', ')
@@ -5120,6 +5126,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!catRows) return '';
                 return '<div style="' + (fi > 0 ? 'margin-top:6px;' : '') + '">'
                     + '<div style="font-size:0.75rem;font-weight:700;color:#1a5c32;margin-bottom:3px;">' + (f.nombre || '')
+                    + (f.municipio ? ' <span style="font-weight:500;color:#64748b;">· ' + (f.municipio || '') + '</span>' : '')
                     + (f.contratista ? ' <span style="font-weight:500;color:#64748b;">· ' + (f.contratista || '') + '</span>' : '')
                     + (f.numeroContrato ? ' <span style="font-weight:500;color:#64748b;">· Contrato ' + (f.numeroContrato || '') + '</span>' : '')
                     + '</div>'
