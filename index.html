@@ -1463,7 +1463,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.120";
+const APP_VERSION = "1.5.121";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 var _pwaRecargando = false;
@@ -3901,8 +3901,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     };
                     document.getElementById('imp-modal-guardar').onclick = function() {
                         document.body.removeChild(impOverlay);
-                        var historial = [];
-                        try { historial = JSON.parse(localStorage.getItem('cardique_historial') || '[]'); } catch(e2) {}
+                        var historial = getHistorial();
                         var impAreasEval = areasEvaluadasDeInspeccion(impData);
                         var impFrentes = frentesSoloAreasEvaluadas(impData.frentes, impAreasEval);
                         var impPct = (typeof calcularPct === 'function') ? calcularPct(impFrentes, impAreasEval).pct : (typeof impData.pct === 'number' ? impData.pct : 0);
@@ -3918,9 +3917,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             importado: true
                         });
                         try {
-                            localStorage.setItem('cardique_historial', JSON.stringify(historial));
+                            saveHistorial(historial);
                             alert('Inspección guardada en el historial correctamente.');
-                            if (typeof renderHistorial === 'function') renderHistorial();
                         } catch(e3) {
                             alert('Error al guardar en historial.');
                         }
@@ -4136,8 +4134,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             try { idbGuardarFoto(id, data.fotoMap[id]); } catch(e) {}
                         });
                     }
-                    var historial = [];
-                    try { historial = JSON.parse(localStorage.getItem("cardique_historial") || "[]"); } catch(e2) {}
+                    var historial = getHistorial();
                     var entradaPct = (typeof data.pct === 'number') ? data.pct : (typeof calcularPct === 'function' ? calcularPct(data.frentes).pct : 0);
                     var entrada = {
                         id: Date.now(),
@@ -4151,9 +4148,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     };
                     historial.unshift(entrada);
                     try {
-                        localStorage.setItem("cardique_historial", JSON.stringify(historial));
+                        saveHistorial(historial);
                         alert("Inspección importada correctamente al historial.");
-                        if (typeof renderHistorial === 'function') renderHistorial();
                     } catch(e3) {
                         alert("Error al guardar. El archivo puede ser muy grande por las fotos.");
                     }
@@ -5867,9 +5863,30 @@ document.addEventListener('DOMContentLoaded', function() {
         try { return JSON.parse(localStorage.getItem('cardique_historial') || '[]'); } catch(e) { return []; }
     }
 
-    function saveHistorial(hist) {
-        try { localStorage.setItem('cardique_historial', JSON.stringify(hist)); } catch(e) { console.warn('Historial full'); }
+    function historialIndicePorId(hist, id) {
+        if (id == null) return -1;
+        return (hist || []).findIndex(function(r) { return r.id === id; });
     }
+
+    function saveHistorial(hist) {
+        try { localStorage.setItem('cardique_historial', JSON.stringify(hist)); } catch(e) { console.warn('Historial full'); return; }
+        sincronizarDependientesHistorial();
+    }
+
+    /** Refresca Comparar, comparación semanal PDF y modal tras cualquier cambio en historial. */
+    function sincronizarDependientesHistorial() {
+        if (typeof renderComparar === 'function') renderComparar();
+        if (typeof actualizarSelectoresCompPdf === 'function') actualizarSelectoresCompPdf();
+        if (typeof window.csRefrescarSiAbierto === 'function') window.csRefrescarSiAbierto();
+        if (typeof window.csRefrescarModalSemanal === 'function') window.csRefrescarModalSemanal();
+        var pantallaHist = document.getElementById('pantalla-historial');
+        if (pantallaHist && pantallaHist.classList.contains('activa') && typeof renderHistorial === 'function') {
+            renderHistorial();
+        }
+    }
+
+    window.getHistorial = getHistorial;
+    window.saveHistorial = saveHistorial;
 
     document.getElementById('btn-archivar').onclick = () => {
         const areasEval = obtenerFiltroCategoriasActivas();
@@ -5916,8 +5933,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.getElementById('btn-limpiar-hist').onclick = () => {
         if (confirm('¿Borrar todo el historial?')) {
-            localStorage.removeItem('cardique_historial');
-            renderHistorial();
+            saveHistorial([]);
         }
     };
 
@@ -6060,9 +6076,8 @@ document.addEventListener('DOMContentLoaded', function() {
             hist[idx].fecha     = document.getElementById('edit-hist-fecha').value;
             hist[idx].ubicacion = document.getElementById('edit-hist-ubicacion').value.trim();
             hist[idx].inspector = document.getElementById('edit-hist-inspector').value.trim();
-            localStorage.setItem('cardique_historial', JSON.stringify(hist));
+            saveHistorial(hist);
             cerrarModal();
-            renderHistorial();
         };
     }
 
@@ -6071,7 +6086,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const hist = getHistorial();
         hist.splice(idx, 1);
         saveHistorial(hist);
-        renderHistorial();
     }
 
     function restaurarInspeccion(idx) {
@@ -6687,12 +6701,18 @@ document.addEventListener('DOMContentLoaded', function() {
         const hist = getHistorial();
         const selA = document.getElementById('comp-sel-a');
         const selB = document.getElementById('comp-sel-b');
-        const valA = selA.value, valB = selB.value;
+        if (!selA || !selB) return;
+        const prevIdxA = selA.value !== '' ? parseInt(selA.value, 10) : NaN;
+        const prevIdxB = selB.value !== '' ? parseInt(selB.value, 10) : NaN;
+        const idA = !isNaN(prevIdxA) && hist[prevIdxA] ? hist[prevIdxA].id : null;
+        const idB = !isNaN(prevIdxB) && hist[prevIdxB] ? hist[prevIdxB].id : null;
         const opts = hist.map((r, i) => `<option value="${i}">${r.proyecto || 'Sin nombre'} — ${r.fecha || ''} (${r.pct}%)</option>`).join('');
         selA.innerHTML = '<option value="">— Selecciona —</option>' + opts;
         selB.innerHTML = '<option value="">— Selecciona —</option>' + opts;
-        if (valA) selA.value = valA;
-        if (valB) selB.value = valB;
+        const newIdxA = historialIndicePorId(hist, idA);
+        const newIdxB = historialIndicePorId(hist, idB);
+        if (newIdxA >= 0) selA.value = String(newIdxA);
+        if (newIdxB >= 0) selB.value = String(newIdxB);
     }
 
     document.getElementById('btn-comparar').onclick = function() {
@@ -6767,14 +6787,33 @@ document.addEventListener('DOMContentLoaded', function() {
     // ── Comparación semanal en PDF ──
     function actualizarSelectoresCompPdf() {
         var hist = getHistorial();
+        var s1 = document.getElementById('comp-inspeccion-1');
+        var s2 = document.getElementById('comp-inspeccion-2');
+        var id1 = window.comparacionSemanal && window.comparacionSemanal.inspeccion1 ? window.comparacionSemanal.inspeccion1.id : null;
+        var id2 = window.comparacionSemanal && window.comparacionSemanal.inspeccion2 ? window.comparacionSemanal.inspeccion2.id : null;
+        if (id1 == null && s1 && s1.value !== '') {
+            var p1 = parseInt(s1.value, 10);
+            if (!isNaN(p1) && hist[p1]) id1 = hist[p1].id;
+        }
+        if (id2 == null && s2 && s2.value !== '') {
+            var p2 = parseInt(s2.value, 10);
+            if (!isNaN(p2) && hist[p2]) id2 = hist[p2].id;
+        }
         var opts = '<option value="">— Sin comparación —</option>'
             + hist.map(function(r, i) {
                 return '<option value="' + i + '">' + (r.fecha || 'Sin fecha') + ' — ' + (r.proyecto || 'Sin nombre') + '</option>';
             }).join('');
-        var s1 = document.getElementById('comp-inspeccion-1');
-        var s2 = document.getElementById('comp-inspeccion-2');
         if (s1) s1.innerHTML = opts;
         if (s2) s2.innerHTML = opts;
+        var i1 = historialIndicePorId(hist, id1);
+        var i2 = historialIndicePorId(hist, id2);
+        if (s1) s1.value = i1 >= 0 ? String(i1) : '';
+        if (s2) s2.value = i2 >= 0 ? String(i2) : '';
+        if (window.comparacionSemanal) {
+            window.comparacionSemanal.inspeccion1 = i1 >= 0 ? hist[i1] : null;
+            window.comparacionSemanal.inspeccion2 = i2 >= 0 ? hist[i2] : null;
+        }
+        if (typeof csRefrescarModalSemanal === 'function') csRefrescarModalSemanal();
     }
 
     function generarGraficasComparacionPDFConInspecciones(recienteOrArray, anterior) {
@@ -7334,8 +7373,25 @@ document.addEventListener('DOMContentLoaded', function() {
         generarInformeDireccion();
     }
 
+    function csCardInfoInspeccion(insp) {
+        if (!insp) return '<span style="color:#9ca3af;font-size:0.78rem;">Toca ⋮ para seleccionar</span>';
+        return '<span style="font-weight:700;font-size:0.84rem;color:#1e3a2f;">' + (insp.proyecto || 'Sin nombre') + '</span>'
+             + '<br><span style="font-size:0.72rem;color:#6b7280;">' + (insp.fecha || '') + '</span>';
+    }
+    window.csCardInfoInspeccion = csCardInfoInspeccion;
+
+    function csRefrescarModalSemanal() {
+        var modal = document.getElementById('modal-comp-semanal');
+        if (!modal || !window.comparacionSemanal) return;
+        var ant = document.getElementById('cs-info-ant');
+        var rec = document.getElementById('cs-info-rec');
+        if (ant) ant.innerHTML = csCardInfoInspeccion(window.comparacionSemanal.inspeccion1);
+        if (rec) rec.innerHTML = csCardInfoInspeccion(window.comparacionSemanal.inspeccion2);
+    }
+    window.csRefrescarModalSemanal = csRefrescarModalSemanal;
+
     function abrirComparacionSemanal() {
-        var historial = JSON.parse(localStorage.getItem('cardique_historial') || '[]');
+        var historial = getHistorial();
 
         // Poblar selectores legacy (mantiene compatibilidad con generarGraficasComparacionPDF)
         var opts = '<option value="">— Sin comparación —</option>'
@@ -7365,13 +7421,18 @@ document.addEventListener('DOMContentLoaded', function() {
             if (s2 && !isNaN(_cB)) s2.value = _cB;
         }
         if (s1) s1.onchange = function() {
-            var idx = parseInt(this.value);
-            window.comparacionSemanal = { inspeccion1: isNaN(idx) ? null : historial[idx], inspeccion2: window.comparacionSemanal ? window.comparacionSemanal.inspeccion2 : null };
+            var idx = parseInt(this.value, 10);
+            var h = getHistorial();
+            if (!window.comparacionSemanal) window.comparacionSemanal = {};
+            window.comparacionSemanal.inspeccion1 = isNaN(idx) ? null : h[idx];
+            csRefrescarModalSemanal();
         };
         if (s2) s2.onchange = function() {
-            var idx = parseInt(this.value);
+            var idx = parseInt(this.value, 10);
+            var h = getHistorial();
             if (!window.comparacionSemanal) window.comparacionSemanal = {};
-            window.comparacionSemanal.inspeccion2 = isNaN(idx) ? null : historial[idx];
+            window.comparacionSemanal.inspeccion2 = isNaN(idx) ? null : h[idx];
+            csRefrescarModalSemanal();
         };
         var btnListo = document.getElementById('btn-listo-comparacion');
         if (btnListo) {
@@ -7382,15 +7443,9 @@ document.addEventListener('DOMContentLoaded', function() {
         var prev = document.getElementById('modal-comp-semanal');
         if (prev) prev.remove();
 
-        function cardInfo(insp) {
-            if (!insp) return '<span style="color:#9ca3af;font-size:0.78rem;">Toca ⋮ para seleccionar</span>';
-            return '<span style="font-weight:700;font-size:0.84rem;color:#1e3a2f;">' + (insp.proyecto || 'Sin nombre') + '</span>'
-                 + '<br><span style="font-size:0.72rem;color:#6b7280;">' + (insp.fecha || '') + '</span>';
-        }
-
         function updateCard(role) {
             var el = document.getElementById('cs-info-' + role);
-            if (el) el.innerHTML = cardInfo(role === 'ant' ? window.comparacionSemanal.inspeccion1 : window.comparacionSemanal.inspeccion2);
+            if (el) el.innerHTML = csCardInfoInspeccion(role === 'ant' ? window.comparacionSemanal.inspeccion1 : window.comparacionSemanal.inspeccion2);
         }
 
         var _csPickerCierre = crearCierreExterno();
@@ -7408,10 +7463,11 @@ document.addEventListener('DOMContentLoaded', function() {
             var rect = anchor.getBoundingClientRect();
             picker.style.top = (rect.bottom + 6) + 'px';
             picker.style.left = Math.max(8, rect.right - 260) + 'px';
-            if (!historial.length) {
+            var listaHist = getHistorial();
+            if (!listaHist.length) {
                 picker.innerHTML = '<div style="padding:14px 16px;color:#9ca3af;font-size:0.82rem;">No hay historial guardado</div>';
             } else {
-                historial.forEach(function(r, i) {
+                listaHist.forEach(function(r, i) {
                     var item = document.createElement('div');
                     item.style.cssText = 'padding:10px 16px;cursor:pointer;border-bottom:1px solid #f3f4f6;font-size:0.82rem;';
                     item.innerHTML = '<div style="font-weight:600;color:#1e3a2f;">' + (r.proyecto || 'Sin nombre') + '</div>'
@@ -7419,11 +7475,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     item.addEventListener('mouseenter', function() { this.style.background = '#f0fdf4'; });
                     item.addEventListener('mouseleave', function() { this.style.background = ''; });
                     item.addEventListener('click', function() {
+                        var h = getHistorial();
                         if (role === 'ant') {
-                            window.comparacionSemanal.inspeccion1 = historial[i];
+                            window.comparacionSemanal.inspeccion1 = h[i];
                             if (s1) s1.value = i;
                         } else {
-                            window.comparacionSemanal.inspeccion2 = historial[i];
+                            window.comparacionSemanal.inspeccion2 = h[i];
                             if (s2) s2.value = i;
                         }
                         updateCard(role);
@@ -7453,12 +7510,12 @@ document.addEventListener('DOMContentLoaded', function() {
               '</div>' +
               '<div style="display:flex;align-items:center;justify-content:space-between;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;margin-bottom:10px;">' +
                 '<div><div style="font-size:0.65rem;font-weight:700;color:#64748b;letter-spacing:0.6px;text-transform:uppercase;margin-bottom:4px;">Anterior</div>' +
-                '<div id="cs-info-ant">' + cardInfo(window.comparacionSemanal.inspeccion1) + '</div></div>' +
+                '<div id="cs-info-ant">' + csCardInfoInspeccion(window.comparacionSemanal.inspeccion1) + '</div></div>' +
                 '<button id="cs-menu-ant" aria-label="Seleccionar inspección anterior" style="background:none;border:1px solid #d1d5db;border-radius:8px;box-shadow:none;color:#374151;font-size:1rem;padding:4px 10px;cursor:pointer;flex-shrink:0;">⋮</button>' +
               '</div>' +
               '<div style="display:flex;align-items:center;justify-content:space-between;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:12px 14px;margin-bottom:16px;">' +
                 '<div><div style="font-size:0.65rem;font-weight:700;color:#16a34a;letter-spacing:0.6px;text-transform:uppercase;margin-bottom:4px;">Reciente</div>' +
-                '<div id="cs-info-rec">' + cardInfo(window.comparacionSemanal.inspeccion2) + '</div></div>' +
+                '<div id="cs-info-rec">' + csCardInfoInspeccion(window.comparacionSemanal.inspeccion2) + '</div></div>' +
                 '<button id="cs-menu-rec" aria-label="Seleccionar inspección reciente" style="background:none;border:1px solid #bbf7d0;border-radius:8px;box-shadow:none;color:#16a34a;font-size:1rem;padding:4px 10px;cursor:pointer;flex-shrink:0;">⋮</button>' +
               '</div>' +
               '<div style="display:flex;gap:8px;margin-bottom:16px;">' +
@@ -7525,7 +7582,7 @@ function csBuscarHistorialCoincidente(frenteRef, contratistaArg, numeroContratoA
     } else {
         fActual = { zona: '', nombre: frenteRef || '', contratista: contratistaArg || '', numeroContrato: numeroContratoArg || '' };
     }
-    var hist = JSON.parse(localStorage.getItem('cardique_historial') || '[]');
+    var hist = typeof getHistorial === 'function' ? getHistorial() : JSON.parse(localStorage.getItem('cardique_historial') || '[]');
     var confirmed = [], tentative = [];
     hist.forEach(function(reg) {
         (reg.frentes || []).forEach(function(hf) {

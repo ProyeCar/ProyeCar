@@ -1,5 +1,5 @@
-// build: 2026-07-13-historial-frentes-sel
-const APP_VERSION = '1.5.120';
+// build: 2026-07-13-historial-sync-comparar
+const APP_VERSION = '1.5.121';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {
