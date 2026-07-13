@@ -1463,7 +1463,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.112";
+const APP_VERSION = "1.5.113";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -4581,16 +4581,17 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('El motor de gráficos no está disponible.');
             return;
         }
+        // Ventana abierta SINCRÓNICAMENTE desde el gesto (evita bloqueo de popups).
         window._pdfWin = window.open('', '_blank');
         var btnDash = document.getElementById('btn-dashboard-ejecutivo');
         var btnOrigHtml = btnDash ? btnDash.innerHTML : '';
         if (btnDash) { btnDash.disabled = true; btnDash.textContent = 'Generando dashboard…'; }
-        CompMotor.capturarGraficasParaPdf(compD, {
-            filtroFrente: (document.getElementById('filtro-frente-pdf') || {}).value || 'todos',
-            filtroArea: (document.getElementById('filtro-area-pdf') || {}).value || 'todas'
-        }).then(function(graficas) {
+        function restaurarBtn() {
             if (btnDash) { btnDash.disabled = false; btnDash.innerHTML = btnOrigHtml; }
-            var h = construirHtmlDashboardEjecutivo(compD, graficas);
+        }
+        function entregarDashboard(h) {
+            // document.write directo sobre la ventana pre-abierta; fallback a Blob URL
+            // (NO data: URL, que Chrome bloquea al navegar la pestaña).
             if (window._pdfWin && !window._pdfWin.closed) {
                 try {
                     window._pdfWin.document.open('text/html', 'replace');
@@ -4598,17 +4599,49 @@ document.addEventListener('DOMContentLoaded', function() {
                     window._pdfWin.document.close();
                     window._pdfWin.focus();
                 } catch (e) {
-                    window._pdfWin.location.href = 'data:text/html;charset=utf-8,' + encodeURIComponent(h);
+                    try {
+                        var bu = URL.createObjectURL(new Blob([h], { type: 'text/html;charset=utf-8' }));
+                        window._pdfWin.location.href = bu;
+                        setTimeout(function() { URL.revokeObjectURL(bu); }, 60000);
+                    } catch (e2) {}
                 }
             } else {
-                var w2 = window.open('data:text/html;charset=utf-8,' + encodeURIComponent(h), '_blank');
-                if (!w2) alert('Permite ventanas emergentes para ver el dashboard.');
+                try {
+                    var bu2 = URL.createObjectURL(new Blob([h], { type: 'text/html;charset=utf-8' }));
+                    var w2 = window.open(bu2, '_blank');
+                    if (!w2) {
+                        var a = document.createElement('a');
+                        a.href = bu2; a.target = '_blank'; a.rel = 'noopener';
+                        document.body.appendChild(a); a.click();
+                        setTimeout(function() { document.body.removeChild(a); }, 500);
+                    }
+                    setTimeout(function() { URL.revokeObjectURL(bu2); }, 60000);
+                } catch (e3) {
+                    alert('Permite ventanas emergentes para ver el dashboard.');
+                }
             }
             window._pdfWin = null;
-        }).catch(function() {
-            if (btnDash) { btnDash.disabled = false; btnDash.innerHTML = btnOrigHtml; }
-            alert('No se pudieron generar los gráficos del dashboard.');
+        }
+        CompMotor.capturarGraficasParaPdf(compD, {
+            filtroFrente: (document.getElementById('filtro-frente-pdf') || {}).value || 'todos',
+            filtroArea: (document.getElementById('filtro-area-pdf') || {}).value || 'todas'
+        }).then(function(graficas) {
+            restaurarBtn();
+            var h;
+            try {
+                h = construirHtmlDashboardEjecutivo(compD, graficas || []);
+            } catch (e) {
+                if (window._pdfWin && !window._pdfWin.closed) { try { window._pdfWin.close(); } catch (e2) {} }
+                window._pdfWin = null;
+                alert('Error al construir el dashboard: ' + (e && e.message ? e.message : e));
+                return;
+            }
+            entregarDashboard(h);
+        }).catch(function(err) {
+            restaurarBtn();
+            if (window._pdfWin && !window._pdfWin.closed) { try { window._pdfWin.close(); } catch (e) {} }
             window._pdfWin = null;
+            alert('No se pudieron generar los gráficos del dashboard.' + (err && err.message ? ' (' + err.message + ')' : ''));
         });
     }
     window.construirHtmlDashboardEjecutivo = construirHtmlDashboardEjecutivo;
@@ -6156,7 +6189,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     responsive: opts.responsive !== false,
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
-                    animation: opts.animation || {},
+                    animation: opts.animation !== undefined ? opts.animation : {},
                     scales: {
                         x: { grid: { display: false }, ticks: { font: { size: opts.tickSizeX != null ? opts.tickSizeX : (opts.tickSize != null ? opts.tickSize : COMP_GRAFICA_TYPO.tickX) } } },
                         y: { min: 0, max: 100, ticks: { stepSize: 10, callback: function(v) { return v + '%'; }, font: { size: opts.tickSizeY != null ? opts.tickSizeY : (opts.tickSize != null ? opts.tickSize : COMP_GRAFICA_TYPO.tickY) } }, grid: { color: 'rgba(0,0,0,0.08)', borderDash: [4, 4] } }
@@ -6413,9 +6446,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             });
             if (!chartQueue.length) return Promise.resolve([]);
+            // Sin animación: Chart.js dibuja de forma síncrona al construirse, así la
+            // captura NO depende de requestAnimationFrame (que se congela cuando la
+            // pestaña queda en segundo plano al abrir la ventana del PDF/dashboard).
             return new Promise(function(resolve) {
                 var capturas = [];
                 var pend = chartQueue.length;
+                var resuelto = false;
+                function terminar() {
+                    if (resuelto) return;
+                    resuelto = true;
+                    resolve(capturas);
+                }
                 chartQueue.forEach(function(item) {
                     var tempDiv = document.createElement('div');
                     tempDiv.style.cssText = 'position:absolute;left:-9999px;top:0;width:' + COMP_GRAFICA_TYPO.pdfW + 'px;';
@@ -6424,40 +6466,46 @@ document.addEventListener('DOMContentLoaded', function() {
                     canvas.width = COMP_GRAFICA_TYPO.pdfW;
                     canvas.height = COMP_GRAFICA_TYPO.pdfH;
                     tempDiv.appendChild(canvas);
-                    var captured = false;
                     var ch = crearGraficaBarras(canvas, item.pA, item.pR, {
                         responsive: false,
                         labels: ['Anterior', 'Reciente'],
                         tickSizeX: COMP_GRAFICA_TYPO.pdfTick,
                         tickSizeY: COMP_GRAFICA_TYPO.pdfTick,
                         pctFontSize: COMP_GRAFICA_TYPO.pdfPctBar,
-                        animation: {
-                            onComplete: function() {
-                                if (captured) return;
-                                captured = true;
-                                capturas.push({
-                                    frenteNombre: item.frenteNombre,
-                                    areaNombre: item.area.nombre,
-                                    pcts: [item.pR, item.pA],
-                                    labels: ['Reciente', 'Anterior'],
-                                    pctReciente: item.pR,
-                                    pctAnterior: item.pA,
-                                    diff: item.area.diff,
-                                    mejorados: item.area.mejorados,
-                                    empeorados: item.area.empeorados,
-                                    iguales: item.area.iguales,
-                                    detalle: item.area.detalle,
-                                    imgData: canvas.toDataURL('image/png')
-                                });
-                                try { ch.destroy(); } catch (e) {}
-                                if (tempDiv.parentNode) tempDiv.parentNode.removeChild(tempDiv);
-                                if (--pend === 0) resolve(capturas);
-                            }
-                        }
+                        animation: false
                     });
                     window._compPdfCharts = window._compPdfCharts || [];
                     window._compPdfCharts.push(ch);
+                    var captured = false;
+                    function grab() {
+                        if (captured) return;
+                        captured = true;
+                        var img = '';
+                        try { img = canvas.toDataURL('image/png'); } catch (e) { img = ''; }
+                        capturas.push({
+                            frenteNombre: item.frenteNombre,
+                            areaNombre: item.area.nombre,
+                            pcts: [item.pR, item.pA],
+                            labels: ['Reciente', 'Anterior'],
+                            pctReciente: item.pR,
+                            pctAnterior: item.pA,
+                            diff: item.area.diff,
+                            mejorados: item.area.mejorados,
+                            empeorados: item.area.empeorados,
+                            iguales: item.area.iguales,
+                            detalle: item.area.detalle,
+                            imgData: img
+                        });
+                        try { ch.destroy(); } catch (e) {}
+                        if (tempDiv.parentNode) tempDiv.parentNode.removeChild(tempDiv);
+                        if (--pend <= 0) terminar();
+                    }
+                    // Capturar tras un tick (setTimeout NO se detiene en segundo plano,
+                    // a diferencia de requestAnimationFrame).
+                    setTimeout(grab, 60);
                 });
+                // Red de seguridad: resolver aunque algún gráfico no se capture.
+                setTimeout(terminar, 6000);
             });
         }
         return {

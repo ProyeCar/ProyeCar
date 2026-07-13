@@ -1,5 +1,5 @@
 // build: 2026-07-12-tarjetas-anterior-reciente-modo-auto
-const APP_VERSION = '1.5.112';
+const APP_VERSION = '1.5.113';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {
