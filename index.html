@@ -1463,7 +1463,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.109";
+const APP_VERSION = "1.5.110";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -4220,6 +4220,20 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     // Tarjetas ANTERIOR / MÁS RECIENTE — componente único (pantalla + PDF).
     var COMP_CHART = { ANT: '#BA7517', REC: '#27500A', NC_A: 'rgba(163,45,45,0.45)', NC_R: '#A32D2D' };
+    // Tipografía de gráficos — fuente única (Comparar Inspecciones).
+    var COMP_GRAFICA_TYPO = {
+        tickX: 11,
+        tickY: 10,
+        pctBar: 10,
+        chartH: 160,
+        pdfW: 700,
+        pdfH: 320,
+        pdfPreviewH: 190,
+        pdfTick: 10,
+        pdfPctBar: 11
+    };
+    window.COMP_CHART = COMP_CHART;
+    window.COMP_GRAFICA_TYPO = COMP_GRAFICA_TYPO;
     function htmlEncabezadoParComparacion(reciente, anterior, opts) {
         opts = opts || {};
         var esc = opts.escFn || function(v) { return (v || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
@@ -4844,6 +4858,12 @@ document.addEventListener('DOMContentLoaded', function() {
             && window._compPdfData.modo === 'auto' && window._compPdfData.comparables
             && window._compPdfData.comparables.length
             && typeof construirHtmlPdfComparacionAuto === 'function') {
+            if (typeof CompMotor !== 'undefined' && CompMotor.capturarGraficasParaPdf) {
+                window.graficasComparacionPDF = await CompMotor.capturarGraficasParaPdf(window._compPdfData, {
+                    filtroFrente: (document.getElementById('filtro-frente-pdf') || {}).value || 'todos',
+                    filtroArea: (document.getElementById('filtro-area-pdf') || {}).value || 'todas'
+                });
+            }
             window._compPdfHtml = construirHtmlPdfComparacionAuto(
                 window._compPdfData,
                 window.graficasComparacionPDF || []
@@ -5853,7 +5873,7 @@ document.addEventListener('DOMContentLoaded', function() {
             window._compPdfCharts = [];
         }
         function pctPluginFactory(id, fontSize) {
-            var fs = fontSize || 10;
+            var fs = fontSize != null ? fontSize : COMP_GRAFICA_TYPO.pctBar;
             return {
                 id: 'pct_' + (id || 'comp'),
                 afterDraw: function(chart) {
@@ -5898,8 +5918,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     plugins: { legend: { display: false } },
                     animation: opts.animation || {},
                     scales: {
-                        x: { grid: { display: false }, ticks: { font: { size: opts.tickSize || 11 } } },
-                        y: { min: 0, max: 100, ticks: { stepSize: 10, callback: function(v) { return v + '%'; }, font: { size: opts.tickSize || 10 } }, grid: { color: 'rgba(0,0,0,0.08)', borderDash: [4, 4] } }
+                        x: { grid: { display: false }, ticks: { font: { size: opts.tickSizeX != null ? opts.tickSizeX : (opts.tickSize != null ? opts.tickSize : COMP_GRAFICA_TYPO.tickX) } } },
+                        y: { min: 0, max: 100, ticks: { stepSize: 10, callback: function(v) { return v + '%'; }, font: { size: opts.tickSizeY != null ? opts.tickSizeY : (opts.tickSize != null ? opts.tickSize : COMP_GRAFICA_TYPO.tickY) } }, grid: { color: 'rgba(0,0,0,0.08)', borderDash: [4, 4] } }
                     }
                 },
                 plugins: [pctPluginFactory(canvas.id, opts.pctFontSize)]
@@ -5999,8 +6019,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         html += '</div>';
 
                         var chartId = 'comp-chart-' + (opts.idPrefix || '') + chartIdx++;
-                        var chartH = opts.compacto ? 160 : 160;
+                        var chartH = COMP_GRAFICA_TYPO.chartH;
                         if (opts.pdfMode) {
+                            chartH = COMP_GRAFICA_TYPO.pdfPreviewH;
                             html += '<div id="' + chartId + '-preview" style="height:' + chartH + 'px;background:#f8fafc;border-radius:6px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;">'
                                 + '<span style="font-size:0.75rem;color:#94a3b8;">Generando gráfica…</span></div>';
                         } else {
@@ -6036,8 +6057,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         document.body.appendChild(tempDiv);
                         canvas = document.createElement('canvas');
                         canvas.id = item.id;
-                        canvas.width = 700;
-                        canvas.height = 280;
+                        canvas.width = COMP_GRAFICA_TYPO.pdfW;
+                        canvas.height = COMP_GRAFICA_TYPO.pdfH;
                         tempDiv.appendChild(canvas);
                     } else {
                         canvas = document.getElementById(item.id);
@@ -6047,8 +6068,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     var ch = crearGraficaBarras(canvas, item.pA, item.pR, {
                         responsive: !item.pdfMode,
                         labels: ['Anterior', 'Reciente'],
-                        pctFontSize: item.pdfMode ? 14 : 10,
-                        tickSize: item.pdfMode ? 12 : 11,
+                        tickSizeX: item.pdfMode ? COMP_GRAFICA_TYPO.pdfTick : COMP_GRAFICA_TYPO.tickX,
+                        tickSizeY: item.pdfMode ? COMP_GRAFICA_TYPO.pdfTick : COMP_GRAFICA_TYPO.tickY,
+                        pctFontSize: item.pdfMode ? COMP_GRAFICA_TYPO.pdfPctBar : COMP_GRAFICA_TYPO.pctBar,
                         animation: item.pdfMode ? {
                             onComplete: function() {
                                 if (captured) return;
@@ -6128,6 +6150,76 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             return { ok: errores.length === 0, errores: errores, manual: manual, auto: auto };
         }
+        function capturarGraficasParaPdf(data, opts) {
+            opts = opts || {};
+            if (typeof Chart === 'undefined') return Promise.resolve([]);
+            var filtroFrente = opts.filtroFrente || 'todos';
+            var filtroArea = opts.filtroArea || 'todas';
+            var chartQueue = [];
+            (data.comparables || []).forEach(function(comp, fi) {
+                var f = comp.frente || {};
+                var fNombre = f.nombre || ('Frente ' + (fi + 1));
+                if (filtroFrente !== 'todos' && fNombre !== filtroFrente) return;
+                if (comp.sinAnterior) return;
+                (comp.areas || []).forEach(function(area) {
+                    if (filtroArea !== 'todas' && area.id !== filtroArea) return;
+                    if (area.pctReciente === null && area.pctAnterior === null) return;
+                    chartQueue.push({
+                        pA: area.pctAnterior,
+                        pR: area.pctReciente,
+                        frenteNombre: fNombre,
+                        area: area
+                    });
+                });
+            });
+            if (!chartQueue.length) return Promise.resolve([]);
+            return new Promise(function(resolve) {
+                var capturas = [];
+                var pend = chartQueue.length;
+                chartQueue.forEach(function(item) {
+                    var tempDiv = document.createElement('div');
+                    tempDiv.style.cssText = 'position:absolute;left:-9999px;top:0;width:' + COMP_GRAFICA_TYPO.pdfW + 'px;';
+                    document.body.appendChild(tempDiv);
+                    var canvas = document.createElement('canvas');
+                    canvas.width = COMP_GRAFICA_TYPO.pdfW;
+                    canvas.height = COMP_GRAFICA_TYPO.pdfH;
+                    tempDiv.appendChild(canvas);
+                    var captured = false;
+                    var ch = crearGraficaBarras(canvas, item.pA, item.pR, {
+                        responsive: false,
+                        labels: ['Anterior', 'Reciente'],
+                        tickSizeX: COMP_GRAFICA_TYPO.pdfTick,
+                        tickSizeY: COMP_GRAFICA_TYPO.pdfTick,
+                        pctFontSize: COMP_GRAFICA_TYPO.pdfPctBar,
+                        animation: {
+                            onComplete: function() {
+                                if (captured) return;
+                                captured = true;
+                                capturas.push({
+                                    frenteNombre: item.frenteNombre,
+                                    areaNombre: item.area.nombre,
+                                    pcts: [item.pR, item.pA],
+                                    labels: ['Reciente', 'Anterior'],
+                                    pctReciente: item.pR,
+                                    pctAnterior: item.pA,
+                                    diff: item.area.diff,
+                                    mejorados: item.area.mejorados,
+                                    empeorados: item.area.empeorados,
+                                    iguales: item.area.iguales,
+                                    detalle: item.area.detalle,
+                                    imgData: canvas.toDataURL('image/png')
+                                });
+                                try { ch.destroy(); } catch (e) {}
+                                if (tempDiv.parentNode) tempDiv.parentNode.removeChild(tempDiv);
+                                if (--pend === 0) resolve(capturas);
+                            }
+                        }
+                    });
+                    window._compPdfCharts = window._compPdfCharts || [];
+                    window._compPdfCharts.push(ch);
+                });
+            });
+        }
         return {
             ORDEN_CAT: ORDEN_CAT, CHART: CHART,
             normStr: normStr, frenteMatch: frenteMatch, pctCat: pctCat,
@@ -6135,7 +6227,8 @@ document.addEventListener('DOMContentLoaded', function() {
             compararArea: compararArea, construirManual: construirManual, construirDesdePar: construirDesdePar,
             ordenarRecienteAnterior: ordenarRecienteAnterior, obtenerMetadatosFiltros: obtenerMetadatosFiltros,
             renderizar: renderizar, htmlDetalleItems: htmlDetalleItems, escHtml: escHtml,
-            destruirCharts: destruirCharts, verificarConsistencia: verificarConsistencia
+            destruirCharts: destruirCharts, verificarConsistencia: verificarConsistencia,
+            capturarGraficasParaPdf: capturarGraficasParaPdf
         };
     })();
 
@@ -6343,14 +6436,14 @@ document.addEventListener('DOMContentLoaded', function() {
             filtroArea: document.getElementById('filtro-area-pdf').value,
             mostrarEncabezado: true,
             mostrarGuia: true,
-            compacto: true,
-            pdfMode: true,
+            compacto: false,
+            pdfMode: false,
             idPrefix: 'pdf-',
-            onPdfComplete: function(graficas, todas) {
-                window.graficasComparacionPDF = graficas;
-                window.graficasComparacionPDF_todas = todas;
+            onComplete: function(result) {
+                window.graficasComparacionPDF = [];
+                window.graficasComparacionPDF_todas = result.todas || [];
                 var btn = document.getElementById('btn-listo-comparacion');
-                if (btn && (graficas.length || todas.length)) btn.style.display = '';
+                if (btn && result.todas && result.todas.length) btn.style.display = '';
             }
         });
     }
@@ -6523,7 +6616,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 var chartPreviewDiv = document.createElement('div');
                 chartPreviewDiv.id = chartId + '-preview';
-                chartPreviewDiv.style.cssText = 'height:190px;background:#f8fafc;border-radius:6px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;';
+                chartPreviewDiv.style.cssText = 'height:' + COMP_GRAFICA_TYPO.pdfPreviewH + 'px;background:#f8fafc;border-radius:6px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;';
                 chartPreviewDiv.innerHTML = '<span style="font-size:0.75rem;color:#94a3b8;">Generando gráfica…</span>';
                 wrapper.appendChild(chartPreviewDiv);
                 contenedor.appendChild(wrapper);
@@ -6548,7 +6641,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 if (v === null || v === undefined || v < 8) return;
                                 ctx.save();
                                 ctx.fillStyle = '#fff';
-                                ctx.font = 'bold 11px sans-serif';
+                                ctx.font = 'bold ' + COMP_GRAFICA_TYPO.pdfPctBar + 'px sans-serif';
                                 ctx.textAlign = 'center';
                                 ctx.textBaseline = 'middle';
                                 ctx.fillText(v + '%', bar.x, (bar.y + bar.base) / 2);
@@ -6638,10 +6731,10 @@ document.addEventListener('DOMContentLoaded', function() {
                             }
                         },
                         scales: {
-                            x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 45, minRotation: 0 } },
+                            x: { grid: { display: false }, ticks: { font: { size: COMP_GRAFICA_TYPO.pdfTick }, maxRotation: 45, minRotation: 0 } },
                             y: {
                                 min: 0, max: 100,
-                                ticks: { callback: function(v) { return v + '%'; }, font: { size: 10 }, stepSize: 10 },
+                                ticks: { callback: function(v) { return v + '%'; }, font: { size: COMP_GRAFICA_TYPO.pdfTick }, stepSize: 10 },
                                 grid: { color: 'rgba(0,0,0,0.15)', borderDash: [4, 4] }
                             }
                         }
@@ -6671,9 +6764,22 @@ document.addEventListener('DOMContentLoaded', function() {
         function eH(s) { return (s || '').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
         if (compD.modo === 'auto') {
-            window._compPdfHtml = construirHtmlPdfComparacionAuto(compD, graficas);
-            window._pdfWin = window.open('', '_blank');
-            generarInformeDireccion();
+            var btnComp = document.getElementById('btn-listo-comparacion');
+            var btnOrigHtml = btnComp ? btnComp.innerHTML : '';
+            if (btnComp) { btnComp.disabled = true; btnComp.textContent = 'Generando gráficas…'; }
+            CompMotor.capturarGraficasParaPdf(compD, {
+                filtroFrente: (document.getElementById('filtro-frente-pdf') || {}).value || 'todos',
+                filtroArea: (document.getElementById('filtro-area-pdf') || {}).value || 'todas'
+            }).then(function(graficasPdf) {
+                if (btnComp) { btnComp.disabled = false; btnComp.innerHTML = btnOrigHtml; }
+                window.graficasComparacionPDF = graficasPdf;
+                window._compPdfHtml = construirHtmlPdfComparacionAuto(compD, graficasPdf);
+                window._pdfWin = window.open('', '_blank');
+                generarInformeDireccion();
+            }).catch(function() {
+                if (btnComp) { btnComp.disabled = false; btnComp.innerHTML = btnOrigHtml; }
+                alert('No se pudieron generar las gráficas para el PDF.');
+            });
             return;
         }
 
