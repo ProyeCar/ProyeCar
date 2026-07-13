@@ -1,5 +1,5 @@
-// build: 2026-07-12-filtro-areas-consistente
-const APP_VERSION = '1.5.92';
+// build: 2026-07-12-comparacion-semanal-en-frentes
+const APP_VERSION = '1.5.93';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {

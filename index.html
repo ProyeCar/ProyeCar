@@ -1340,7 +1340,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.92";
+const APP_VERSION = "1.5.93";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -1560,6 +1560,28 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="card-header"><h2><span class="icon-box icon-box-verde"><span class="pc-icon-hydrate" data-i="construction" data-s="20" data-c="#1a5c35"></span></span>Frentes de obra</h2></div>
         <div id="frentes-container"></div>
         <button id="agregar-frente" class="btn-agregar-frente"><span class="pc-icon-hydrate" data-i="plus" data-s="18" data-c="#ffffff"></span> Agregar nuevo frente</button>
+        <!-- ── Comparación Semanal ── -->
+        <div id="cs-seccion" style="margin-top:16px;border:1px solid #bbf7d0;border-radius:14px;overflow:hidden;">
+            <div id="cs-toggle-row" onclick="csToggle()" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:linear-gradient(135deg,#f0fdf4,#f8fafc);cursor:pointer;user-select:none;">
+                <span style="font-size:0.88rem;font-weight:700;color:#1e3a2f;display:inline-flex;align-items:center;gap:6px;"><span class="pc-icon-hydrate" data-i="bar-chart-2" data-s="16" data-c="#1e3a2f"></span> Incluir comparación semanal</span>
+                <div id="cs-toggle-switch" style="width:40px;height:22px;background:#d1d5db;border-radius:11px;position:relative;flex-shrink:0;">
+                    <div id="cs-toggle-knob" style="position:absolute;top:3px;left:3px;width:16px;height:16px;background:white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.25);"></div>
+                </div>
+            </div>
+            <div id="cs-body" style="display:none;padding:12px 14px 14px;background:white;">
+                <div id="comparacion-box" style="display:none;"><select id="comp-inspeccion-1"></select><select id="comp-inspeccion-2"></select></div>
+                <div id="cs-resumen-auto" style="display:none;font-size:0.78rem;color:#475569;margin-bottom:10px;padding:8px 10px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;line-height:1.45;"></div>
+                <div id="cs-avisos" style="display:none;font-size:0.78rem;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;margin-bottom:10px;"></div>
+                <div id="filtros-comp-pdf" style="display:none;margin-bottom:8px;">
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <select id="filtro-frente-pdf" style="flex:1;min-width:140px;padding:6px 10px;border-radius:8px;border:0.5px solid var(--color-border-tertiary);font-size:16px;background:var(--color-background-primary);color:var(--color-text-primary);"><option value="todos">Todos los frentes</option></select>
+                        <select id="filtro-area-pdf" style="flex:1;min-width:140px;padding:6px 10px;border-radius:8px;border:0.5px solid var(--color-border-tertiary);font-size:16px;background:var(--color-background-primary);color:var(--color-text-primary);"><option value="todas">Todas las áreas</option></select>
+                    </div>
+                </div>
+                <div id="contenedor-graficas-pdf" style="margin-top:8px;"></div>
+                <button id="btn-listo-comparacion" onclick="generarInformeConComparacion()" style="display:none;width:100%;background:linear-gradient(135deg,#0d9488,#14b8a6);color:white;border:none;border-radius:12px;padding:13px;font-size:0.9rem;font-weight:700;cursor:pointer;margin-top:8px;align-items:center;justify-content:center;gap:6px;"><span class="pc-icon-hydrate" data-i="file-down" data-s="16" data-c="#fff"></span> Generar comparación semanal en PDF</button>
+            </div>
+        </div>
     </div>
 </div></div>
 
@@ -1596,28 +1618,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 <span class="herramienta-icon-ring"><span class="pc-icon-hydrate" data-i="file-text" data-s="22" data-c="#d97706"></span></span>
                 <span class="herramienta-label">Generar informe para Dirección</span>
             </button>
-        </div>
-        <!-- ── Comparación Semanal ── -->
-        <div id="cs-seccion" style="margin-top:14px;border:1px solid #bbf7d0;border-radius:14px;overflow:hidden;">
-            <div id="cs-toggle-row" onclick="csToggle()" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:linear-gradient(135deg,#f0fdf4,#f8fafc);cursor:pointer;user-select:none;">
-                <span style="font-size:0.88rem;font-weight:700;color:#1e3a2f;display:inline-flex;align-items:center;gap:6px;"><span class="pc-icon-hydrate" data-i="bar-chart-2" data-s="16" data-c="#1e3a2f"></span> Incluir comparación semanal</span>
-                <div id="cs-toggle-switch" style="width:40px;height:22px;background:#d1d5db;border-radius:11px;position:relative;flex-shrink:0;">
-                    <div id="cs-toggle-knob" style="position:absolute;top:3px;left:3px;width:16px;height:16px;background:white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.25);"></div>
-                </div>
-            </div>
-            <div id="cs-body" style="display:none;padding:12px 14px 14px;background:white;">
-                <div id="comparacion-box" style="display:none;"><select id="comp-inspeccion-1"></select><select id="comp-inspeccion-2"></select></div>
-                <div id="cs-resumen-auto" style="display:none;font-size:0.78rem;color:#475569;margin-bottom:10px;padding:8px 10px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;line-height:1.45;"></div>
-                <div id="cs-avisos" style="display:none;font-size:0.78rem;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;margin-bottom:10px;"></div>
-                <div id="filtros-comp-pdf" style="display:none;margin-bottom:8px;">
-                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                        <select id="filtro-frente-pdf" style="flex:1;min-width:140px;padding:6px 10px;border-radius:8px;border:0.5px solid var(--color-border-tertiary);font-size:16px;background:var(--color-background-primary);color:var(--color-text-primary);"><option value="todos">Todos los frentes</option></select>
-                        <select id="filtro-area-pdf" style="flex:1;min-width:140px;padding:6px 10px;border-radius:8px;border:0.5px solid var(--color-border-tertiary);font-size:16px;background:var(--color-background-primary);color:var(--color-text-primary);"><option value="todas">Todas las áreas</option></select>
-                    </div>
-                </div>
-                <div id="contenedor-graficas-pdf" style="margin-top:8px;"></div>
-                <button id="btn-listo-comparacion" onclick="generarInformeConComparacion()" style="display:none;width:100%;background:linear-gradient(135deg,#0d9488,#14b8a6);color:white;border:none;border-radius:12px;padding:13px;font-size:0.9rem;font-weight:700;cursor:pointer;margin-top:8px;align-items:center;justify-content:center;gap:6px;"><span class="pc-icon-hydrate" data-i="file-down" data-s="16" data-c="#fff"></span> Generar comparación semanal en PDF</button>
-            </div>
         </div>
         <div class="herramientas-actions">
         <button id="reset-global" class="btn-peligro"><span class="pc-icon-hydrate" data-i="refresh-cw" data-s="16" data-c="currentColor"></span> Reiniciar todo</button>
@@ -3408,6 +3408,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch(e) {}
         }
         if (typeof pcIconHydrateAll === 'function') pcIconHydrateAll();
+        if (typeof csRefrescarSiAbierto === 'function') csRefrescarSiAbierto();
         } catch (e) {
             console.error('renderFrentes:', e);
             if (frentesContainer) {
@@ -4233,6 +4234,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (nombre === 'sync') renderSync();
         const waFab = document.getElementById('wa-fab');
         if (waFab) waFab.style.display = (nombre === 'frentes') ? 'flex' : 'none';
+        if (nombre === 'frentes' && typeof csRefrescarSiAbierto === 'function') csRefrescarSiAbierto();
         window.scrollTo(0, 0);
     }
 
@@ -4591,11 +4593,13 @@ document.addEventListener('DOMContentLoaded', function() {
         guardarFiltroCategorias(ids);
         aplicarFiltroUI(ids);
         saveToLocal();
+        if (typeof csRefrescarSiAbierto === 'function') csRefrescarSiAbierto();
     }
     function limpiarFiltrosAreas() {
         guardarFiltroCategorias([]);
         aplicarFiltroUI([]);
         saveToLocal();
+        if (typeof csRefrescarSiAbierto === 'function') csRefrescarSiAbierto();
     }
     function enfocarFiltroCategoria(catid) {
         if (!catid || catid === 'todos' || !chipCategoriaExiste(catid)) {
@@ -4605,6 +4609,7 @@ document.addEventListener('DOMContentLoaded', function() {
         guardarFiltroCategorias([catid]);
         aplicarFiltroUI([catid]);
         saveToLocal();
+        if (typeof csRefrescarSiAbierto === 'function') csRefrescarSiAbierto();
     }
     renderChipsCategorias();
     aplicarFiltroUI(obtenerFiltroCategoriasActivas());
@@ -6387,6 +6392,10 @@ function csSemanalGenerar() {
     if (contenedor) contenedor.innerHTML = '';
     if (btnPdf) btnPdf.style.display = 'none';
     if (typeof _renderizarCompPdf === 'function') _renderizarCompPdf();
+}
+
+function csRefrescarSiAbierto() {
+    if (_csAbierto) csSemanalGenerar();
 }
 
 function csToggle() {
