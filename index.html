@@ -1376,7 +1376,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.93";
+const APP_VERSION = "1.5.95";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -2516,31 +2516,35 @@ document.addEventListener('DOMContentLoaded', function() {
             items: items
         };
     }
+    var ZONA_CIENAGA = 'Ciénaga de la Virgen';
+    function nombreContieneCienaga(texto) {
+        return /ci[eé]naga\s+de\s+la\s+virgen/i.test(String(texto || ''));
+    }
+    function esFrenteGrupoCienaga(f) {
+        if (!f) return false;
+        return nombreContieneCienaga(f.zona) || nombreContieneCienaga(f.nombre);
+    }
     function migrarZonaDesdeNombre(nombre) {
         var nom = String(nombre || '').trim();
         if (!nom) return { zona: '', nombre: 'Frente sin nombre' };
-        var parts = nom.split(/\s*-\s*/).map(function(s) { return s.trim(); }).filter(Boolean);
-        if (parts.length >= 3 && /^frente(\s+\d+)?$/i.test(parts[0])) {
-            var zonaM = parts.slice(1, -1).join(' - ');
-            var sectorM = parts[parts.length - 1];
-            if (zonaM.length >= 2 && sectorM.length >= 2) return { zona: zonaM, nombre: sectorM };
-        }
-        if (parts.length === 2) {
-            if (/^frente(\s+\d+)?$/i.test(parts[0])) return { zona: '', nombre: nom };
-            var p0 = parts[0], p1 = parts[1];
-            if (/^(sector|box|frente|tramo)\b/i.test(p1)) return { zona: p0, nombre: p1 };
-            if (p0.length >= 8 && p1.length <= Math.max(28, Math.floor(p0.length * 0.65))) return { zona: p0, nombre: p1 };
-        }
-        return { zona: '', nombre: nom };
+        if (!nombreContieneCienaga(nom)) return { zona: '', nombre: nom };
+        var sector = nom.replace(/^frente\s*\d*\s*-\s*/i, '');
+        sector = sector.replace(/ci[eé]naga\s+de\s+la\s+virgen\s*-\s*/gi, '');
+        sector = sector.replace(/^ci[eé]naga\s+de\s+la\s+virgen\s*/gi, '');
+        sector = sector.replace(/\s*-\s*ci[eé]naga\s+de\s+la\s+virgen/gi, '');
+        sector = sector.trim();
+        if (!sector) sector = nom;
+        return { zona: ZONA_CIENAGA, nombre: sector };
     }
     function frenteUiKey(frente, idx) {
         return 'f_' + idx + '_' + (frente.nombre || '') + '_' + (frente.contratista || '') + '_' + (frente.numeroContrato || '');
     }
     function frenteNormStr(s) { return (s || '').trim().toLowerCase(); }
     function frenteNombreCombinado(f) {
-        var z = (f && f.zona || '').trim();
+        if (!esFrenteGrupoCienaga(f)) return (f && f.nombre || '').trim();
+        var z = ZONA_CIENAGA;
         var n = (f && f.nombre || '').trim();
-        return z ? (z + ' - ' + n) : n;
+        return n ? (z + ' - ' + n) : z;
     }
     var MATCH_CONFIRM_LS = 'proyecar_frente_match_confirm';
     function loadMatchConfirmados() {
@@ -2585,6 +2589,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return { level: 'none' };
     }
     window.migrarZonaDesdeNombre = migrarZonaDesdeNombre;
+    window.esFrenteGrupoCienaga = esFrenteGrupoCienaga;
     window.frenteUiKey = frenteUiKey;
     window.clasificarMatchFrente = clasificarMatchFrente;
     window.confirmarMatchFrente = function(fActual, histId, histNombre) {
@@ -2594,12 +2599,14 @@ document.addEventListener('DOMContentLoaded', function() {
     function normalizeFrente(f) {
         if (!f || typeof f !== 'object') return null;
         var cats = Array.isArray(f.categorias) ? f.categorias.map(normalizeCategoria).filter(Boolean) : [];
-        var zona = typeof f.zona === 'string' ? f.zona.trim() : '';
+        var zona = '';
         var nombre = String(f.nombre || 'Frente sin nombre');
-        if (!('zona' in f)) {
+        if (nombreContieneCienaga(nombre) || nombreContieneCienaga(f.zona || '')) {
             var mig = migrarZonaDesdeNombre(nombre);
             zona = mig.zona;
             nombre = mig.nombre;
+        } else {
+            zona = '';
         }
         return {
             zona: zona,
@@ -2939,18 +2946,19 @@ document.addEventListener('DOMContentLoaded', function() {
         const coloresCat = cargarColoresCategoria();
         var lastZonaHeader = null;
         frentes.forEach((frente, idx) => {
-            var zonaActual = (frente.zona || '').trim();
+            var esCienaga = esFrenteGrupoCienaga(frente);
+            var zonaActual = esCienaga ? ZONA_CIENAGA : '';
             if (zonaActual && zonaActual !== lastZonaHeader) {
                 var zonaHdr = document.createElement("div");
                 zonaHdr.className = "zona-grupo-header";
-                zonaHdr.innerHTML = pcIcon('map-pin', 18, '#14532d') + ' <span>Zona: ' + zonaActual.replace(/</g, '&lt;') + '</span>';
+                zonaHdr.innerHTML = pcIcon('map-pin', 18, '#14532d') + ' <span>Zona: ' + ZONA_CIENAGA.replace(/</g, '&lt;') + '</span>';
                 frentesContainer.appendChild(zonaHdr);
                 lastZonaHeader = zonaActual;
             }
             if (!zonaActual) lastZonaHeader = null;
             var frenteUiId = frenteUiKey(frente, idx);
             const frenteDiv = document.createElement("div");
-            frenteDiv.className = "frente-card" + (zonaActual ? " frente-en-zona" : "");
+            frenteDiv.className = "frente-card" + (esCienaga ? " frente-en-zona" : "");
             const headerDiv = document.createElement("div");
             headerDiv.className = "frente-header";
             // Toggle arrow
@@ -2978,10 +2986,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 grupo.appendChild(inp);
                 return grupo;
             }
-            camposCard.appendChild(crearCampoFrente('hard-hat', 'Sector/Frente:', 'Ej: Sector Norte, Box Matagente', frente.nombre, (v) => { frentes[idx].nombre = v; }, true));
+            if (esCienaga) {
+                camposCard.appendChild(crearCampoFrente('hard-hat', 'Sector/Frente:', 'Ej: Sector Norte', frente.nombre, (v) => { frentes[idx].nombre = v; }, true));
+            } else {
+                camposCard.appendChild(crearCampoFrente('construction', 'Nombre del frente:', 'Nombre del frente de obra', frente.nombre, (v) => { frentes[idx].nombre = v; }, true));
+            }
             const metaRow = document.createElement("div");
             metaRow.className = "frente-campos-meta";
-            metaRow.appendChild(crearCampoFrente('map-pin', 'Zona (opcional):', 'Ej: Ciénaga de la Virgen', frente.zona, (v) => { frentes[idx].zona = v; renderFrentes(); }, false));
             metaRow.appendChild(crearCampoFrente('building-2', 'Contratista:', 'Nombre del contratista', frente.contratista, (v) => { frentes[idx].contratista = v; }, false));
             metaRow.appendChild(crearCampoFrente('file-text', 'N° de Contrato:', 'Número de contrato', frente.numeroContrato, (v) => { frentes[idx].numeroContrato = v; }, false));
             camposCard.appendChild(metaRow);
@@ -3807,7 +3818,7 @@ document.addEventListener('DOMContentLoaded', function() {
     btnAgregarFrente.onclick = () => { setTimeout(() => {
         const nuevoNombre = prompt("Nombre del nuevo frente:", "Nuevo frente");
         if (nuevoNombre && nuevoNombre.trim() !== "") {
-            frentes.push({ zona: "", nombre: nuevoNombre.trim(), contratista: "", numeroContrato: "", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" });
+            frentes.push({ nombre: nuevoNombre.trim(), contratista: "", numeroContrato: "", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" });
             // Inyectar ítems custom existentes en el nuevo frente
             var customExistente = extractCustomItems(frentes.slice(0, frentes.length - 1));
             var nuevoFrente = frentes[frentes.length - 1];
@@ -4078,13 +4089,13 @@ document.addEventListener('DOMContentLoaded', function() {
         var pdfZonaActual = null;
         for(var fi=0;fi<frentesPdf.length;fi++){
             var fr=frentesPdf[fi],st=stats[fi],bc=st.pct>=80?'#16a34a':st.pct>=50?'#d97706':'#dc2626';
-            var zFr = (fr.zona || '').trim();
-            if (zFr && zFr !== pdfZonaActual) {
+            var esCienagaPdf = esFrenteGrupoCienaga(fr);
+            if (esCienagaPdf && ZONA_CIENAGA !== pdfZonaActual) {
                 h += '<div style="page-break-before:always;break-before:page;"></div>';
-                h += '<div class="sec-h" style="background:linear-gradient(135deg,#14532d,#166534);margin-top:0;">Zona: '+esc(zFr)+'</div>';
-                pdfZonaActual = zFr;
+                h += '<div class="sec-h" style="background:linear-gradient(135deg,#14532d,#166534);margin-top:0;">Zona: '+esc(ZONA_CIENAGA)+'</div>';
+                pdfZonaActual = ZONA_CIENAGA;
             }
-            if (!zFr) pdfZonaActual = null;
+            if (!esCienagaPdf) pdfZonaActual = null;
             h += '<div class="frente-pg">';
             h += '<div class="frente-banner"><h2>'+esc(fr.nombre)+'</h2>'
                 +'<p>Secci&oacute;n '+(fi+2)+' de '+(frentesPdf.length+1)+' &nbsp;|&nbsp; Profesional: '+esc(inspector)
@@ -4222,7 +4233,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (arAreas.length > 0) {
                 var arSorted = arAreas.slice().sort(function(a, b) { return b.pct - a.pct; });
                 arSorted.forEach(function(a, i) { a.rank = i + 1; });
-                areaResData.push({ nombre: arfr.nombre, zona: (arfr.zona || '').trim(), areas: arSorted });
+                areaResData.push({ nombre: arfr.nombre, esCienaga: esFrenteGrupoCienaga(arfr), areas: arSorted });
             }
         }
         if (areaResData.length > 0) {
@@ -4230,11 +4241,11 @@ document.addEventListener('DOMContentLoaded', function() {
             var arZonaActual = null;
             for (var ardi = 0; ardi < areaResData.length; ardi++) {
                 var arData = areaResData[ardi];
-                if (arData.zona && arData.zona !== arZonaActual) {
-                    h += '<div class="sub-t" style="color:#14532d;border-left-color:#14532d;">Zona: ' + esc(arData.zona) + '</div>';
-                    arZonaActual = arData.zona;
+                if (arData.esCienaga && ZONA_CIENAGA !== arZonaActual) {
+                    h += '<div class="sub-t" style="color:#14532d;border-left-color:#14532d;">Zona: ' + esc(ZONA_CIENAGA) + '</div>';
+                    arZonaActual = ZONA_CIENAGA;
                 }
-                if (!arData.zona) arZonaActual = null;
+                if (!arData.esCienaga) arZonaActual = null;
                 var arChH = Math.max(160, arData.areas.length * 36 + 50);
                 h += '<div style="margin-bottom:24px;page-break-inside:avoid;break-inside:avoid;">';
                 h += '<div class="sub-t">' + esc(arData.nombre) + '</div>';
@@ -4392,7 +4403,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return 'ProyeCar\n\n' + frentes.length + ' frente(s) registrados:\n' + frentes.map(f => '• ' + f.nombre).join('\n');
         }
         const totalItems = abierto.categorias.reduce((n, c) => n + c.items.length, 0);
-        return 'ProyeCar — ' + (abierto.zona ? abierto.zona + ' · ' : '') + abierto.nombre + '\n' +
+        return 'ProyeCar — ' + (esFrenteGrupoCienaga(abierto) ? ZONA_CIENAGA + ' · ' : '') + abierto.nombre + '\n' +
             (abierto.contratista ? 'Contratista: ' + abierto.contratista + '\n' : '') +
             abierto.categorias.length + ' área(s), ' + totalItems + ' ítem(s) registrados.';
     }
@@ -4894,7 +4905,16 @@ document.addEventListener('DOMContentLoaded', function() {
             noCumple: stats.noCumple,
             sinCalif: stats.sinCalif,
             total: stats.total,
-            frentes: data.frentes.map(f => ({ zona: f.zona || '', nombre: f.nombre, contratista: f.contratista || '', numeroContrato: f.numeroContrato || '', fotos: [], observaciones: f.observaciones, recomendaciones: f.recomendaciones, categorias: f.categorias }))
+            frentes: data.frentes.map(f => ({
+                zona: esFrenteGrupoCienaga(f) ? ZONA_CIENAGA : '',
+                nombre: f.nombre,
+                contratista: f.contratista || '',
+                numeroContrato: f.numeroContrato || '',
+                fotos: [],
+                observaciones: f.observaciones,
+                recomendaciones: f.recomendaciones,
+                categorias: f.categorias
+            }))
         };
         const hist = getHistorial();
         hist.unshift(registro);
@@ -6467,8 +6487,8 @@ function csResolverTodasComparaciones() {
             return;
         }
         var best = busqueda.confirmed[0];
-        var actual = csFiltrarInspeccionPorFrente(csSnapshotActual(), f.nombre, f.contratista, f.numeroContrato, f.zona);
-        var anteriorInsp = csFiltrarInspeccionPorFrente(best.insp, f.nombre, f.contratista, f.numeroContrato, f.zona);
+        var actual = csFiltrarInspeccionPorFrente(csSnapshotActual(), f.nombre, f.contratista, f.numeroContrato, esFrenteGrupoCienaga(f) ? ZONA_CIENAGA : '');
+        var anteriorInsp = csFiltrarInspeccionPorFrente(best.insp, f.nombre, f.contratista, f.numeroContrato, esFrenteGrupoCienaga(f) ? ZONA_CIENAGA : '');
         var filtroIds = typeof areasEvaluadasParaComparacion === 'function'
             ? areasEvaluadasParaComparacion(actual, anteriorInsp, filtroActivo)
             : filtroActivo;

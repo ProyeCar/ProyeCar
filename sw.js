@@ -1,5 +1,5 @@
-// build: 2026-07-12-campo-zona-frentes
-const APP_VERSION = '1.5.94';
+// build: 2026-07-12-zona-solo-cienaga-virgen
+const APP_VERSION = '1.5.95';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {
