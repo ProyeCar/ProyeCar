@@ -435,6 +435,42 @@
             gap: 8px 16px;
             align-items: flex-end;
         }
+        .zona-grupo-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 18px 0 10px;
+            padding: 10px 14px;
+            background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
+            border: 1.5px solid #86efac;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: #14532d;
+            letter-spacing: -0.2px;
+        }
+        .zona-grupo-header:first-child { margin-top: 0; }
+        .zona-grupo { margin-bottom: 4px; }
+        .zona-grupo .frente-card { margin-left: 4px; border-left: 3px solid #86efac; }
+        .cs-pendiente-item {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 0;
+            border-bottom: 1px dashed #fde68a;
+        }
+        .cs-pendiente-item:last-child { border-bottom: none; }
+        .btn-confirmar-match {
+            background: #16a34a;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
         .frente-titulo input {
             font-size: 1.08rem;
             font-weight: 800;
@@ -1572,6 +1608,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div id="comparacion-box" style="display:none;"><select id="comp-inspeccion-1"></select><select id="comp-inspeccion-2"></select></div>
                 <div id="cs-resumen-auto" style="display:none;font-size:0.78rem;color:#475569;margin-bottom:10px;padding:8px 10px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;line-height:1.45;"></div>
                 <div id="cs-avisos" style="display:none;font-size:0.78rem;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;margin-bottom:10px;"></div>
+                <div id="cs-pendientes" style="display:none;font-size:0.78rem;color:#92400e;background:#fff7ed;border:1px solid #fdba74;border-radius:8px;padding:10px 12px;margin-bottom:10px;"></div>
                 <div id="filtros-comp-pdf" style="display:none;margin-bottom:8px;">
                     <div style="display:flex;gap:8px;flex-wrap:wrap;">
                         <select id="filtro-frente-pdf" style="flex:1;min-width:140px;padding:6px 10px;border-radius:8px;border:0.5px solid var(--color-border-tertiary);font-size:16px;background:var(--color-background-primary);color:var(--color-text-primary);"><option value="todos">Todos los frentes</option></select>
@@ -2479,11 +2516,94 @@ document.addEventListener('DOMContentLoaded', function() {
             items: items
         };
     }
+    function migrarZonaDesdeNombre(nombre) {
+        var nom = String(nombre || '').trim();
+        if (!nom) return { zona: '', nombre: 'Frente sin nombre' };
+        var parts = nom.split(/\s*-\s*/).map(function(s) { return s.trim(); }).filter(Boolean);
+        if (parts.length >= 3 && /^frente(\s+\d+)?$/i.test(parts[0])) {
+            var zonaM = parts.slice(1, -1).join(' - ');
+            var sectorM = parts[parts.length - 1];
+            if (zonaM.length >= 2 && sectorM.length >= 2) return { zona: zonaM, nombre: sectorM };
+        }
+        if (parts.length === 2) {
+            if (/^frente(\s+\d+)?$/i.test(parts[0])) return { zona: '', nombre: nom };
+            var p0 = parts[0], p1 = parts[1];
+            if (/^(sector|box|frente|tramo)\b/i.test(p1)) return { zona: p0, nombre: p1 };
+            if (p0.length >= 8 && p1.length <= Math.max(28, Math.floor(p0.length * 0.65))) return { zona: p0, nombre: p1 };
+        }
+        return { zona: '', nombre: nom };
+    }
+    function frenteUiKey(frente, idx) {
+        return 'f_' + idx + '_' + (frente.nombre || '') + '_' + (frente.contratista || '') + '_' + (frente.numeroContrato || '');
+    }
+    function frenteNormStr(s) { return (s || '').trim().toLowerCase(); }
+    function frenteNombreCombinado(f) {
+        var z = (f && f.zona || '').trim();
+        var n = (f && f.nombre || '').trim();
+        return z ? (z + ' - ' + n) : n;
+    }
+    var MATCH_CONFIRM_LS = 'proyecar_frente_match_confirm';
+    function loadMatchConfirmados() {
+        try { return JSON.parse(localStorage.getItem(MATCH_CONFIRM_LS) || '[]'); } catch (e) { return []; }
+    }
+    function saveMatchConfirmados(arr) {
+        try { localStorage.setItem(MATCH_CONFIRM_LS, JSON.stringify(arr)); } catch (e) {}
+    }
+    function matchConfirmKey(fActual, histId, histNombre) {
+        return frenteNormStr(fActual.nombre) + '|' + frenteNormStr(fActual.contratista) + '|' + frenteNormStr(fActual.numeroContrato) + '|' + histId + '|' + frenteNormStr(histNombre);
+    }
+    function isMatchConfirmed(key) {
+        return loadMatchConfirmados().indexOf(key) >= 0;
+    }
+    function confirmarMatchFrente(key) {
+        var arr = loadMatchConfirmados();
+        if (arr.indexOf(key) < 0) { arr.push(key); saveMatchConfirmados(arr); }
+    }
+    function frenteContratoCoincide(f, ref) {
+        return frenteNormStr(f.contratista) === frenteNormStr(ref.contratista)
+            && frenteNormStr(f.numeroContrato) === frenteNormStr(ref.numeroContrato);
+    }
+    function frenteNombreExacto(f, ref) {
+        return frenteNormStr(f.nombre) === frenteNormStr(ref.nombre);
+    }
+    function frenteNombreLegacyCoincide(actual, histF) {
+        var actNom = (actual.nombre || '').trim();
+        var histNom = (histF.nombre || '').trim();
+        if (!actNom || !histNom) return false;
+        if (frenteNormStr(histNom) === frenteNormStr(frenteNombreCombinado(actual))) return true;
+        if (histNom.length > actNom.length && histNom.toLowerCase().indexOf(actNom.toLowerCase()) >= 0 && actNom.length >= 4) return true;
+        return false;
+    }
+    function clasificarMatchFrente(actual, histF) {
+        if (!actual || !histF) return { level: 'none' };
+        if (!frenteContratoCoincide(actual, histF)) return { level: 'none' };
+        if (frenteNombreExacto(actual, histF)) return { level: 'exact' };
+        if (frenteNombreLegacyCoincide(actual, histF)) {
+            if (frenteNormStr(actual.nombre) !== frenteNormStr(histF.nombre)) return { level: 'tentative', histF: histF };
+            return { level: 'legacy' };
+        }
+        return { level: 'none' };
+    }
+    window.migrarZonaDesdeNombre = migrarZonaDesdeNombre;
+    window.frenteUiKey = frenteUiKey;
+    window.clasificarMatchFrente = clasificarMatchFrente;
+    window.confirmarMatchFrente = function(fActual, histId, histNombre) {
+        confirmarMatchFrente(matchConfirmKey(fActual, histId, histNombre));
+        if (typeof csRefrescarSiAbierto === 'function') csRefrescarSiAbierto();
+    };
     function normalizeFrente(f) {
         if (!f || typeof f !== 'object') return null;
         var cats = Array.isArray(f.categorias) ? f.categorias.map(normalizeCategoria).filter(Boolean) : [];
+        var zona = typeof f.zona === 'string' ? f.zona.trim() : '';
+        var nombre = String(f.nombre || 'Frente sin nombre');
+        if (!('zona' in f)) {
+            var mig = migrarZonaDesdeNombre(nombre);
+            zona = mig.zona;
+            nombre = mig.nombre;
+        }
         return {
-            nombre: String(f.nombre || 'Frente sin nombre'),
+            zona: zona,
+            nombre: nombre,
             contratista: f.contratista || '',
             numeroContrato: f.numeroContrato || '',
             categorias: cats,
@@ -2817,9 +2937,20 @@ document.addEventListener('DOMContentLoaded', function() {
         frentes = normalizeFrentes(frentes);
         frentesContainer.innerHTML = "";
         const coloresCat = cargarColoresCategoria();
+        var lastZonaHeader = null;
         frentes.forEach((frente, idx) => {
+            var zonaActual = (frente.zona || '').trim();
+            if (zonaActual && zonaActual !== lastZonaHeader) {
+                var zonaHdr = document.createElement("div");
+                zonaHdr.className = "zona-grupo-header";
+                zonaHdr.innerHTML = pcIcon('map-pin', 18, '#14532d') + ' <span>Zona: ' + zonaActual.replace(/</g, '&lt;') + '</span>';
+                frentesContainer.appendChild(zonaHdr);
+                lastZonaHeader = zonaActual;
+            }
+            if (!zonaActual) lastZonaHeader = null;
+            var frenteUiId = frenteUiKey(frente, idx);
             const frenteDiv = document.createElement("div");
-            frenteDiv.className = "frente-card";
+            frenteDiv.className = "frente-card" + (zonaActual ? " frente-en-zona" : "");
             const headerDiv = document.createElement("div");
             headerDiv.className = "frente-header";
             // Toggle arrow
@@ -2847,9 +2978,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 grupo.appendChild(inp);
                 return grupo;
             }
-            camposCard.appendChild(crearCampoFrente('construction', 'Nombre del frente:', 'Nombre del frente de obra', frente.nombre, (v) => { frentes[idx].nombre = v; }, true));
+            camposCard.appendChild(crearCampoFrente('hard-hat', 'Sector/Frente:', 'Ej: Sector Norte, Box Matagente', frente.nombre, (v) => { frentes[idx].nombre = v; }, true));
             const metaRow = document.createElement("div");
             metaRow.className = "frente-campos-meta";
+            metaRow.appendChild(crearCampoFrente('map-pin', 'Zona (opcional):', 'Ej: Ciénaga de la Virgen', frente.zona, (v) => { frentes[idx].zona = v; renderFrentes(); }, false));
             metaRow.appendChild(crearCampoFrente('building-2', 'Contratista:', 'Nombre del contratista', frente.contratista, (v) => { frentes[idx].contratista = v; }, false));
             metaRow.appendChild(crearCampoFrente('file-text', 'N° de Contrato:', 'Número de contrato', frente.numeroContrato, (v) => { frentes[idx].numeroContrato = v; }, false));
             camposCard.appendChild(metaRow);
@@ -2871,7 +3003,7 @@ document.addEventListener('DOMContentLoaded', function() {
             frenteBody.appendChild(accionesCarruselBody);
             // Restaurar estado UI (por defecto: colapsado)
             var _uiSt = loadUiState();
-            var _fSt = _uiSt[frente.nombre] || {};
+            var _fSt = _uiSt[frenteUiId] || _uiSt[frente.nombre] || {};
             if (_fSt.open === true) { toggleArrow.classList.add("open"); } else { frenteBody.classList.add("collapsed"); }
 
             headerDiv.addEventListener("click", (e) => {
@@ -2879,8 +3011,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 frenteBody.classList.toggle("collapsed");
                 toggleArrow.classList.toggle("open");
                 var st = loadUiState();
-                if (!st[frente.nombre]) st[frente.nombre] = {};
-                st[frente.nombre].open = !frenteBody.classList.contains("collapsed");
+                if (!st[frenteUiId]) st[frenteUiId] = {};
+                st[frenteUiId].open = !frenteBody.classList.contains("collapsed");
                 saveUiState(st);
             });
 
@@ -2954,9 +3086,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 catTitulo.addEventListener("click", () => {
                     catBody.classList.toggle("collapsed"); catToggle.classList.toggle("open");
                     var st = loadUiState();
-                    if (!st[frente.nombre]) st[frente.nombre] = {};
-                    if (!st[frente.nombre].cats) st[frente.nombre].cats = {};
-                    st[frente.nombre].cats[cat.id] = !catBody.classList.contains("collapsed");
+                    if (!st[frenteUiId]) st[frenteUiId] = {};
+                    if (!st[frenteUiId].cats) st[frenteUiId].cats = {};
+                    st[frenteUiId].cats[cat.id] = !catBody.classList.contains("collapsed");
                     saveUiState(st);
                 });
                 const itemsDiv = document.createElement("div"); itemsDiv.className = "items-grid";
@@ -3675,7 +3807,7 @@ document.addEventListener('DOMContentLoaded', function() {
     btnAgregarFrente.onclick = () => { setTimeout(() => {
         const nuevoNombre = prompt("Nombre del nuevo frente:", "Nuevo frente");
         if (nuevoNombre && nuevoNombre.trim() !== "") {
-            frentes.push({ nombre: nuevoNombre.trim(), contratista: "", numeroContrato: "", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" });
+            frentes.push({ zona: "", nombre: nuevoNombre.trim(), contratista: "", numeroContrato: "", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" });
             // Inyectar ítems custom existentes en el nuevo frente
             var customExistente = extractCustomItems(frentes.slice(0, frentes.length - 1));
             var nuevoFrente = frentes[frentes.length - 1];
@@ -3943,8 +4075,16 @@ document.addEventListener('DOMContentLoaded', function() {
         h += '</tbody></table></div>';
 
         // Detalle por frente
+        var pdfZonaActual = null;
         for(var fi=0;fi<frentesPdf.length;fi++){
             var fr=frentesPdf[fi],st=stats[fi],bc=st.pct>=80?'#16a34a':st.pct>=50?'#d97706':'#dc2626';
+            var zFr = (fr.zona || '').trim();
+            if (zFr && zFr !== pdfZonaActual) {
+                h += '<div style="page-break-before:always;break-before:page;"></div>';
+                h += '<div class="sec-h" style="background:linear-gradient(135deg,#14532d,#166534);margin-top:0;">Zona: '+esc(zFr)+'</div>';
+                pdfZonaActual = zFr;
+            }
+            if (!zFr) pdfZonaActual = null;
             h += '<div class="frente-pg">';
             h += '<div class="frente-banner"><h2>'+esc(fr.nombre)+'</h2>'
                 +'<p>Secci&oacute;n '+(fi+2)+' de '+(frentesPdf.length+1)+' &nbsp;|&nbsp; Profesional: '+esc(inspector)
@@ -4082,13 +4222,19 @@ document.addEventListener('DOMContentLoaded', function() {
             if (arAreas.length > 0) {
                 var arSorted = arAreas.slice().sort(function(a, b) { return b.pct - a.pct; });
                 arSorted.forEach(function(a, i) { a.rank = i + 1; });
-                areaResData.push({ nombre: arfr.nombre, areas: arSorted });
+                areaResData.push({ nombre: arfr.nombre, zona: (arfr.zona || '').trim(), areas: arSorted });
             }
         }
         if (areaResData.length > 0) {
             h += '<div class="sec-h" style="page-break-before:always;">3. Resumen Comparativo por &Aacute;rea</div><div class="sec-b">';
+            var arZonaActual = null;
             for (var ardi = 0; ardi < areaResData.length; ardi++) {
                 var arData = areaResData[ardi];
+                if (arData.zona && arData.zona !== arZonaActual) {
+                    h += '<div class="sub-t" style="color:#14532d;border-left-color:#14532d;">Zona: ' + esc(arData.zona) + '</div>';
+                    arZonaActual = arData.zona;
+                }
+                if (!arData.zona) arZonaActual = null;
                 var arChH = Math.max(160, arData.areas.length * 36 + 50);
                 h += '<div style="margin-bottom:24px;page-break-inside:avoid;break-inside:avoid;">';
                 h += '<div class="sub-t">' + esc(arData.nombre) + '</div>';
@@ -4246,7 +4392,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return 'ProyeCar\n\n' + frentes.length + ' frente(s) registrados:\n' + frentes.map(f => '• ' + f.nombre).join('\n');
         }
         const totalItems = abierto.categorias.reduce((n, c) => n + c.items.length, 0);
-        return 'ProyeCar — ' + abierto.nombre + '\n' +
+        return 'ProyeCar — ' + (abierto.zona ? abierto.zona + ' · ' : '') + abierto.nombre + '\n' +
             (abierto.contratista ? 'Contratista: ' + abierto.contratista + '\n' : '') +
             abierto.categorias.length + ' área(s), ' + totalItems + ' ítem(s) registrados.';
     }
@@ -4748,7 +4894,7 @@ document.addEventListener('DOMContentLoaded', function() {
             noCumple: stats.noCumple,
             sinCalif: stats.sinCalif,
             total: stats.total,
-            frentes: data.frentes.map(f => ({ nombre: f.nombre, contratista: f.contratista || '', numeroContrato: f.numeroContrato || '', fotos: [], observaciones: f.observaciones, recomendaciones: f.recomendaciones, categorias: f.categorias }))
+            frentes: data.frentes.map(f => ({ zona: f.zona || '', nombre: f.nombre, contratista: f.contratista || '', numeroContrato: f.numeroContrato || '', fotos: [], observaciones: f.observaciones, recomendaciones: f.recomendaciones, categorias: f.categorias }))
         };
         const hist = getHistorial();
         hist.unshift(registro);
@@ -4947,6 +5093,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         function frenteMatch(f, ref) {
             if (!f || !ref) return false;
+            if (typeof frenteContratoCoincide === 'function' && typeof frenteNombreExacto === 'function') {
+                if (!frenteContratoCoincide(f, ref)) return false;
+                if (frenteNombreExacto(f, ref)) return true;
+                if (typeof frenteNombreLegacyCoincide === 'function') return frenteNombreLegacyCoincide(f, ref);
+            }
             return normStr(f.nombre) === normStr(ref.nombre)
                 && normStr(f.contratista) === normStr(ref.contratista)
                 && normStr(f.numeroContrato) === normStr(ref.numeroContrato);
@@ -6259,23 +6410,39 @@ function csSnapshotActual() {
     };
 }
 
-function csBuscarHistorialCoincidente(nombre, contratista, numeroContrato) {
+function csBuscarHistorialCoincidente(frenteRef, contratistaArg, numeroContratoArg) {
+    var fActual;
+    if (typeof frenteRef === 'object' && frenteRef !== null && frenteRef.nombre !== undefined) {
+        fActual = frenteRef;
+    } else {
+        fActual = { zona: '', nombre: frenteRef || '', contratista: contratistaArg || '', numeroContrato: numeroContratoArg || '' };
+    }
     var hist = JSON.parse(localStorage.getItem('cardique_historial') || '[]');
-    return hist.filter(function(reg) {
-        return (reg.frentes || []).some(function(f) {
-            return csFrenteMatch(f, nombre, contratista, numeroContrato);
+    var confirmed = [], tentative = [];
+    hist.forEach(function(reg) {
+        (reg.frentes || []).forEach(function(hf) {
+            var mc = typeof clasificarMatchFrente === 'function' ? clasificarMatchFrente(fActual, hf) : { level: 'none' };
+            if (mc.level === 'exact' || mc.level === 'legacy') {
+                confirmed.push({ insp: reg, frenteHist: hf, level: mc.level });
+            } else if (mc.level === 'tentative') {
+                var key = matchConfirmKey(fActual, reg.id, hf.nombre);
+                if (isMatchConfirmed(key)) confirmed.push({ insp: reg, frenteHist: hf, level: 'confirmed' });
+                else tentative.push({ insp: reg, frenteHist: hf, key: key });
+            }
         });
-    }).sort(function(a, b) {
-        return new Date(b.fecha || 0) - new Date(a.fecha || 0);
     });
+    confirmed.sort(function(a, b) { return new Date(b.insp.fecha || 0) - new Date(a.insp.fecha || 0); });
+    tentative.sort(function(a, b) { return new Date(b.insp.fecha || 0) - new Date(a.insp.fecha || 0); });
+    return { confirmed: confirmed, tentative: tentative, legacyList: confirmed.map(function(c) { return c.insp; }) };
 }
 
-function csFiltrarInspeccionPorFrente(insp, nombre, contratista, numeroContrato) {
+function csFiltrarInspeccionPorFrente(insp, nombre, contratista, numeroContrato, zonaOpcional) {
+    var ref = { zona: zonaOpcional || '', nombre: nombre, contratista: contratista, numeroContrato: numeroContrato };
     var ff = (insp.frentes || []).filter(function(f) {
-        return csFrenteMatch(f, nombre, contratista, numeroContrato);
+        return csFrenteMatch(f, nombre, contratista, numeroContrato) || (typeof clasificarMatchFrente === 'function' && clasificarMatchFrente(ref, f).level !== 'none');
     });
     var copia = Object.assign({}, insp);
-    copia.frentes = ff.length ? ff : [{ nombre: nombre, contratista: contratista, numeroContrato: numeroContrato, categorias: [] }];
+    copia.frentes = ff.length ? ff : [{ zona: ref.zona, nombre: nombre, contratista: contratista, numeroContrato: numeroContrato, categorias: [] }];
     return copia;
 }
 
@@ -6287,37 +6454,73 @@ function csObtenerFiltroAreasActivas() {
 }
 
 function csResolverTodasComparaciones() {
-    if (typeof frentes === 'undefined' || !frentes.length) return { comparables: [], omitidos: [] };
-    var comparables = [], omitidos = [];
+    if (typeof frentes === 'undefined' || !frentes.length) return { comparables: [], omitidos: [], pendientes: [] };
+    var comparables = [], omitidos = [], pendientes = [];
     var filtroActivo = csObtenerFiltroAreasActivas();
     frentes.forEach(function(f) {
-        var matches = csBuscarHistorialCoincidente(f.nombre, f.contratista, f.numeroContrato);
-        if (matches.length === 0) {
-            omitidos.push({ nombre: f.nombre || 'Sin nombre', contratista: f.contratista, numeroContrato: f.numeroContrato });
+        var busqueda = csBuscarHistorialCoincidente(f);
+        busqueda.tentative.forEach(function(t) {
+            pendientes.push({ frente: f, tentative: t });
+        });
+        if (!busqueda.confirmed.length) {
+            omitidos.push({ nombre: f.nombre || 'Sin nombre', contratista: f.contratista, numeroContrato: f.numeroContrato, zona: f.zona || '', tienePendiente: busqueda.tentative.length > 0 });
             return;
         }
-        var actual = csFiltrarInspeccionPorFrente(csSnapshotActual(), f.nombre, f.contratista, f.numeroContrato);
-        var anteriorInsp = csFiltrarInspeccionPorFrente(matches[0], f.nombre, f.contratista, f.numeroContrato);
+        var best = busqueda.confirmed[0];
+        var actual = csFiltrarInspeccionPorFrente(csSnapshotActual(), f.nombre, f.contratista, f.numeroContrato, f.zona);
+        var anteriorInsp = csFiltrarInspeccionPorFrente(best.insp, f.nombre, f.contratista, f.numeroContrato, f.zona);
         var filtroIds = typeof areasEvaluadasParaComparacion === 'function'
             ? areasEvaluadasParaComparacion(actual, anteriorInsp, filtroActivo)
             : filtroActivo;
         var built = CompMotor.construirDesdePar(actual, anteriorInsp, [f], { modo: 'auto', filtroAreaIds: filtroIds });
         if (built.comparables[0]) comparables.push(built.comparables[0]);
     });
-    return { modo: 'auto', comparables: comparables, omitidos: omitidos };
+    return { modo: 'auto', comparables: comparables, omitidos: omitidos, pendientes: pendientes };
 }
 
 function csActualizarResumenUI(res) {
     res = res || csResolverTodasComparaciones();
     var resumen = document.getElementById('cs-resumen-auto');
     var avisos = document.getElementById('cs-avisos');
+    var pendientesEl = document.getElementById('cs-pendientes');
     var filtroIds = csObtenerFiltroAreasActivas();
     var filtroTxt = filtroIds.length ? (' · Filtro activo: ' + filtroIds.length + ' área(s)') : '';
+
+    if (pendientesEl) {
+        var listaPend = res.pendientes || [];
+        if (!listaPend.length) {
+            pendientesEl.style.display = 'none';
+            pendientesEl.innerHTML = '';
+        } else {
+            pendientesEl.innerHTML = '<div style="font-weight:700;margin-bottom:8px;">Posible coincidencia no confirmada</div>'
+                + listaPend.map(function(p) {
+                    var ct = p.frente.numeroContrato ? ' · Contrato ' + csEscHtml(p.frente.numeroContrato) : '';
+                    return '<div class="cs-pendiente-item">'
+                        + '<span style="flex:1;min-width:180px;"><strong>' + csEscHtml(p.frente.nombre) + '</strong>' + ct
+                        + ' ↔ histórico «' + csEscHtml(p.tentative.frenteHist.nombre) + '» (' + csEscHtml(p.tentative.insp.fecha || '') + ')</span>'
+                        + '<button type="button" class="btn-confirmar-match" data-hist-id="' + p.tentative.insp.id + '" data-hist-nom="' + csEscHtml(p.tentative.frenteHist.nombre).replace(/"/g, '&quot;') + '" data-f-nom="' + csEscHtml(p.frente.nombre).replace(/"/g, '&quot;') + '" data-f-cont="' + csEscHtml(p.frente.contratista || '').replace(/"/g, '&quot;') + '" data-f-ctr="' + csEscHtml(p.frente.numeroContrato || '').replace(/"/g, '&quot;') + '">Confirmar</button>'
+                        + '</div>';
+                }).join('');
+            pendientesEl.style.display = '';
+            pendientesEl.querySelectorAll('.btn-confirmar-match').forEach(function(btn) {
+                btn.onclick = function() {
+                    if (typeof window.confirmarMatchFrente === 'function') {
+                        window.confirmarMatchFrente(
+                            { nombre: btn.getAttribute('data-f-nom'), contratista: btn.getAttribute('data-f-cont'), numeroContrato: btn.getAttribute('data-f-ctr') },
+                            parseInt(btn.getAttribute('data-hist-id'), 10),
+                            btn.getAttribute('data-hist-nom')
+                        );
+                    }
+                    csSemanalGenerar();
+                };
+            });
+        }
+    }
 
     if (resumen) {
         if (!res.comparables.length) {
             resumen.innerHTML = '<div style="font-weight:700;color:#1e3a2f;margin-bottom:4px;">Comparación automática</div>'
-                + '<div style="color:#6b7280;">No hay frentes con historial previo coincidente para comparar.</div>';
+                + '<div style="color:#6b7280;">' + ((res.pendientes && res.pendientes.length) ? 'Hay coincidencias pendientes de confirmar arriba.' : 'No hay frentes con historial previo coincidente para comparar.') + '</div>';
             resumen.style.display = '';
         } else {
             var lineas = res.comparables.map(function(c) {
@@ -6338,7 +6541,10 @@ function csActualizarResumenUI(res) {
             avisos.innerHTML = '';
         } else {
             avisos.innerHTML = res.omitidos.map(function(o) {
-                return '<div style="margin-bottom:4px;">Frente ' + csEscHtml(o.nombre) + ' sin historial previo — no incluido en comparación</div>';
+                var msg = o.tienePendiente
+                    ? 'Frente ' + csEscHtml(o.nombre) + ' — posible coincidencia pendiente de confirmar'
+                    : 'Frente ' + csEscHtml(o.nombre) + ' sin historial previo — no incluido en comparación';
+                return '<div style="margin-bottom:4px;">' + msg + '</div>';
             }).join('');
             avisos.style.display = '';
         }
