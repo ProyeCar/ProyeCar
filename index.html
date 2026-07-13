@@ -1376,7 +1376,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.95";
+const APP_VERSION = "1.5.96";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -2592,6 +2592,39 @@ document.addEventListener('DOMContentLoaded', function() {
     window.esFrenteGrupoCienaga = esFrenteGrupoCienaga;
     window.frenteUiKey = frenteUiKey;
     window.clasificarMatchFrente = clasificarMatchFrente;
+    function intentarRecuperarZonaCienaga(f) {
+        if (!f || nombreContieneCienaga(f.nombre) || nombreContieneCienaga(f.zona)) return false;
+        try {
+            var hist = JSON.parse(localStorage.getItem('cardique_historial') || '[]');
+            var nomF = frenteNormStr(f.nombre);
+            for (var i = 0; i < hist.length; i++) {
+                var frentesH = hist[i].frentes || [];
+                for (var j = 0; j < frentesH.length; j++) {
+                    var hf = frentesH[j];
+                    if (!nombreContieneCienaga(hf.nombre)) continue;
+                    if (!frenteContratoCoincide(f, hf)) continue;
+                    var mig = migrarZonaDesdeNombre(hf.nombre);
+                    if (frenteNormStr(mig.nombre) === nomF) return true;
+                    if (hf.nombre.toLowerCase().indexOf((f.nombre || '').toLowerCase()) >= 0 && (f.nombre || '').length >= 4) return true;
+                }
+            }
+        } catch (e) {}
+        return false;
+    }
+    function resolverZonaYNombreFrente(f) {
+        var nombre = String((f && f.nombre) || 'Frente sin nombre');
+        if (nombreContieneCienaga(nombre)) {
+            var migNom = migrarZonaDesdeNombre(nombre);
+            return { zona: migNom.zona, nombre: migNom.nombre };
+        }
+        if (f && f.zona && nombreContieneCienaga(f.zona)) {
+            return { zona: ZONA_CIENAGA, nombre: nombre };
+        }
+        if (intentarRecuperarZonaCienaga(f)) {
+            return { zona: ZONA_CIENAGA, nombre: nombre };
+        }
+        return { zona: '', nombre: nombre };
+    }
     window.confirmarMatchFrente = function(fActual, histId, histNombre) {
         confirmarMatchFrente(matchConfirmKey(fActual, histId, histNombre));
         if (typeof csRefrescarSiAbierto === 'function') csRefrescarSiAbierto();
@@ -2599,18 +2632,10 @@ document.addEventListener('DOMContentLoaded', function() {
     function normalizeFrente(f) {
         if (!f || typeof f !== 'object') return null;
         var cats = Array.isArray(f.categorias) ? f.categorias.map(normalizeCategoria).filter(Boolean) : [];
-        var zona = '';
-        var nombre = String(f.nombre || 'Frente sin nombre');
-        if (nombreContieneCienaga(nombre) || nombreContieneCienaga(f.zona || '')) {
-            var mig = migrarZonaDesdeNombre(nombre);
-            zona = mig.zona;
-            nombre = mig.nombre;
-        } else {
-            zona = '';
-        }
+        var resuelto = resolverZonaYNombreFrente(f);
         return {
-            zona: zona,
-            nombre: nombre,
+            zona: resuelto.zona,
+            nombre: resuelto.nombre,
             contratista: f.contratista || '',
             numeroContrato: f.numeroContrato || '',
             categorias: cats,
@@ -2941,7 +2966,11 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     function renderFrentes() {
         try {
+        var snapshotZona = JSON.stringify((frentes || []).map(function(f) { return { z: f.zona || '', n: f.nombre || '' }; }));
         frentes = normalizeFrentes(frentes);
+        if (JSON.stringify(frentes.map(function(f) { return { z: f.zona || '', n: f.nombre || '' }; })) !== snapshotZona) {
+            saveToLocal();
+        }
         frentesContainer.innerHTML = "";
         const coloresCat = cargarColoresCategoria();
         var lastZonaHeader = null;
@@ -2988,19 +3017,31 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             if (esCienaga) {
                 camposCard.appendChild(crearCampoFrente('hard-hat', 'Sector/Frente:', 'Ej: Sector Norte', frente.nombre, (v) => { frentes[idx].nombre = v; }, true));
+                const metaRow = document.createElement("div");
+                metaRow.className = "frente-campos-meta";
+                const zonaGrupo = document.createElement("div");
+                zonaGrupo.className = "frente-campo";
+                zonaGrupo.innerHTML = '<label class="frente-campo-label">' + pcIconLabel('map-pin', 'Zona:', 14, '#166534') + '</label>'
+                    + '<input type="text" class="frente-campo-input" value="' + ZONA_CIENAGA.replace(/"/g, '&quot;') + '" readonly tabindex="-1" style="background:#ecfdf5;color:#14532d;cursor:default;">';
+                metaRow.appendChild(zonaGrupo);
+                metaRow.appendChild(crearCampoFrente('building-2', 'Contratista:', 'Nombre del contratista', frente.contratista, (v) => { frentes[idx].contratista = v; }, false));
+                metaRow.appendChild(crearCampoFrente('file-text', 'N° de Contrato:', 'Número de contrato', frente.numeroContrato, (v) => { frentes[idx].numeroContrato = v; }, false));
+                camposCard.appendChild(metaRow);
             } else {
                 camposCard.appendChild(crearCampoFrente('construction', 'Nombre del frente:', 'Nombre del frente de obra', frente.nombre, (v) => { frentes[idx].nombre = v; }, true));
+                const metaRow = document.createElement("div");
+                metaRow.className = "frente-campos-meta";
+                metaRow.appendChild(crearCampoFrente('building-2', 'Contratista:', 'Nombre del contratista', frente.contratista, (v) => { frentes[idx].contratista = v; }, false));
+                metaRow.appendChild(crearCampoFrente('file-text', 'N° de Contrato:', 'Número de contrato', frente.numeroContrato, (v) => { frentes[idx].numeroContrato = v; }, false));
+                camposCard.appendChild(metaRow);
             }
-            const metaRow = document.createElement("div");
-            metaRow.className = "frente-campos-meta";
-            metaRow.appendChild(crearCampoFrente('building-2', 'Contratista:', 'Nombre del contratista', frente.contratista, (v) => { frentes[idx].contratista = v; }, false));
-            metaRow.appendChild(crearCampoFrente('file-text', 'N° de Contrato:', 'Número de contrato', frente.numeroContrato, (v) => { frentes[idx].numeroContrato = v; }, false));
-            camposCard.appendChild(metaRow);
             tituloDiv.appendChild(camposCard);
             const btnEliminar = document.createElement("button");
             btnEliminar.innerHTML = pcActionBtn('delete', 'Eliminar frente', 14);
             btnEliminar.className = "btn-eliminar-frente";
             btnEliminar.onclick = () => { setTimeout(() => { if (confirm("¿Eliminar este frente?")) { frentes.splice(idx, 1); saveToLocal(); renderFrentes(); } }, 10); };
+            const btnEliminarPie = btnEliminar.cloneNode(true);
+            btnEliminarPie.onclick = btnEliminar.onclick;
             headerDiv.appendChild(toggleArrow);
             headerDiv.appendChild(tituloDiv);
             headerDiv.appendChild(btnEliminar);
@@ -3485,7 +3526,7 @@ document.addEventListener('DOMContentLoaded', function() {
             frenteBody.appendChild(recomendacionesDiv);
             const zonaPeligroDiv = document.createElement("div");
             zonaPeligroDiv.className = "zona-peligro-frente";
-            zonaPeligroDiv.appendChild(btnEliminar);
+            zonaPeligroDiv.appendChild(btnEliminarPie);
             frenteBody.appendChild(zonaPeligroDiv);
             frenteDiv.appendChild(frenteBody);
             // Body is open by default - no maxHeight restriction needed
