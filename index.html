@@ -1463,7 +1463,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.106";
+const APP_VERSION = "1.5.107";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -6562,6 +6562,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
             var h = '<div style="page-break-before:always;margin-top:20px;">';
             h += '<h3 style="font-size:12pt;font-weight:700;color:#1e3a2f;margin-bottom:12px;page-break-after:avoid;break-after:avoid;">Comparación Semanal por Frente</h3>';
+            var inspRecienteAuto = compD.reciente
+                || (typeof csSnapshotActual === 'function' ? csSnapshotActual() : null)
+                || (compD.comparables && compD.comparables[0] ? compD.comparables[0].reciente : null);
+            var inspAnteriorAuto = compD.anterior
+                || (compD.comparables && compD.comparables[0] ? compD.comparables[0].anterior : null);
+            if (inspRecienteAuto && inspAnteriorAuto) {
+                h += htmlPdfEncabezadoParComparacion(inspRecienteAuto, inspAnteriorAuto, eH);
+            }
             h += '<div style="background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;padding:12px;margin-bottom:14px;font-size:9pt;">' + eH(resumen) + '</div>';
 
             if (compD.omitidos && compD.omitidos.length) {
@@ -6990,7 +6998,9 @@ function csResolverTodasComparaciones() {
         var built = CompMotor.construirDesdePar(actual, anteriorInsp, [f], { modo: 'auto', filtroAreaIds: filtroIds });
         if (built.comparables[0]) comparables.push(built.comparables[0]);
     });
-    return { modo: 'auto', comparables: comparables, omitidos: omitidos, pendientes: pendientes };
+    var actualGlobal = typeof csSnapshotActual === 'function' ? csSnapshotActual() : null;
+    var anteriorGlobal = comparables.length ? comparables[0].anterior : null;
+    return { modo: 'auto', comparables: comparables, omitidos: omitidos, pendientes: pendientes, reciente: actualGlobal, anterior: anteriorGlobal };
 }
 
 function csActualizarResumenUI(res) {
