@@ -1,5 +1,5 @@
-// build: 2026-07-12-fix-salto-pagina-zona-pdf
-const APP_VERSION = '1.5.102';
+// build: 2026-07-12-no-repetir-zona-municipio-grupo
+const APP_VERSION = '1.5.103';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {

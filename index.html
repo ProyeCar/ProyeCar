@@ -518,6 +518,25 @@
             letter-spacing: -0.2px;
         }
         .zona-grupo-header:first-child { margin-top: 0; }
+        .zona-grupo-header { flex-wrap: wrap; }
+        .zona-grupo-titulo { display: flex; align-items: center; gap: 8px; }
+        .zona-grupo-municipio { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+        .zona-grupo-municipio label { display: flex; align-items: center; gap: 4px; font-size: 0.8rem; font-weight: 700; color: #166534; white-space: nowrap; }
+        .zona-grupo-municipio input {
+            border: 1.5px solid #86efac;
+            border-radius: 8px;
+            padding: 5px 10px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #14532d;
+            background: #fff;
+            min-width: 170px;
+        }
+        .zona-grupo-municipio input:focus { outline: none; border-color: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,.15); }
+        @media (max-width: 560px) {
+            .zona-grupo-municipio { margin-left: 0; width: 100%; }
+            .zona-grupo-municipio input { flex: 1; min-width: 0; }
+        }
         .zona-grupo { margin-bottom: 4px; }
         .zona-grupo .frente-card { margin-left: 4px; border-left: 3px solid #86efac; }
         .cs-pendiente-item {
@@ -1444,7 +1463,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.102";
+const APP_VERSION = "1.5.103";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -3202,7 +3221,27 @@ document.addEventListener('DOMContentLoaded', function() {
             if (zonaActual && zonaActual !== lastZonaHeader) {
                 var zonaHdr = document.createElement("div");
                 zonaHdr.className = "zona-grupo-header";
-                zonaHdr.innerHTML = pcIcon('map-pin', 18, '#14532d') + ' <span>Zona: ' + ZONA_CIENAGA.replace(/</g, '&lt;') + '</span>';
+                var zonaTxt = document.createElement("span");
+                zonaTxt.className = "zona-grupo-titulo";
+                zonaTxt.innerHTML = pcIcon('map-pin', 18, '#14532d') + ' <span>Zona: ' + ZONA_CIENAGA.replace(/</g, '&lt;') + '</span>';
+                zonaHdr.appendChild(zonaTxt);
+                // Municipio del grupo: una sola vez, editable, se aplica a todos los frentes de la zona
+                var muniWrap = document.createElement("div");
+                muniWrap.className = "zona-grupo-municipio";
+                var muniLbl = document.createElement("label");
+                muniLbl.innerHTML = pcIconLabel('map-pin', 'Municipio:', 14, '#166534');
+                var muniInp = document.createElement("input");
+                muniInp.type = "text";
+                muniInp.placeholder = "Ej: Cartagena de Indias";
+                var muniGrupo = '';
+                frentes.forEach(function(ff) { if (!muniGrupo && esFrenteGrupoCienaga(ff) && (ff.municipio || '').trim()) muniGrupo = ff.municipio.trim(); });
+                muniInp.value = muniGrupo;
+                var aplicarMuniGrupo = function(v) { frentes.forEach(function(ff, ii) { if (esFrenteGrupoCienaga(ff)) frentes[ii].municipio = v; }); };
+                muniInp.addEventListener("input", function(e) { aplicarMuniGrupo(e.target.value); });
+                muniInp.addEventListener("change", function(e) { aplicarMuniGrupo(e.target.value); saveToLocal(); });
+                muniWrap.appendChild(muniLbl);
+                muniWrap.appendChild(muniInp);
+                zonaHdr.appendChild(muniWrap);
                 frentesContainer.appendChild(zonaHdr);
                 lastZonaHeader = zonaActual;
             }
@@ -3239,17 +3278,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 return grupo;
             }
             if (esCienaga) {
+                // Zona y Municipio se muestran una sola vez en el encabezado del grupo,
+                // así que la tarjeta individual solo lleva Sector/Frente + Contratista + N° Contrato.
                 camposCard.appendChild(crearCampoFrente('hard-hat', 'Sector/Frente:', 'Ej: Sector Norte', frente.nombre, (v) => { frentes[idx].nombre = v; }, true));
                 const metaRow = document.createElement("div");
                 metaRow.className = "frente-campos-meta";
-                const zonaGrupo = document.createElement("div");
-                zonaGrupo.className = "frente-campo";
-                zonaGrupo.innerHTML = '<label class="frente-campo-label">' + pcIconLabel('map-pin', 'Zona:', 14, '#166534') + '</label>'
-                    + '<input type="text" class="frente-campo-input" value="' + ZONA_CIENAGA.replace(/"/g, '&quot;') + '" readonly tabindex="-1" style="background:#ecfdf5;color:#14532d;cursor:default;">';
-                metaRow.appendChild(zonaGrupo);
                 metaRow.appendChild(crearCampoFrente('building-2', 'Contratista:', 'Nombre del contratista', frente.contratista, (v) => { frentes[idx].contratista = v; }, false));
                 metaRow.appendChild(crearCampoFrente('file-text', 'N° de Contrato:', 'Número de contrato', frente.numeroContrato, (v) => { frentes[idx].numeroContrato = v; }, false));
-                metaRow.appendChild(crearCampoFrente('map-pin', 'Municipio:', 'Ej: Mahates, Cartagena', frente.municipio, (v) => { frentes[idx].municipio = v; }, false));
                 camposCard.appendChild(metaRow);
             } else {
                 camposCard.appendChild(crearCampoFrente('construction', 'Nombre del frente:', 'Nombre del frente de obra', frente.nombre, (v) => { frentes[idx].nombre = v; }, true));
@@ -4151,13 +4186,16 @@ document.addEventListener('DOMContentLoaded', function() {
         f = f || {};
         var e = escFn || function(v) { return (v || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
         var esCienaga = typeof esFrenteGrupoCienaga === 'function' && esFrenteGrupoCienaga(f);
-        var zona = (f.zona || '').trim() || (esCienaga ? ZONA_CIENAGA : '');
         var municipio = (f.municipio || '').trim();
         var sector = (f.nombre || '').trim() || 'Sin nombre';
         var contratista = (f.contratista || '').trim() || 'No especificado';
         var contrato = (f.numeroContrato || '').trim() || 'No especificado';
-        var rows = '<tr><td>Municipio:</td><td>' + (municipio ? e(municipio) : '<em style="color:#6b7280">—</em>') + '</td></tr>';
-        if (zona && esCienaga) rows += '<tr><td>Zona:</td><td>' + e(zona) + '</td></tr>';
+        // Frentes de zona (Ciénaga): Zona y Municipio ya van una sola vez en el
+        // encabezado del grupo, así que la ficha individual NO los repite.
+        var rows = '';
+        if (!esCienaga) {
+            rows += '<tr><td>Municipio:</td><td>' + (municipio ? e(municipio) : '<em style="color:#6b7280">—</em>') + '</td></tr>';
+        }
         rows += '<tr><td>Sector/Frente:</td><td>' + e(sector) + '</td></tr>'
             + '<tr><td>Contratista:</td><td>' + e(contratista) + '</td></tr>'
             + '<tr><td>N&deg; Contrato:</td><td>' + e(contrato) + '</td></tr>';
@@ -4166,10 +4204,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Encabezado de zona SIN envoltura .frente-pg: se inserta DENTRO del
     // .frente-pg del primer sector para que haya un solo salto de página
     // (zona + primer sector juntos), evitando saltos duplicados y páginas en blanco.
-    function htmlPdfEncabezadoZona(zona, escFn) {
+    function htmlPdfEncabezadoZona(zona, municipio, escFn) {
         if (!zona) return '';
         var e = escFn || function(v) { return (v || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
-        return '<div class="sec-h" style="background:linear-gradient(135deg,#14532d,#166534);margin-top:0;">Zona: ' + e(zona) + '</div>';
+        var muni = (municipio || '').trim() || 'Cartagena de Indias';
+        return '<div class="sec-h" style="background:linear-gradient(135deg,#14532d,#166534);margin-top:0;">Zona: ' + e(zona)
+            + '<span style="font-weight:500;font-size:10pt;opacity:.92;"> &nbsp;&middot;&nbsp; Municipio: ' + e(muni) + '</span></div>';
     }
     window.resolverFrentePdf = resolverFrentePdf;
     window.htmlPdfFichaUbicacionFrente = htmlPdfFichaUbicacionFrente;
@@ -4442,7 +4482,7 @@ document.addEventListener('DOMContentLoaded', function() {
             var abreZonaPdf = esCienagaPdf && ZONA_CIENAGA !== pdfZonaActual;
             if (esCienagaPdf) pdfZonaActual = ZONA_CIENAGA; else pdfZonaActual = null;
             h += '<div class="frente-pg">';
-            if (abreZonaPdf) h += htmlPdfEncabezadoZona(ZONA_CIENAGA, esc);
+            if (abreZonaPdf) h += htmlPdfEncabezadoZona(ZONA_CIENAGA, fr.municipio, esc);
             h += htmlPdfFichaUbicacionFrente(fr, esc);
             h += '<div class="frente-banner"><h2>'+esc(fr.nombre)+'</h2>'
                 +'<p>Secci&oacute;n '+(fi+2)+' de '+(frentesPdf.length+1)+' &nbsp;|&nbsp; Profesional: '+esc(inspector)
@@ -5745,7 +5785,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     var abreZonaComp = esCienagaComp && ZONA_CIENAGA !== opts._pdfZonaActual;
                     if (esCienagaComp) opts._pdfZonaActual = ZONA_CIENAGA; else opts._pdfZonaActual = null;
                     html += '<div class="frente-pg">';
-                    if (abreZonaComp) html += typeof htmlPdfEncabezadoZona === 'function' ? htmlPdfEncabezadoZona(ZONA_CIENAGA, escHtml) : '';
+                    if (abreZonaComp) html += typeof htmlPdfEncabezadoZona === 'function' ? htmlPdfEncabezadoZona(ZONA_CIENAGA, frData.municipio, escHtml) : '';
                     html += typeof htmlPdfFichaUbicacionFrente === 'function' ? htmlPdfFichaUbicacionFrente(frData, escHtml) : '';
                 } else {
                     var hdrStyle = opts.compacto
@@ -6509,7 +6549,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 var abreZonaAuto = esCienagaPdf && ZONA_CIENAGA !== pdfZonaActual;
                 if (esCienagaPdf) pdfZonaActual = ZONA_CIENAGA; else pdfZonaActual = null;
                 h += '<div class="frente-pg">';
-                if (abreZonaAuto) h += htmlPdfEncabezadoZona(ZONA_CIENAGA, eH);
+                if (abreZonaAuto) h += htmlPdfEncabezadoZona(ZONA_CIENAGA, frData.municipio, eH);
                 h += htmlPdfFichaUbicacionFrente(frData, eH);
                 (comp.areas || []).forEach(function(area) {
                     if (filtroAreaPdf !== 'todas' && area.id !== filtroAreaPdf) return;
@@ -6617,7 +6657,7 @@ document.addEventListener('DOMContentLoaded', function() {
             var abreZonaMan = esCienagaMan && ZONA_CIENAGA !== pdfZonaMan;
             if (esCienagaMan) pdfZonaMan = ZONA_CIENAGA; else pdfZonaMan = null;
             h += '<div class="frente-pg">';
-            if (abreZonaMan) h += htmlPdfEncabezadoZona(ZONA_CIENAGA, eH);
+            if (abreZonaMan) h += htmlPdfEncabezadoZona(ZONA_CIENAGA, frData.municipio, eH);
             h += htmlPdfFichaUbicacionFrente(frData, eH);
             items.forEach(function(g) {
             var dLabel = '', dStyle = '';
