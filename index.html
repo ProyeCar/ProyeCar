@@ -1340,7 +1340,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.91";
+const APP_VERSION = "1.5.92";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -2697,7 +2697,7 @@ document.addEventListener('DOMContentLoaded', function() {
         frentes = normalizeFrentes(frentes);
         var itemsPersonalizados = extractCustomItems(frentes);
         try {
-            const data = { frentes, ...form };
+            const data = { frentes, ...form, areasEvaluadas: obtenerFiltroCategoriasActivas() };
             const dataJson = JSON.stringify(data);
             backupFrentesStorage(dataJson);
             localStorage.setItem(FRENTES_STORAGE_KEY, dataJson);
@@ -2706,7 +2706,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return true;
         } catch(e) {
             try {
-                const dataNoFotos = { frentes: frentes.map(f => ({...f, fotos:[]})), ...form };
+                const dataNoFotos = { frentes: frentes.map(f => ({...f, fotos:[]})), ...form, areasEvaluadas: obtenerFiltroCategoriasActivas() };
                 const dataJson = JSON.stringify(dataNoFotos);
                 backupFrentesStorage(dataJson);
                 localStorage.setItem(FRENTES_STORAGE_KEY, dataJson);
@@ -2759,6 +2759,9 @@ document.addEventListener('DOMContentLoaded', function() {
             fechaInput.value = loaded.fecha || "";
             ubicacionInput.value = loaded.ubicacion || "";
             inspectorInput.value = loaded.inspector || "";
+            if (loaded.areasEvaluadas && loaded.areasEvaluadas.length) {
+                guardarFiltroCategorias(loaded.areasEvaluadas);
+            }
         } else if (!saved) {
             frentes = normalizeFrentes([
                 { nombre: "Frente 1 - Arroyo Ají Molido", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" },
@@ -3379,7 +3382,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         document.body.removeChild(impOverlay);
                         var historial = [];
                         try { historial = JSON.parse(localStorage.getItem('cardique_historial') || '[]'); } catch(e2) {}
-                        var impPct = (typeof impData.pct === 'number') ? impData.pct : (typeof calcularPct === 'function' ? calcularPct(impData.frentes).pct : 0);
+                        var impAreasEval = areasEvaluadasDeInspeccion(impData);
+                        var impFrentes = frentesSoloAreasEvaluadas(impData.frentes, impAreasEval);
+                        var impPct = (typeof calcularPct === 'function') ? calcularPct(impFrentes, impAreasEval).pct : (typeof impData.pct === 'number' ? impData.pct : 0);
                         historial.unshift({
                             id: Date.now(),
                             fecha: impData.fecha || new Date().toISOString().split('T')[0],
@@ -3387,7 +3392,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             ubicacion: impData.ubicacion || '',
                             inspector: impData.inspector || 'No especificado',
                             pct: impPct,
-                            frentes: impData.frentes,
+                            areasEvaluadas: impAreasEval,
+                            frentes: impFrentes,
                             importado: true
                         });
                         try {
@@ -3778,9 +3784,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (!frentes.length) { restoreBtn(); alert('Sin frentes de obra.'); return; }
 
+        var areasEvalPdf = obtenerFiltroCategoriasActivas();
+        var frentesPdf = frentesSoloAreasEvaluadas(frentes, areasEvalPdf);
+        var etiquetasAreasPdf = etiquetasFiltroAreasActivas();
+
         // ── 5. Cargar fotos desde IndexedDB ──
         var allIds = [];
-        frentes.forEach(function(fr) { (fr.fotos || []).forEach(function(id) { allIds.push(id); }); });
+        frentesPdf.forEach(function(fr) { (fr.fotos || []).forEach(function(id) { allIds.push(id); }); });
         var fotoMap = {};
         if (allIds.length) {
             try { fotoMap = await idbLeerFotos(allIds); } catch(e) {}
@@ -3793,8 +3803,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // ── 6. Estadísticas ──
         var logoData = (logoImg.src && logoImg.src.startsWith('data:')) ? logoImg.src : null;
         var gC=0, gN=0, gS=0, stats=[];
-        for (var fi=0; fi<frentes.length; fi++) {
-            var fr=frentes[fi], c=0, n=0, s=0;
+        for (var fi=0; fi<frentesPdf.length; fi++) {
+            var fr=frentesPdf[fi], c=0, n=0, s=0;
             for (var ci=0; ci<fr.categorias.length; ci++)
                 for (var ii=0; ii<fr.categorias[ci].items.length; ii++) {
                     var it=fr.categorias[ci].items[ii];
@@ -3885,7 +3895,8 @@ document.addEventListener('DOMContentLoaded', function() {
             + '<tr><td>&#128197; Fecha:</td><td>'+esc(fecha)+'</td></tr>'
             + '<tr><td>&#128205; Municipio:</td><td>'+esc(ubicacion)+'</td></tr>'
             + '<tr><td>&#128100; Profesional:</td><td>'+esc(inspector)+'</td></tr>'
-            + '<tr><td>Frentes:</td><td>'+frentes.length+'</td></tr>'
+            + '<tr><td>Frentes:</td><td>'+frentesPdf.length+'</td></tr>'
+            + (etiquetasAreasPdf ? '<tr><td>&#128203; &Aacute;reas evaluadas:</td><td>'+esc(etiquetasAreasPdf)+'</td></tr>' : '')
             + '</tbody></table>';
         h += '</div>';
         h += '<div class="portada-footer-strip">CARDIQUE &middot; &Aacute;rea de Planeaci&oacute;n &middot; Uso interno</div>';
@@ -3931,11 +3942,11 @@ document.addEventListener('DOMContentLoaded', function() {
         h += '</tbody></table></div>';
 
         // Detalle por frente
-        for(var fi=0;fi<frentes.length;fi++){
-            var fr=frentes[fi],st=stats[fi],bc=st.pct>=80?'#16a34a':st.pct>=50?'#d97706':'#dc2626';
+        for(var fi=0;fi<frentesPdf.length;fi++){
+            var fr=frentesPdf[fi],st=stats[fi],bc=st.pct>=80?'#16a34a':st.pct>=50?'#d97706':'#dc2626';
             h += '<div class="frente-pg">';
             h += '<div class="frente-banner"><h2>'+esc(fr.nombre)+'</h2>'
-                +'<p>Secci&oacute;n '+(fi+2)+' de '+(frentes.length+1)+' &nbsp;|&nbsp; Profesional: '+esc(inspector)
+                +'<p>Secci&oacute;n '+(fi+2)+' de '+(frentesPdf.length+1)+' &nbsp;|&nbsp; Profesional: '+esc(inspector)
                 +' &nbsp;|&nbsp; Contratista: '+esc(fr.contratista||'No especificado')
                 +' &nbsp;|&nbsp; N° Contrato: '+esc(fr.numeroContrato||'No especificado')
                 +' &nbsp;|&nbsp; Fecha: '+esc(fecha)+'</p></div>';
@@ -4054,8 +4065,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // ── Sección 3: Resumen comparativo por área por frente ──
         var areaResData = [];
-        for (var arfi = 0; arfi < frentes.length; arfi++) {
-            var arfr = frentes[arfi], arAreas = [];
+        for (var arfi = 0; arfi < frentesPdf.length; arfi++) {
+            var arfr = frentesPdf[arfi], arAreas = [];
             for (var arci = 0; arci < arfr.categorias.length; arci++) {
                 var arcat = arfr.categorias[arci], arc = 0, arn = 0, ars = 0;
                 for (var arii = 0; arii < arcat.items.length; arii++) {
@@ -4345,6 +4356,56 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } catch (e) {}
     }
+    function areasEvaluadasDeInspeccion(insp) {
+        if (!insp) return [];
+        if (Array.isArray(insp.areasEvaluadas) && insp.areasEvaluadas.length) return insp.areasEvaluadas.slice();
+        var ids = [];
+        (insp.frentes || []).forEach(function(f) {
+            (f.categorias || []).forEach(function(c) {
+                if (c && c.id && ids.indexOf(c.id) < 0) ids.push(c.id);
+            });
+        });
+        return ids;
+    }
+    function interseccionAreasEvaluadas(idsA, idsB) {
+        var a = Array.isArray(idsA) ? idsA : [];
+        var b = Array.isArray(idsB) ? idsB : [];
+        if (!a.length && !b.length) return [];
+        if (!a.length) return b.slice();
+        if (!b.length) return a.slice();
+        return a.filter(function(id) { return b.indexOf(id) >= 0; });
+    }
+    function categoriaEnAreasEvaluadas(catId, areasEvaluadas) {
+        if (!areasEvaluadas || !areasEvaluadas.length) return true;
+        return areasEvaluadas.indexOf(catId) >= 0;
+    }
+    function filtrarCategoriasEvaluadas(categorias, areasEvaluadas) {
+        return (categorias || []).filter(function(cat) {
+            return cat && categoriaEnAreasEvaluadas(cat.id, areasEvaluadas);
+        });
+    }
+    function frentesSoloAreasEvaluadas(frentesData, areasEvaluadas) {
+        return (frentesData || []).map(function(f) {
+            var copia = Object.assign({}, f);
+            copia.categorias = filtrarCategoriasEvaluadas(f.categorias, areasEvaluadas);
+            return copia;
+        });
+    }
+    function areasEvaluadasParaComparacion(reciente, anterior, filtroActivoOpcional) {
+        var base = interseccionAreasEvaluadas(
+            areasEvaluadasDeInspeccion(reciente),
+            areasEvaluadasDeInspeccion(anterior)
+        );
+        if (filtroActivoOpcional && filtroActivoOpcional.length) {
+            return interseccionAreasEvaluadas(filtroActivoOpcional, base);
+        }
+        return base;
+    }
+    window.areasEvaluadasDeInspeccion = areasEvaluadasDeInspeccion;
+    window.interseccionAreasEvaluadas = interseccionAreasEvaluadas;
+    window.filtrarCategoriasEvaluadas = filtrarCategoriasEvaluadas;
+    window.frentesSoloAreasEvaluadas = frentesSoloAreasEvaluadas;
+    window.areasEvaluadasParaComparacion = areasEvaluadasParaComparacion;
     function htmlFiltroAreaCard(catid, nombre) {
         var iconHtml = catid === 'todos'
             ? '<span class="icon-box icon-box-verde">' + pcIcon('layout-grid', 20, '#1a5c35') + '</span>'
@@ -4529,10 +4590,12 @@ document.addEventListener('DOMContentLoaded', function() {
         else ids.push(catid);
         guardarFiltroCategorias(ids);
         aplicarFiltroUI(ids);
+        saveToLocal();
     }
     function limpiarFiltrosAreas() {
         guardarFiltroCategorias([]);
         aplicarFiltroUI([]);
+        saveToLocal();
     }
     function enfocarFiltroCategoria(catid) {
         if (!catid || catid === 'todos' || !chipCategoriaExiste(catid)) {
@@ -4541,6 +4604,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         guardarFiltroCategorias([catid]);
         aplicarFiltroUI([catid]);
+        saveToLocal();
     }
     renderChipsCategorias();
     aplicarFiltroUI(obtenerFiltroCategoriasActivas());
@@ -4640,9 +4704,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }, { passive: true });
     })();
 
-    function calcularPct(frentesData) {
+    function calcularPct(frentesData, areasEvaluadas) {
+        areasEvaluadas = areasEvaluadas || [];
         let c = 0, n = 0, s = 0;
-        frentesData.forEach(f => f.categorias.forEach(cat => cat.items.forEach(item => {
+        frentesData.forEach(f => filtrarCategoriasEvaluadas(f.categorias, areasEvaluadas).forEach(cat => cat.items.forEach(item => {
             if (item.cumple === true) c++;
             else if (item.cumple === false) n++;
             else s++;
@@ -4660,9 +4725,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     document.getElementById('btn-archivar').onclick = () => {
-        const data = { frentes, proyecto: proyectoInput.value, fecha: fechaInput.value, ubicacion: ubicacionInput.value, inspector: inspectorInput.value };
+        const areasEval = obtenerFiltroCategoriasActivas();
+        const frentesArch = frentesSoloAreasEvaluadas(frentes, areasEval);
+        const data = { frentes: frentesArch, proyecto: proyectoInput.value, fecha: fechaInput.value, ubicacion: ubicacionInput.value, inspector: inspectorInput.value, areasEvaluadas: areasEval };
         if (!data.frentes || data.frentes.length === 0) { alert('No hay frentes para archivar.'); return; }
-        const stats = calcularPct(data.frentes);
+        const stats = calcularPct(data.frentes, areasEval);
         const registro = {
             id: Date.now(),
             archivedAt: new Date().toLocaleString('es-CO'),
@@ -4670,6 +4737,7 @@ document.addEventListener('DOMContentLoaded', function() {
             fecha: data.fecha,
             inspector: data.inspector,
             ubicacion: data.ubicacion,
+            areasEvaluadas: areasEval,
             pct: stats.pct,
             cumple: stats.cumple,
             noCumple: stats.noCumple,
@@ -4700,19 +4768,24 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         const ORDEN_PREDEFINIDO = ['Ambiental', 'SST', 'Jurídica', 'Social', 'Técnica'];
         lista.innerHTML = hist.map((r, i) => {
+            const areasEval = areasEvaluadasDeInspeccion(r);
+            const frentesHist = frentesSoloAreasEvaluadas(r.frentes || [], areasEval);
             let hc = 0, hn = 0;
-            (r.frentes || []).forEach(f => (f.categorias || []).forEach(cat => (cat.items || []).forEach(item => {
+            frentesHist.forEach(f => (f.categorias || []).forEach(cat => (cat.items || []).forEach(item => {
                 if (item.cumple === true) hc++;
                 else if (item.cumple === false) hn++;
             })));
             const hTotal = hc + hn;
             const pctCalc = hTotal > 0 ? parseFloat((hc / hTotal * 100).toFixed(1)) : (r.pct || 0);
             const color = pctCalc >= 80 ? '#16a34a' : pctCalc >= 50 ? '#d97706' : '#dc2626';
-            const tags = r.frentes.map(f => `<span class="hist-tag">${f.nombre}</span>`).join('');
-            const numFrentes = r.frentes ? r.frentes.length : 0;
+            const tags = frentesHist.map(f => `<span class="hist-tag">${f.nombre}</span>`).join('');
+            const numFrentes = frentesHist.length;
+            const areasHistLabel = areasEval.length
+                ? areasEval.map(function(id) { return FILTRO_AREA_LABELS[id] || id; }).join(', ')
+                : '';
 
             // Desglose por frente y área
-            const frentesBlocks = (r.frentes || []).map((f, fi) => {
+            const frentesBlocks = frentesHist.map((f, fi) => {
                 const cats = f.categorias || [];
                 const seenNombres = [];
                 cats.forEach(cat => { if (!seenNombres.includes(cat.nombre)) seenNombres.push(cat.nombre); });
@@ -4771,6 +4844,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <div class="hist-proyecto">${r.proyecto || 'Sin nombre'}</div>
                         <div class="hist-fecha" style="display:flex;align-items:center;gap:4px;">${pcIcon('calendar',12,'#64748b')} ${r.fecha || ''} &nbsp;|&nbsp; Archivado: ${r.archivedAt || ''}</div>
                         <div class="hist-inspector" style="display:flex;align-items:center;gap:4px;">${pcIcon('user',12,'#64748b')} ${r.inspector || 'No especificado'}${r.importado ? '<span style="font-size:0.7rem;background:#7c3aed;color:#fff;padding:2px 8px;border-radius:10px;margin-left:6px;">Importada</span>' : ''}</div>
+                        ${areasHistLabel ? '<div style="font-size:0.72rem;color:#64748b;margin-top:4px;display:flex;align-items:center;gap:4px;">' + pcIcon('filter', 12, '#64748b') + ' Áreas: ' + areasHistLabel + '</div>' : ''}
                     </div>
                     <span style="font-size:0.8rem;font-weight:500;color:var(--color-text-secondary);display:inline-flex;align-items:center;gap:4px;">${pcIcon('clipboard-list',12,'#64748b')} ${numFrentes}${numFrentes === 1 ? ' frente' : ' frentes'}</span>
                 </div>
@@ -4842,6 +4916,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const hist = getHistorial();
         const r = hist[idx];
         frentes = normalizeFrentes(r.frentes || []);
+        if (r.areasEvaluadas && r.areasEvaluadas.length) {
+            guardarFiltroCategorias(r.areasEvaluadas);
+        } else {
+            guardarFiltroCategorias([]);
+        }
         proyectoInput.value = r.proyecto || '';
         fechaInput.value = r.fecha || '';
         ubicacionInput.value = r.ubicacion || '';
@@ -4955,7 +5034,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         function construirDesdePar(reciente, anterior, frentesLista, opts) {
             opts = opts || {};
-            var filtroIds = opts.filtroAreaIds || [];
+            var filtroIds = opts.filtroAreaIds;
+            if (!Array.isArray(filtroIds)) {
+                filtroIds = typeof window.areasEvaluadasParaComparacion === 'function'
+                    ? window.areasEvaluadasParaComparacion(reciente, anterior, opts.filtroActivoOpcional)
+                    : [];
+            }
             var comparables = [];
             (frentesLista || []).forEach(function(fRef) {
                 var fActual = findFrenteEnInsp(reciente, fRef);
@@ -6165,7 +6249,8 @@ function csSnapshotActual() {
         fecha: (document.getElementById('fecha') || {}).value || '',
         ubicacion: (document.getElementById('ubicacion') || {}).value || '',
         inspector: (document.getElementById('inspector') || {}).value || '',
-        frentes: typeof frentes !== 'undefined' ? frentes : []
+        frentes: typeof frentes !== 'undefined' ? frentes : [],
+        areasEvaluadas: csObtenerFiltroAreasActivas()
     };
 }
 
@@ -6199,7 +6284,7 @@ function csObtenerFiltroAreasActivas() {
 function csResolverTodasComparaciones() {
     if (typeof frentes === 'undefined' || !frentes.length) return { comparables: [], omitidos: [] };
     var comparables = [], omitidos = [];
-    var filtroIds = csObtenerFiltroAreasActivas();
+    var filtroActivo = csObtenerFiltroAreasActivas();
     frentes.forEach(function(f) {
         var matches = csBuscarHistorialCoincidente(f.nombre, f.contratista, f.numeroContrato);
         if (matches.length === 0) {
@@ -6208,6 +6293,9 @@ function csResolverTodasComparaciones() {
         }
         var actual = csFiltrarInspeccionPorFrente(csSnapshotActual(), f.nombre, f.contratista, f.numeroContrato);
         var anteriorInsp = csFiltrarInspeccionPorFrente(matches[0], f.nombre, f.contratista, f.numeroContrato);
+        var filtroIds = typeof areasEvaluadasParaComparacion === 'function'
+            ? areasEvaluadasParaComparacion(actual, anteriorInsp, filtroActivo)
+            : filtroActivo;
         var built = CompMotor.construirDesdePar(actual, anteriorInsp, [f], { modo: 'auto', filtroAreaIds: filtroIds });
         if (built.comparables[0]) comparables.push(built.comparables[0]);
     });
