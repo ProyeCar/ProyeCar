@@ -1463,7 +1463,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.104";
+const APP_VERSION = "1.5.105";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 
@@ -6546,6 +6546,10 @@ document.addEventListener('DOMContentLoaded', function() {
             var filtroFrentePdf = (document.getElementById('filtro-frente-pdf') || {}).value || 'todos';
             var filtroAreaPdf = (document.getElementById('filtro-area-pdf') || {}).value || 'todas';
             var pdfZonaActual = null;
+            // El contenedor de la sección ya fuerza página nueva (page-break-before:always).
+            // El PRIMER frente no lleva .frente-pg para no duplicar el salto (título huérfano
+            // en página casi vacía); los siguientes sí, igual que los frentes normales.
+            var esPrimerFrenteComp = true;
             (compD.comparables || []).forEach(function(comp) {
                 var fNombre = comp.frente.nombre || 'Sin nombre';
                 if (filtroFrentePdf !== 'todos' && fNombre !== filtroFrentePdf) return;
@@ -6555,7 +6559,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 var esCienagaPdf = typeof esFrenteGrupoCienaga === 'function' && esFrenteGrupoCienaga(frData);
                 var abreZonaAuto = esCienagaPdf && ZONA_CIENAGA !== pdfZonaActual;
                 if (esCienagaPdf) pdfZonaActual = ZONA_CIENAGA; else pdfZonaActual = null;
-                h += '<div class="frente-pg">';
+                h += esPrimerFrenteComp ? '<div>' : '<div class="frente-pg">';
+                esPrimerFrenteComp = false;
                 if (abreZonaAuto) h += htmlPdfEncabezadoZona(ZONA_CIENAGA, frData.municipio, eH);
                 h += htmlPdfFichaUbicacionFrente(frData, eH);
                 (comp.areas || []).forEach(function(area) {
@@ -6654,6 +6659,8 @@ document.addEventListener('DOMContentLoaded', function() {
             frenteGroups[key].push(g);
         });
         var pdfZonaMan = null;
+        // Igual que en modo auto: el primer frente no duplica el salto del contenedor de sección.
+        var esPrimerFrenteMan = true;
         Object.keys(frenteGroups).forEach(function(fNombre) {
             var items = frenteGroups[fNombre];
             if (!items.length) return;
@@ -6663,7 +6670,8 @@ document.addEventListener('DOMContentLoaded', function() {
             var esCienagaMan = typeof esFrenteGrupoCienaga === 'function' && esFrenteGrupoCienaga(frData);
             var abreZonaMan = esCienagaMan && ZONA_CIENAGA !== pdfZonaMan;
             if (esCienagaMan) pdfZonaMan = ZONA_CIENAGA; else pdfZonaMan = null;
-            h += '<div class="frente-pg">';
+            h += esPrimerFrenteMan ? '<div>' : '<div class="frente-pg">';
+            esPrimerFrenteMan = false;
             if (abreZonaMan) h += htmlPdfEncabezadoZona(ZONA_CIENAGA, frData.municipio, eH);
             h += htmlPdfFichaUbicacionFrente(frData, eH);
             items.forEach(function(g) {
