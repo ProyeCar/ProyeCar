@@ -1,5 +1,5 @@
-// build: 2026-07-15-analisis-comparativo-matching-por-frente
-const APP_VERSION = '1.5.132';
+// build: 2026-07-15-analisis-comparativo-sin-limite-tiempo
+const APP_VERSION = '1.5.133';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {

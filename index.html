@@ -1489,7 +1489,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.132";
+const APP_VERSION = "1.5.133";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 
 /** Fecha de HOY en Colombia (America/Bogota) como "YYYY-MM-DD".
@@ -7166,16 +7166,22 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     }
 
-    /** Busca el registro histórico más reciente cuyo frente coincide por nombre (flexible). */
+    /**
+     * Busca en TODO el historial (sin límite de días/semanas/meses) el registro más reciente
+     * anterior a la fecha actual cuyo frente coincide por nombre (flexible).
+     * Solo excluye registros con fecha >= inspección actual (misma fecha o futuras).
+     */
     function buscarHistorialFrentePorNombre(fActual, fechaActual) {
         var hist = getHistorial();
         var candidatos = [];
-        var fechaRef = fechaActual ? new Date(fechaActual).getTime() : 0;
+        var fechaRef = typeof normalizarFechaInspeccionYMD === 'function'
+            ? normalizarFechaInspeccionYMD(fechaActual || '')
+            : (fechaActual || '').trim().substring(0, 10);
         hist.forEach(function(reg) {
             if (!reg || !reg.frentes) return;
-            if (fechaActual && !isNaN(fechaRef)) {
-                var regFecha = new Date(reg.fecha || 0).getTime();
-                if (!isNaN(regFecha) && regFecha >= fechaRef) return;
+            if (fechaRef && /^\d{4}-\d{2}-\d{2}$/.test(fechaRef)) {
+                var regFecha = String(reg.fecha || '').trim().substring(0, 10);
+                if (/^\d{4}-\d{2}-\d{2}$/.test(regFecha) && regFecha >= fechaRef) return;
             }
             (reg.frentes || []).forEach(function(hf) {
                 var mc = clasificarMatchFrente(fActual, hf);
@@ -7188,8 +7194,9 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
         candidatos.sort(function(a, b) {
-            var fa = new Date(a.fecha || 0).getTime(), fb = new Date(b.fecha || 0).getTime();
-            if (fb !== fa) return fb - fa;
+            var fa = String(a.fecha || '').trim().substring(0, 10);
+            var fb = String(b.fecha || '').trim().substring(0, 10);
+            if (fb !== fa) return fb.localeCompare(fa);
             var ca = frenteContratoNumeroCoincide(fActual, a.frenteHist);
             var cb = frenteContratoNumeroCoincide(fActual, b.frenteHist);
             if (ca && !cb) return -1;
@@ -7931,7 +7938,7 @@ function csResetResumenComparacionSemanal() {
     if (resumen) {
         resumen.style.display = '';
         resumen.innerHTML = '<div style="font-weight:700;color:#1e3a2f;margin-bottom:4px;">Análisis comparativo automático</div>'
-            + '<div style="color:#6b7280;">Activa el interruptor para comparar cada frente inspeccionado hoy con su historial previo (matching por nombre).</div>';
+            + '<div style="color:#6b7280;">Activa el interruptor para comparar cada frente de hoy con su último registro histórico anterior (sin límite de tiempo, matching por nombre).</div>';
     }
     var avisos = document.getElementById('cs-avisos');
     var pendientesEl = document.getElementById('cs-pendientes');
@@ -7992,7 +7999,7 @@ function csSemanalGenerar() {
             var txt = res.comparables.length + ' frente(s) con historial coincidente';
             if (res.omitidos.length) txt += ' · ' + res.omitidos.length + ' sin historial previo';
             resumen.innerHTML = '<div style="font-weight:700;color:#1e3a2f;margin-bottom:4px;">Análisis comparativo automático</div>'
-                + '<div style="color:#475569;">' + CompMotor.escHtml(txt) + ' · matching por nombre de frente/sector</div>';
+                + '<div style="color:#475569;">' + CompMotor.escHtml(txt) + ' · último registro anterior por frente (sin límite de días)</div>';
         }
     }
 
