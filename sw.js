@@ -1,5 +1,5 @@
-// build: 2026-07-14-design-tokens-fase-a
-const APP_VERSION = '1.5.126';
+// build: 2026-07-14-fix-fecha-zona-horaria-local
+const APP_VERSION = '1.5.127';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {

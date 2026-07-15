@@ -1489,8 +1489,25 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.126";
+const APP_VERSION = "1.5.127";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
+
+/** Fecha de HOY en Colombia (America/Bogota) como "YYYY-MM-DD".
+ *  Evita el desfase de zona horaria de Date.valueAsDate / toISOString() (UTC). */
+function fechaHoyLocalYMD() {
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Bogota',
+      year: 'numeric', month: '2-digit', day: '2-digit'
+    }).format(new Date());
+  } catch (e) {
+    var d = new Date();
+    var m = String(d.getMonth() + 1).padStart(2, '0');
+    var day = String(d.getDate()).padStart(2, '0');
+    return d.getFullYear() + '-' + m + '-' + day;
+  }
+}
+window.fechaHoyLocalYMD = fechaHoyLocalYMD;
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 var _pwaRecargando = false;
 
@@ -2562,7 +2579,7 @@ document.addEventListener('DOMContentLoaded', function() {
         fechaInput.value = parsed.fecha || "";
         ubicacionInput.value = parsed.ubicacion || "";
         inspectorInput.value = parsed.inspector || "";
-        if (!fechaInput.value) fechaInput.valueAsDate = new Date();
+        if (!fechaInput.value) fechaInput.value = fechaHoyLocalYMD();
         if (rawData && rawData.fotoMap && typeof idbGuardarFoto === "function") {
             Object.keys(rawData.fotoMap).forEach(function(id) {
                 try { idbGuardarFoto(id, rawData.fotoMap[id]); } catch (e) {}
@@ -2631,7 +2648,7 @@ document.addEventListener('DOMContentLoaded', function() {
             { nombre: "Frente 2 - Box Matagente", contratista: "", numeroContrato: "", municipio: "", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" }
         ];
         proyectoInput.value = "";
-        fechaInput.valueAsDate = new Date();
+        fechaInput.value = fechaHoyLocalYMD();
         ubicacionInput.value = "Jurisdicción CARDIQUE";
         inspectorInput.value = "";
         frentes.forEach(function(fr) {
@@ -2768,7 +2785,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnResetGlobal = document.getElementById("reset-global");
     const btnExportarJson = document.getElementById("exportar-json");
 
-    fechaInput.valueAsDate = new Date();
+    if (!fechaInput.value) fechaInput.value = fechaHoyLocalYMD();
 
     function showSavedMessage() { saveIndicator.innerHTML = pcIcon('circle-check', 14, '#16a34a') + ' Datos guardados'; setTimeout(() => saveIndicator.textContent = "", 2000); }
     function getFormValues() {
@@ -5717,7 +5734,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Sincronizar informe con Supabase + R2 (offline-first, ver sincronizarInforme)
         try {
             var htmlBlob = new Blob([h], { type: 'text/html;charset=utf-8' });
-            var nombreArchivo = 'informe_' + (proyectoInput.value || 'sin-nombre').replace(/[^a-z0-9]+/gi, '-') + '_' + (fechaInput.value || new Date().toISOString().slice(0,10)) + '_' + Date.now() + '.html';
+            var nombreArchivo = 'informe_' + (proyectoInput.value || 'sin-nombre').replace(/[^a-z0-9]+/gi, '-') + '_' + (fechaInput.value || fechaHoyLocalYMD()) + '_' + Date.now() + '.html';
             sincronizarInforme(nombreArchivo, htmlBlob).catch(function(e) { console.error('Error sincronizando informe:', e); });
         } catch (e) {
             console.error('Error creando blob para sincronización:', e);
