@@ -1175,14 +1175,47 @@
                 height 280ms cubic-bezier(0.16, 1, 0.3, 1),
                 opacity 200ms ease;
         }
-        .wa-fab {
+        .wa-fab-wrap {
             position: fixed; right: 16px;
             bottom: calc(78px + env(safe-area-inset-bottom));
             z-index: 1500;
-            width: 52px; height: 52px; border-radius: 50%;
+            width: 56px; height: 56px;
+            pointer-events: none;
+        }
+        .wa-fab-wrap .wa-fab { pointer-events: auto; }
+        .wa-fab-ripple {
+            position: absolute; inset: 0; margin: auto;
+            width: 56px; height: 56px;
+            border-radius: 50%;
+            border: 2px solid rgba(37, 211, 102, 0.42);
+            animation: wa-ripple 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+            pointer-events: none;
+        }
+        .wa-fab-ripple:nth-child(2) { animation-delay: 1.25s; }
+        @keyframes wa-ripple {
+            0% { transform: scale(1); opacity: 0.55; }
+            100% { transform: scale(2.15); opacity: 0; }
+        }
+        @keyframes wa-pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35); }
+            50% { transform: scale(1.06); box-shadow: 0 6px 20px rgba(37, 211, 102, 0.45); }
+        }
+        .wa-fab {
+            position: absolute; inset: 0; margin: auto;
+            width: 56px; height: 56px; border-radius: 50%;
             background: #25D366; border: none; cursor: pointer;
             display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+            box-shadow: 0 4px 14px rgba(0,0,0,0.22);
+            animation: wa-pulse 2.5s ease-in-out infinite;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .wa-fab svg {
+            width: 32px; height: 32px;
+            display: block; flex-shrink: 0;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .wa-fab, .wa-fab-ripple { animation: none !important; }
         }
         .nav-btn {
             display: flex; flex-direction: column; align-items: center; gap: 5px;
@@ -1489,8 +1522,10 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.134";
+const APP_VERSION = "1.5.135";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
+/** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
+var PROYECAR_WHATSAPP_NUMERO = '';
 
 /** Fecha de HOY en Colombia (America/Bogota) como "YYYY-MM-DD".
  *  Evita el desfase de zona horaria de Date.valueAsDate / toISOString() (UTC). */
@@ -1893,13 +1928,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 Comparar inspecciones
             </button>
         </div>
-        <div class="menu-titulo" style="margin-top:18px;color:#b45309;">Diagnóstico temporal</div>
-        <div class="menu-lista">
-            <button class="menu-item" type="button" onclick="proyecarDiagnosticoAlmacenamiento()" style="border-color:#fde68a;background:#fffbeb;">
-                <span style="font-size:1.2rem;line-height:1;">🔍</span>
-                Diagnóstico de almacenamiento
-            </button>
-        </div>
     </div>
 </div></div>
 
@@ -1920,218 +1948,19 @@ document.addEventListener('DOMContentLoaded', function() {
     </button>
 </nav>
 
-<button id="wa-fab" class="wa-fab" style="display:none;" aria-label="Compartir por WhatsApp" title="Compartir por WhatsApp">
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.5 2 2 6.5 2 12c0 1.9.5 3.7 1.5 5.3L2 22l4.9-1.4C8.4 21.5 10.1 22 12 22c5.5 0 10-4.5 10-10S17.5 2 12 2zm0 18.2c-1.6 0-3.2-.4-4.5-1.3l-.3-.2-3 .8.8-2.9-.2-.3C4 15 3.6 13.5 3.6 12c0-4.6 3.8-8.4 8.4-8.4s8.4 3.8 8.4 8.4-3.8 8.2-8.4 8.2zm4.6-6.1c-.3-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1-.2.3-.6.8-.8 1-.1.2-.3.2-.5.1-.3-.1-1.2-.4-2.2-1.4-.8-.7-1.4-1.6-1.5-1.9-.2-.3 0-.4.1-.6.1-.1.3-.3.4-.5.1-.1.2-.3.2-.4.1-.2 0-.4 0-.5-.1-.1-.6-1.5-.9-2-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.1s1 2.5 1.1 2.6c.1.2 1.9 2.9 4.6 4 .6.3 1.1.4 1.5.6.6.2 1.2.2 1.6.1.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2-.1-.1-.3-.2-.5-.3z"/></svg>
-</button>
+<div class="wa-fab-wrap" id="wa-fab-wrap" style="display:none;" aria-hidden="true">
+    <span class="wa-fab-ripple" aria-hidden="true"></span>
+    <span class="wa-fab-ripple" aria-hidden="true"></span>
+    <button id="wa-fab" class="wa-fab" type="button" aria-label="Compartir informe por WhatsApp" title="Compartir por WhatsApp">
+        <svg viewBox="0 0 24 24" fill="#ffffff" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+    </button>
+</div>
 
 <div id="badge-cola" class="badge-cola" style="display:none;"></div>
 
 <script type="module" src="supabase-pdfs.js"></script>
 <script>
     console.log('ProyeCar v' + APP_VERSION + ' cargado');
-
-    // ── TEMPORAL: diagnóstico de almacenamiento (buscar rastro de inspecciones eliminadas) ──
-    function proyecarEscHtmlDiag(s) {
-        return String(s == null ? '' : s)
-            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
-    function proyecarMarcaSospechosa(texto) {
-        var t = String(texto || '');
-        return /2026-07-12|12\/07\/2026|07\/12\/2026|12\/7\/2026|7\/12\/2026|"fecha"\s*:\s*"2026-07-12"|Archivado:.*12/.test(t)
-            || (/\b12\b/.test(t) && /historial|inspeccion|fecha|frente|cardique_historial|inspectorFrentes/i.test(t));
-    }
-    async function proyecarLeerIndexedDBDiag() {
-        var out = [];
-        if (!window.indexedDB) {
-            out.push({ db: '(sin indexedDB)', stores: [] });
-            return out;
-        }
-        var dbs = [];
-        try {
-            if (indexedDB.databases) dbs = await indexedDB.databases();
-            else dbs = [{ name: 'cardique_fotos', version: 2 }];
-        } catch (e) {
-            dbs = [{ name: 'cardique_fotos', version: 2 }];
-        }
-        for (var i = 0; i < dbs.length; i++) {
-            var dbName = dbs[i] && dbs[i].name;
-            if (!dbName) continue;
-            var dbInfo = { db: dbName + '@' + (dbs[i].version || '?'), stores: [] };
-            try {
-                var db = await new Promise(function(resolve, reject) {
-                    var req = indexedDB.open(dbName);
-                    req.onsuccess = function() { resolve(req.result); };
-                    req.onerror = function() { reject(req.error); };
-                });
-                var storeNames = Array.from(db.objectStoreNames || []);
-                for (var s = 0; s < storeNames.length; s++) {
-                    var sn = storeNames[s];
-                    var rows = await new Promise(function(resolve, reject) {
-                        try {
-                            var tx = db.transaction(sn, 'readonly');
-                            var r = tx.objectStore(sn).getAll();
-                            r.onsuccess = function() { resolve(r.result || []); };
-                            r.onerror = function() { reject(r.error); };
-                        } catch (err) { resolve([{ _error: String(err) }]); }
-                    });
-                    var summaries = (rows || []).slice(0, 20).map(function(row, idx) {
-                        var raw = '';
-                        try { raw = JSON.stringify(row); } catch (e2) { raw = String(row); }
-                        if (raw.length > 200) raw = raw.slice(0, 200) + '…';
-                        return { idx: idx, len: (rows[idx] && JSON.stringify(rows[idx]) || '').length, preview: raw, sospechoso: proyecarMarcaSospechosa(raw) };
-                    });
-                    dbInfo.stores.push({ name: sn, count: (rows || []).length, rows: summaries });
-                }
-                db.close();
-            } catch (e) {
-                dbInfo.stores.push({ name: '(error)', count: 0, rows: [{ preview: String(e), sospechoso: false }] });
-            }
-            out.push(dbInfo);
-        }
-        return out;
-    }
-    async function proyecarDiagnosticoAlmacenamiento() {
-        var lsKeys = [];
-        for (var i = 0; i < localStorage.length; i++) lsKeys.push(localStorage.key(i));
-        lsKeys.sort();
-        var lsBlocks = lsKeys.map(function(k) {
-            var raw = localStorage.getItem(k) || '';
-            var preview = raw.length > 200 ? raw.slice(0, 200) + '…' : raw;
-            return {
-                key: k,
-                length: raw.length,
-                preview: preview,
-                sospechoso: proyecarMarcaSospechosa(k + ' ' + raw)
-            };
-        });
-        var ssKeys = [];
-        for (var j = 0; j < sessionStorage.length; j++) ssKeys.push(sessionStorage.key(j));
-        var ssBlocks = ssKeys.map(function(k) {
-            var raw = sessionStorage.getItem(k) || '';
-            var preview = raw.length > 200 ? raw.slice(0, 200) + '…' : raw;
-            return { key: k, length: raw.length, preview: preview, sospechoso: proyecarMarcaSospechosa(k + ' ' + raw) };
-        });
-        var mem = {
-            APP_VERSION: (typeof APP_VERSION !== 'undefined' ? APP_VERSION : null),
-            _csAbierto: !!window._csAbierto,
-            has_compPdfData: !!window._compPdfData,
-            _compPdfAnterior: window._compPdfData && window._compPdfData.anterior
-                ? { id: window._compPdfData.anterior.id, fecha: window._compPdfData.anterior.fecha }
-                : null,
-            comparables: ((window._compPdfData && window._compPdfData.comparables) || []).map(function(c) {
-                return {
-                    frente: c.frente && c.frente.nombre,
-                    fechaAnterior: c.fechaAnterior,
-                    anteriorId: c.anterior && c.anterior.id,
-                    anteriorFecha: c.anterior && c.anterior.fecha
-                };
-            }),
-            comparacionSemanal: window.comparacionSemanal ? {
-                i1: window.comparacionSemanal.inspeccion1 && { id: window.comparacionSemanal.inspeccion1.id, fecha: window.comparacionSemanal.inspeccion1.fecha },
-                i2: window.comparacionSemanal.inspeccion2 && { id: window.comparacionSemanal.inspeccion2.id, fecha: window.comparacionSemanal.inspeccion2.fecha }
-            } : null,
-            _comparisonData: window._comparisonData ? {
-                reciente: window._comparisonData.reciente && { id: window._comparisonData.reciente.id, fecha: window._comparisonData.reciente.fecha },
-                anterior: window._comparisonData.anterior && { id: window._comparisonData.anterior.id, fecha: window._comparisonData.anterior.fecha }
-            } : null
-        };
-        var idb = await proyecarLeerIndexedDBDiag();
-        var histResumen = [];
-        try {
-            histResumen = JSON.parse(localStorage.getItem('cardique_historial') || '[]').map(function(r) {
-                return { id: r.id, fecha: r.fecha, archivedAt: r.archivedAt, proyecto: r.proyecto, nFrentes: (r.frentes || []).length };
-            });
-        } catch (e) { histResumen = [{ error: String(e) }]; }
-
-        var html = '';
-        html += '<div style="font-size:0.78rem;line-height:1.45;">';
-        html += '<div style="margin-bottom:10px;padding:8px 10px;background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;">';
-        html += '<b>TEMPORAL</b> — Diagnóstico de almacenamiento · v' + proyecarEscHtmlDiag(mem.APP_VERSION);
-        html += '<br>Historial parseado: ' + histResumen.length + ' registro(s)<br>';
-        html += '<code style="font-size:0.7rem;word-break:break-all;">' + proyecarEscHtmlDiag(JSON.stringify(histResumen)) + '</code></div>';
-
-        function renderBlocks(titulo, blocks) {
-            html += '<div style="font-weight:700;margin:12px 0 6px;color:#1e3a2f;">' + proyecarEscHtmlDiag(titulo) + ' (' + blocks.length + ')</div>';
-            if (!blocks.length) {
-                html += '<div style="color:#94a3b8;font-size:0.72rem;">(vacío)</div>';
-                return;
-            }
-            blocks.forEach(function(b) {
-                var bg = b.sospechoso ? '#fee2e2' : '#f8fafc';
-                var bd = b.sospechoso ? '#fca5a5' : '#e2e8f0';
-                html += '<div style="margin-bottom:8px;padding:8px 10px;border-radius:8px;border:1px solid ' + bd + ';background:' + bg + ';">';
-                if (b.sospechoso) html += '<div style="color:#b91c1c;font-weight:800;margin-bottom:4px;">⚠ POSIBLE RASTRO DÍA 12 / INSPECCIÓN</div>';
-                html += '<div style="font-weight:700;word-break:break-all;">' + proyecarEscHtmlDiag(b.key) + ' <span style="color:#64748b;font-weight:500;">(' + b.length + ' chars)</span></div>';
-                html += '<pre style="margin:6px 0 0;white-space:pre-wrap;word-break:break-all;font-size:0.68rem;color:#334155;">' + proyecarEscHtmlDiag(b.preview) + '</pre>';
-                html += '</div>';
-            });
-        }
-        renderBlocks('localStorage', lsBlocks);
-        renderBlocks('sessionStorage', ssBlocks);
-
-        html += '<div style="font-weight:700;margin:12px 0 6px;color:#1e3a2f;">Memoria análisis comparativo</div>';
-        html += '<pre style="padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;white-space:pre-wrap;word-break:break-all;font-size:0.68rem;">'
-            + proyecarEscHtmlDiag(JSON.stringify(mem, null, 2)) + '</pre>';
-
-        html += '<div style="font-weight:700;margin:12px 0 6px;color:#1e3a2f;">IndexedDB</div>';
-        idb.forEach(function(db) {
-            html += '<div style="margin-bottom:8px;font-weight:600;">DB: ' + proyecarEscHtmlDiag(db.db) + '</div>';
-            (db.stores || []).forEach(function(st) {
-                html += '<div style="margin:4px 0 8px 8px;padding:8px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;">';
-                html += '<div>store <b>' + proyecarEscHtmlDiag(st.name) + '</b> · ' + st.count + ' fila(s)</div>';
-                (st.rows || []).forEach(function(row) {
-                    var bg = row.sospechoso ? '#fee2e2' : 'transparent';
-                    html += '<div style="margin-top:6px;padding:6px;background:' + bg + ';border-radius:6px;">';
-                    if (row.sospechoso) html += '<div style="color:#b91c1c;font-weight:800;">⚠ SOSPECHOSO</div>';
-                    html += '<pre style="margin:0;white-space:pre-wrap;word-break:break-all;font-size:0.66rem;">' + proyecarEscHtmlDiag(row.preview) + '</pre>';
-                    html += '</div>';
-                });
-                html += '</div>';
-            });
-        });
-        html += '</div>';
-
-        var prev = document.getElementById('modal-diag-storage');
-        if (prev) prev.remove();
-        var overlay = document.createElement('div');
-        overlay.id = 'modal-diag-storage';
-        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:10050;display:flex;align-items:flex-end;justify-content:center;padding:12px;';
-        overlay.innerHTML = '<div style="background:#fff;width:100%;max-width:560px;max-height:88vh;border-radius:16px 16px 12px 12px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.3);">'
-            + '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #e5e7eb;background:#fffbeb;">'
-            + '<div style="font-weight:800;color:#92400e;font-size:0.92rem;">🔍 Diagnóstico de almacenamiento</div>'
-            + '<button type="button" id="diag-storage-close" style="border:none;background:#e5e7eb;border-radius:8px;padding:6px 10px;cursor:pointer;font-weight:700;">Cerrar</button></div>'
-            + '<div id="diag-storage-body" style="overflow:auto;padding:12px 14px;flex:1;-webkit-overflow-scrolling:touch;"></div>'
-            + '<div style="padding:10px 14px;border-top:1px solid #e5e7eb;display:flex;gap:8px;">'
-            + '<button type="button" id="diag-storage-copy" style="flex:1;padding:10px;border:none;border-radius:10px;background:#1a5c35;color:#fff;font-weight:700;cursor:pointer;">Copiar texto</button>'
-            + '</div></div>';
-        document.body.appendChild(overlay);
-        document.getElementById('diag-storage-body').innerHTML = html;
-        document.getElementById('diag-storage-close').onclick = function() { overlay.remove(); };
-        overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
-        document.getElementById('diag-storage-copy').onclick = function() {
-            var plain = [
-                '=== ProyeCar diagnóstico almacenamiento ===',
-                'APP_VERSION=' + mem.APP_VERSION,
-                'historial=' + JSON.stringify(histResumen),
-                'localStorage keys=' + lsKeys.join(', '),
-                lsBlocks.map(function(b) { return (b.sospechoso ? '[SOSPECHOSO] ' : '') + b.key + ' (' + b.length + '):\n' + b.preview; }).join('\n\n'),
-                'sessionStorage:\n' + JSON.stringify(ssBlocks, null, 2),
-                'memory:\n' + JSON.stringify(mem, null, 2),
-                'indexedDB:\n' + JSON.stringify(idb, null, 2)
-            ].join('\n\n');
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(plain).then(function() {
-                    alert('Diagnóstico copiado al portapapeles. Pégalo en el chat.');
-                }).catch(function() {
-                    prompt('Copia este diagnóstico:', plain.slice(0, 1500));
-                });
-            } else {
-                prompt('Copia este diagnóstico:', plain.slice(0, 1500));
-            }
-        };
-        console.log('[ProyeCar DIAG]', { histResumen: histResumen, localStorage: lsBlocks, sessionStorage: ssBlocks, memory: mem, indexedDB: idb });
-    }
-    window.proyecarDiagnosticoAlmacenamiento = proyecarDiagnosticoAlmacenamiento;
 
     const PLANTILLAS_AUTO = [
         {
@@ -5324,13 +5153,31 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         saveToLocal();
 
-        if (!frentes.length) { restoreBtn(); alert('Sin frentes de obra.'); return; }
+        if (!frentes.length) {
+            if (window._informeHtmlReject) {
+                var rej0 = window._informeHtmlReject;
+                window._informeHtmlReject = null;
+                window._informeHtmlCallback = null;
+                restoreBtn();
+                rej0(new Error('Sin frentes de obra.'));
+                return;
+            }
+            restoreBtn(); alert('Sin frentes de obra.'); return;
+        }
 
         var areasEvalPdf = obtenerFiltroCategoriasActivas();
         var frentesPdf = frentesParaInspeccionActiva(frentes, areasEvalPdf);
         var etiquetasAreasPdf = etiquetasFiltroAreasActivas();
 
         if (!frentesPdf.length) {
+            if (window._informeHtmlReject) {
+                var rej1 = window._informeHtmlReject;
+                window._informeHtmlReject = null;
+                window._informeHtmlCallback = null;
+                restoreBtn();
+                rej1(new Error('Sin frentes para el informe.'));
+                return;
+            }
             restoreBtn();
             alert(hayFrentesSeleccionadosInspeccion()
                 ? 'Ningún frente seleccionado coincide con el filtro de áreas activo.'
@@ -5735,6 +5582,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
         h += '<\/body><\/html>';
 
+        if (window._informeHtmlCallback) {
+            var cbHtml = window._informeHtmlCallback;
+            window._informeHtmlCallback = null;
+            window._informeHtmlReject = null;
+            restoreBtn();
+            cbHtml(h);
+            return;
+        }
+
         // ── 9. Abrir informe ──
         // document.write() sobre la ventana pre-abierta: sin URL en pie de página,
         // sin bloqueo de popup en iOS Safari, datos y fotos visibles
@@ -5806,8 +5662,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (nombre === 'historial') renderHistorial();
         if (nombre === 'comparar') renderComparar();
         if (nombre === 'sync') renderSync();
-        const waFab = document.getElementById('wa-fab');
-        if (waFab) waFab.style.display = (nombre === 'frentes') ? 'flex' : 'none';
+        const waWrap = document.getElementById('wa-fab-wrap');
+        if (waWrap) {
+            var showWa = (nombre === 'frentes');
+            waWrap.style.display = showWa ? 'block' : 'none';
+            waWrap.setAttribute('aria-hidden', showWa ? 'false' : 'true');
+        }
         if (nombre === 'frentes' && typeof csRefrescarSiAbierto === 'function') csRefrescarSiAbierto();
         window.scrollTo(0, 0);
     }
@@ -5825,12 +5685,173 @@ document.addEventListener('DOMContentLoaded', function() {
             abierto.categorias.length + ' área(s), ' + totalItems + ' ítem(s) registrados.';
     }
 
+    function construirUrlWhatsApp(textoCorto) {
+        var num = String(PROYECAR_WHATSAPP_NUMERO || '').replace(/\D/g, '');
+        var base = num ? ('https://wa.me/' + num) : 'https://wa.me/';
+        return base + '?text=' + encodeURIComponent(textoCorto || 'Informe CARDIQUE — EcoField Inspector');
+    }
+
+    function obtenerOpcionesInformeWhatsApp() {
+        var opts = [];
+        var areasEval = typeof obtenerFiltroCategoriasActivas === 'function' ? obtenerFiltroCategoriasActivas() : [];
+        var frentesPdf = typeof frentesParaInspeccionActiva === 'function'
+            ? frentesParaInspeccionActiva(typeof frentes !== 'undefined' ? frentes : [], areasEval)
+            : [];
+        if (frentesPdf.length) {
+            opts.push({ id: 'informe', label: 'Informe general', desc: 'Inspección completa por frentes' });
+        }
+        var compD = window._compPdfData;
+        var tieneComp = compD && compD.comparables && compD.comparables.length
+            && compD.comparables.some(function(c) { return !c.sinHistorialPrevio; });
+        if (window._csAbierto && compD && compD.comparables && compD.comparables.length) {
+            opts.push({ id: 'comparativo', label: 'Análisis comparativo de inspecciones', desc: 'Informe con sección comparativa' });
+        }
+        if (tieneComp && typeof construirHtmlDashboardEjecutivo === 'function') {
+            opts.push({ id: 'dashboard', label: 'Dashboard Ejecutivo', desc: 'Vista ejecutiva (2 páginas)' });
+        }
+        return opts;
+    }
+
+    function generarHtmlInformeDireccionAsync(opts) {
+        opts = opts || {};
+        return new Promise(function(resolve, reject) {
+            window._informeHtmlCallback = resolve;
+            window._informeHtmlReject = reject;
+            var savedCompHtml = window._compPdfHtml;
+            if (!opts.incluirComparacion) window._compPdfHtml = null;
+            window._pdfWin = null;
+            generarInformeDireccion().catch(function(e) {
+                window._informeHtmlCallback = null;
+                window._informeHtmlReject = null;
+                if (!opts.incluirComparacion) window._compPdfHtml = savedCompHtml;
+                reject(e);
+            });
+        });
+    }
+
+    async function generarHtmlInformeWhatsApp(tipo) {
+        var proyecto = (document.getElementById('proyecto') || {}).value || 'Informe';
+        var fecha = (document.getElementById('fecha') || {}).value || fechaHoyLocalYMD();
+        var filtrosComp = {
+            filtroFrente: (document.getElementById('filtro-frente-pdf') || {}).value || 'todos',
+            filtroArea: (document.getElementById('filtro-area-pdf') || {}).value || 'todas'
+        };
+        if (tipo === 'informe') {
+            return generarHtmlInformeDireccionAsync({ incluirComparacion: false });
+        }
+        if (tipo === 'comparativo') {
+            var compD = window._compPdfData;
+            if (!compD || !compD.comparables || !compD.comparables.length) {
+                throw new Error('No hay datos de análisis comparativo.');
+            }
+            if (typeof CompMotor !== 'undefined' && CompMotor.capturarGraficasParaPdf) {
+                var graficasComp = await CompMotor.capturarGraficasParaPdf(compD, filtrosComp);
+                window._compPdfHtml = construirHtmlPdfComparacionAuto(compD, graficasComp || []);
+            }
+            return generarHtmlInformeDireccionAsync({ incluirComparacion: true });
+        }
+        if (tipo === 'dashboard') {
+            var compDash = window._compPdfData;
+            if (!compDash || !compDash.comparables || !compDash.comparables.length) {
+                throw new Error('No hay datos para el dashboard.');
+            }
+            if (typeof CompMotor === 'undefined' || !CompMotor.capturarGraficasParaPdf) {
+                throw new Error('Motor de gráficos no disponible.');
+            }
+            var graficasDash = await CompMotor.capturarGraficasParaPdf(compDash, Object.assign({}, filtrosComp, {
+                canvasW: COMP_GRAFICA_TYPO.dashW,
+                canvasH: COMP_GRAFICA_TYPO.dashH,
+                tickSizeX: COMP_GRAFICA_TYPO.tickX * 2,
+                tickSizeY: COMP_GRAFICA_TYPO.tickY * 2,
+                pctFontSize: COMP_GRAFICA_TYPO.pctBar * 2
+            }));
+            return construirHtmlDashboardEjecutivo(compDash, graficasDash || []);
+        }
+        throw new Error('Tipo de informe no válido.');
+    }
+
+    async function compartirArchivoWhatsApp(file, mensajeCorto) {
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+                title: file.name,
+                text: mensajeCorto,
+                files: [file]
+            });
+            return;
+        }
+        var url = URL.createObjectURL(file);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = file.name;
+        a.click();
+        setTimeout(function() { URL.revokeObjectURL(url); }, 5000);
+        window.open(construirUrlWhatsApp(mensajeCorto), '_blank', 'noopener');
+        alert('Archivo descargado. Adjúntalo en WhatsApp desde el chat que se abrió.');
+    }
+
+    function mostrarSelectorInformeWhatsApp(opciones, onElegir) {
+        var prev = document.getElementById('modal-wa-informe');
+        if (prev) prev.remove();
+        var overlay = document.createElement('div');
+        overlay.id = 'modal-wa-informe';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(13,51,33,0.45);z-index:10060;display:flex;align-items:flex-end;justify-content:center;padding:12px;padding-bottom:calc(12px + env(safe-area-inset-bottom));';
+        var itemsHtml = opciones.map(function(op) {
+            return '<button type="button" class="wa-informe-opt" data-id="' + op.id + '" style="width:100%;text-align:left;padding:12px 14px;border:1px solid #e2e8f0;border-radius:12px;background:#fff;margin-bottom:8px;cursor:pointer;font-family:inherit;">'
+                + '<div style="font-weight:700;font-size:0.88rem;color:#1e3a2f;">' + op.label + '</div>'
+                + '<div style="font-size:0.72rem;color:#64748b;margin-top:2px;">' + op.desc + '</div></button>';
+        }).join('');
+        overlay.innerHTML = '<div style="background:#fff;width:100%;max-width:400px;border-radius:16px;padding:16px 14px;box-shadow:0 20px 60px rgba(13,51,33,0.2);">'
+            + '<div style="font-weight:800;font-size:0.95rem;color:#1e3a2f;margin-bottom:4px;">Enviar por WhatsApp</div>'
+            + '<div style="font-size:0.75rem;color:#64748b;margin-bottom:12px;">Elige el informe a compartir</div>'
+            + itemsHtml
+            + '<button type="button" id="wa-informe-cancel" style="width:100%;padding:10px;border:none;border-radius:10px;background:#f1f5f9;color:#475569;font-weight:600;cursor:pointer;margin-top:4px;">Cancelar</button>'
+            + '</div>';
+        document.body.appendChild(overlay);
+        overlay.querySelectorAll('.wa-informe-opt').forEach(function(btn) {
+            btn.onclick = function() {
+                overlay.remove();
+                onElegir(btn.getAttribute('data-id'));
+            };
+        });
+        document.getElementById('wa-informe-cancel').onclick = function() { overlay.remove(); };
+        overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+    }
+
+    async function whatsappCompartirInforme(tipo) {
+        var proyecto = (document.getElementById('proyecto') || {}).value || 'Informe';
+        var fecha = (document.getElementById('fecha') || {}).value || fechaHoyLocalYMD();
+        var fab = document.getElementById('wa-fab');
+        if (fab) fab.disabled = true;
+        try {
+            var html = await generarHtmlInformeWhatsApp(tipo);
+            var slug = String(proyecto).replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'informe';
+            var file = new File([html], 'ProyeCar_' + tipo + '_' + slug + '_' + fecha + '.html', { type: 'text/html;charset=utf-8' });
+            var msg = 'Informe CARDIQUE — ' + proyecto + ' (' + fecha + '). Abre el archivo adjunto e imprime como PDF si lo necesitas.';
+            await compartirArchivoWhatsApp(file, msg);
+        } catch (e) {
+            alert((e && e.message) ? e.message : 'No se pudo preparar el informe para WhatsApp.');
+        } finally {
+            if (fab) fab.disabled = false;
+        }
+    }
+
+    function iniciarCompartirWhatsApp() {
+        var opciones = obtenerOpcionesInformeWhatsApp();
+        if (!opciones.length) {
+            window.open(construirUrlWhatsApp(construirTextoCompartirFrente()), '_blank', 'noopener');
+            return;
+        }
+        if (opciones.length === 1) {
+            whatsappCompartirInforme(opciones[0].id);
+            return;
+        }
+        mostrarSelectorInformeWhatsApp(opciones, whatsappCompartirInforme);
+    }
+    window.iniciarCompartirWhatsApp = iniciarCompartirWhatsApp;
+
     const waFabBtn = document.getElementById('wa-fab');
     if (waFabBtn) {
-        waFabBtn.onclick = () => {
-            const url = 'https://wa.me/?text=' + encodeURIComponent(construirTextoCompartirFrente());
-            window.open(url, '_blank');
-        };
+        waFabBtn.onclick = function() { iniciarCompartirWhatsApp(); };
     }
 
     const ORDEN_NAV_SWIPE = ['datos', 'frentes', 'sync', 'mas'];
