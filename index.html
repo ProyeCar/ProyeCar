@@ -1489,7 +1489,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.133";
+const APP_VERSION = "1.5.134";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 
 /** Fecha de HOY en Colombia (America/Bogota) como "YYYY-MM-DD".
@@ -4709,19 +4709,45 @@ document.addEventListener('DOMContentLoaded', function() {
             + (opts.pdfMode ? 'page-break-inside:avoid;break-inside:avoid;' : '');
         reciente = reciente || {};
         anterior = anterior || {};
+        var sinHist = !!opts.sinHistorialAnterior;
+        var antProyecto = sinHist ? 'Sin historial previo' : (anterior.proyecto || 'Sin nombre');
+        var antFecha = sinHist ? '' : (anterior.fecha || '');
         return '<div style="' + wrapStyle + '">'
             + '<div style="flex:1;background:#fff7ed;border:2px solid ' + colAnt + ';border-radius:12px;padding:12px;">'
             + '<div style="font-size:0.65rem;font-weight:700;color:' + colAnt + ';letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px;">ANTERIOR</div>'
-            + '<div style="font-weight:700;font-size:0.9rem;color:#1e3a2f;">' + esc(anterior.proyecto || 'Sin nombre') + '</div>'
-            + '<div style="font-size:0.78rem;color:#6b7280;display:flex;align-items:center;gap:4px;">' + calIcon + ' ' + esc(anterior.fecha || '') + '</div></div>'
+            + '<div style="font-weight:700;font-size:0.9rem;color:#1e3a2f;">' + esc(antProyecto) + '</div>'
+            + (antFecha ? '<div style="font-size:0.78rem;color:#6b7280;display:flex;align-items:center;gap:4px;">' + calIcon + ' ' + esc(antFecha) + '</div>' : '')
+            + '</div>'
             + '<div style="flex:1;background:#f0fdf4;border:2px solid ' + colRec + ';border-radius:12px;padding:12px;">'
             + '<div style="font-size:0.65rem;font-weight:700;color:' + colRec + ';letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px;">M&Aacute;S RECIENTE</div>'
             + '<div style="font-weight:700;font-size:0.9rem;color:#1e3a2f;">' + esc(reciente.proyecto || 'Sin nombre') + '</div>'
             + '<div style="font-size:0.78rem;color:#6b7280;display:flex;align-items:center;gap:4px;">' + calIcon + ' ' + esc(reciente.fecha || '') + '</div></div></div>';
     }
+    function resolverSinHistorialEncabezado(compD, filtroFrente) {
+        compD = compD || {};
+        var comps = compD.comparables || [];
+        if (!comps.length) return true;
+        filtroFrente = filtroFrente
+            || (document.getElementById('filtro-frente-pdf') || {}).value
+            || (document.getElementById('filtro-frente') || {}).value
+            || 'todos';
+        if (filtroFrente !== 'todos') {
+            var c = comps.find(function(x) { return x.frente && x.frente.nombre === filtroFrente; });
+            return !!(c && c.sinHistorialPrevio);
+        }
+        return comps.every(function(c) { return c.sinHistorialPrevio; });
+    }
     function resolverParComparacionPdf(compD) {
         compD = compD || {};
-        var comp0 = compD.comparables && compD.comparables[0];
+        var filtroF = (document.getElementById('filtro-frente-pdf') || {}).value
+            || (document.getElementById('filtro-frente') || {}).value || 'todos';
+        var comp0 = null;
+        if (filtroF !== 'todos') {
+            comp0 = (compD.comparables || []).find(function(c) { return c.frente && c.frente.nombre === filtroF; });
+        } else {
+            comp0 = (compD.comparables || []).find(function(c) { return !c.sinHistorialPrevio; })
+                || (compD.comparables && compD.comparables[0]);
+        }
         var reciente = compD.reciente || (comp0 && comp0.reciente) || null;
         var anterior = compD.anterior || (comp0 && comp0.anterior) || null;
         if (!reciente || !(reciente.proyecto || reciente.fecha)) {
@@ -4738,7 +4764,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 fecha: (anterior && anterior.fecha) || (comp0 && comp0.fechaAnterior) || ''
             };
         }
-        return { reciente: reciente, anterior: anterior };
+        var sinHist = resolverSinHistorialEncabezado(compD);
+        return { reciente: reciente, anterior: anterior, sinHistorialAnterior: sinHist };
     }
     function htmlPdfPorcentajesPar(pctAnt, pctRec) {
         var colAnt = '#BA7517', colRec = '#27500A';
@@ -4778,22 +4805,15 @@ document.addEventListener('DOMContentLoaded', function() {
         var todasG = window.graficasComparacionPDF_todas || graficas;
         var totalMej = 0, totalEmp = 0, totalIg = 0;
         todasG.forEach(function(g) { totalMej += g.mejorados || 0; totalEmp += g.empeorados || 0; totalIg += g.iguales || 0; });
-        var resumen = (compD.comparables ? compD.comparables.length : 0) + ' frente(s) comparado(s). '
+        var nCompPdf = (compD.comparables || []).filter(function(c) { return !c.sinHistorialPrevio; }).length;
+        var resumen = nCompPdf + ' frente(s) comparado(s). '
             + todasG.length + ' área(s) evaluada(s). '
             + 'Ítems: ' + totalMej + ' mejoraron, ' + totalEmp + ' empeoraron, ' + totalIg + ' iguales.';
         var par = resolverParComparacionPdf(compD);
         var h = '<div style="page-break-before:always;margin-top:20px;font-size:16px;">';
         h += '<h3 style="font-size:1rem;font-weight:700;color:#1e3a2f;margin-bottom:12px;page-break-after:avoid;break-after:avoid;">Análisis comparativo de inspecciones por Frente</h3>';
-        h += htmlEncabezadoParComparacion(par.reciente, par.anterior, { escFn: eH, pdfMode: true });
+        h += htmlEncabezadoParComparacion(par.reciente, par.anterior, { escFn: eH, pdfMode: true, sinHistorialAnterior: par.sinHistorialAnterior });
         h += '<div style="background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;padding:12px;margin-bottom:14px;font-size:0.78rem;line-height:1.45;">' + eH(resumen) + '</div>';
-        if (compD.omitidos && compD.omitidos.length) {
-            h += '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px;margin-bottom:14px;font-size:0.78rem;color:#b45309;line-height:1.45;">';
-            compD.omitidos.forEach(function(o) {
-                var nomO = o.nomDisplay || o.nombre || 'Sin nombre';
-                h += '<div>Sin historial previo para ' + eH(nomO) + '</div>';
-            });
-            h += '</div>';
-        }
         var filtroFrentePdf = (document.getElementById('filtro-frente-pdf') || {}).value || 'todos';
         var filtroAreaPdf = (document.getElementById('filtro-area-pdf') || {}).value || 'todas';
         var pdfZonaActual = null;
@@ -4811,6 +4831,15 @@ document.addEventListener('DOMContentLoaded', function() {
             esPrimerFrenteComp = false;
             if (abreZonaAuto) h += htmlPdfEncabezadoZona(ZONA_CIENAGA, frData.municipio, eH);
             h += htmlPdfFichaUbicacionFrente(frData, eH);
+            if (comp.sinAnterior) {
+                var nomLPdf = typeof limpiarNombreFrenteParaMatch === 'function'
+                    ? limpiarNombreFrenteParaMatch(fNombre) : fNombre;
+                var msgPdf = comp.sinHistorialPrevio
+                    ? ('Sin historial previo para ' + eH(nomLPdf || fNombre))
+                    : 'Sin datos anteriores para comparar';
+                h += '<div style="background:#f8fafc;border-radius:12px;padding:12px;color:#6b7280;font-size:0.85rem;margin-bottom:10px;">' + msgPdf + '</div></div>';
+                return;
+            }
             (comp.areas || []).forEach(function(area) {
                 if (filtroAreaPdf !== 'todas' && area.id !== filtroAreaPdf) return;
                 var g = graficas.find(function(x) { return x.frenteNombre === fNombre && x.areaNombre === area.nombre; }) || area;
@@ -5058,7 +5087,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Municipio y Zona NO se muestran aquí: se aclaran una sola vez más abajo,
         // en el encabezado agrupado de la zona (Ciénaga de la Virgen). Las tarjetas
         // ANTERIOR / MÁS RECIENTE quedan con su contenido original (nombre + fecha).
-        h += htmlEncabezadoParComparacion(par.reciente, par.anterior, { escFn: esc, pdfMode: true });
+        h += htmlEncabezadoParComparacion(par.reciente, par.anterior, { escFn: esc, pdfMode: true, sinHistorialAnterior: par.sinHistorialAnterior });
         h += '<div class="dash-title" style="font-size:9.5pt;font-weight:700;color:#1e3a2f;margin:12px 0 4px;">Comparación visual por área <span style="font-weight:500;color:#94a3b8;">(' + totalGraficas + ' gráfico' + (totalGraficas === 1 ? '' : 's') + ')</span></div>';
         h += '<div class="dash-chart-grid">';
         if (!totalGraficas) {
@@ -6743,8 +6772,8 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             return h + '</div>';
         }
-        function htmlEncabezadoPar(reciente, anterior) {
-            return htmlEncabezadoParComparacion(reciente, anterior);
+        function htmlEncabezadoPar(reciente, anterior, hdrOpts) {
+            return htmlEncabezadoParComparacion(reciente, anterior, hdrOpts);
         }
         function htmlGuiaColores() {
             return '<div style="background:#f8fafc;border-radius:12px;padding:12px;margin-top:8px;">'
@@ -6827,8 +6856,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (opts.mostrarEncabezado) {
                 var parHdr = typeof resolverParComparacionPdf === 'function'
                     ? resolverParComparacionPdf(data)
-                    : { reciente: data.reciente, anterior: data.anterior };
-                html += htmlEncabezadoPar(parHdr.reciente, parHdr.anterior);
+                    : { reciente: data.reciente, anterior: data.anterior, sinHistorialAnterior: false };
+                html += htmlEncabezadoPar(parHdr.reciente, parHdr.anterior, { sinHistorialAnterior: parHdr.sinHistorialAnterior });
             }
             var chartQueue = [];
             var todas = [];
@@ -6866,7 +6895,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 if (comp.sinAnterior) {
-                    html += '<div style="background:#f8fafc;border-radius:12px;padding:12px;color:#6b7280;font-size:0.85rem;margin-bottom:10px;">Solo en inspección reciente — sin datos anteriores para comparar</div>';
+                    var nomLimpio = typeof window.limpiarNombreFrenteParaMatch === 'function'
+                        ? window.limpiarNombreFrenteParaMatch(fNombre) : fNombre;
+                    var msgSin = comp.sinHistorialPrevio
+                        ? 'Sin historial previo para ' + escHtml(nomLimpio || fNombre)
+                        : 'Solo en inspección reciente — sin datos anteriores para comparar';
+                    html += '<div style="background:#f8fafc;border-radius:12px;padding:12px;color:#6b7280;font-size:0.85rem;margin-bottom:10px;">' + msgSin + '</div>';
                     if (opts.pdfMode) html += '</div>';
                     return;
                 }
@@ -7227,6 +7261,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     contratista: f.contratista,
                     numeroContrato: f.numeroContrato
                 });
+                comparables.push({
+                    frente: {
+                        nombre: f.nombre,
+                        contratista: f.contratista,
+                        numeroContrato: f.numeroContrato,
+                        municipio: f.municipio || '',
+                        zona: f.zona || ''
+                    },
+                    reciente: actual,
+                    anterior: null,
+                    fechaReciente: actual.fecha || '',
+                    proyectoReciente: actual.proyecto || '',
+                    fechaAnterior: '',
+                    proyectoAnterior: '',
+                    sinAnterior: true,
+                    sinHistorialPrevio: true,
+                    areas: []
+                });
                 return;
             }
             var filtroArea = typeof areasEvaluadasParaComparacion === 'function'
@@ -7267,18 +7319,9 @@ document.addEventListener('DOMContentLoaded', function() {
         window.comparacionSemanal.inspeccion2 = res.reciente;
 
         var avisos = document.getElementById('cs-avisos');
-        if (avisos) {
-            if (res.omitidos && res.omitidos.length) {
-                avisos.style.display = '';
-                avisos.innerHTML = res.omitidos.map(function(o) {
-                    var nom = o.nomDisplay || o.nombre || 'Sin nombre';
-                    return '<div style="margin-bottom:4px;"><strong>Sin historial previo para ' + CompMotor.escHtml(nom) + '</strong></div>';
-                }).join('');
-            } else {
-                avisos.style.display = 'none';
-                avisos.innerHTML = '';
-            }
-        }
+        if (avisos) { avisos.style.display = 'none'; avisos.innerHTML = ''; }
+
+        if (typeof csActualizarResumenAnalisis === 'function') csActualizarResumenAnalisis();
 
         var meta = CompMotor.obtenerMetadatosFiltros(res);
         var filtrosInit = poblarFiltrosComparacion(meta, {
@@ -7296,6 +7339,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 body.innerHTML = '';
                 return;
             }
+            if (typeof csActualizarResumenAnalisis === 'function') csActualizarResumenAnalisis();
             CompMotor.renderizar(body, res, {
                 filtroFrente: fF,
                 filtroArea: fA,
@@ -7659,6 +7703,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function _renderizarCompPdfAuto() {
         var data = window._compPdfData || window._compManualData;
         if (!data || !data.comparables) return;
+        if (typeof csActualizarResumenAnalisis === 'function') csActualizarResumenAnalisis();
         document.getElementById('btn-listo-comparacion').style.display = 'none';
         window.graficasComparacionPDF = [];
         window.graficasComparacionPDF_todas = [];
@@ -7933,12 +7978,49 @@ function limpiarCachesComparacionSemanal() {
 }
 window.limpiarCachesComparacionSemanal = limpiarCachesComparacionSemanal;
 
+function csHtmlResumenAnalisis(res) {
+    res = res || {};
+    var rec = res.reciente || {};
+    var filtroF = (document.getElementById('filtro-frente-pdf') || {}).value || 'todos';
+    var antTxt = 'Sin historial previo';
+    var antFecha = '';
+    var compRef = null;
+    if (filtroF !== 'todos') {
+        compRef = (res.comparables || []).find(function(c) { return c.frente && c.frente.nombre === filtroF; });
+    } else {
+        compRef = (res.comparables || []).find(function(c) { return !c.sinHistorialPrevio; });
+    }
+    if (compRef && !compRef.sinHistorialPrevio && compRef.anterior) {
+        antTxt = compRef.anterior.proyecto || compRef.proyectoAnterior || 'Sin nombre';
+        antFecha = compRef.anterior.fecha || compRef.fechaAnterior || '';
+    } else if (compRef && compRef.sinHistorialPrevio) {
+        antTxt = 'Sin historial previo';
+        antFecha = '';
+    } else if (res.anterior) {
+        antTxt = res.anterior.proyecto || 'Sin nombre';
+        antFecha = res.anterior.fecha || '';
+    }
+    return '<div style="font-weight:700;color:#1e3a2f;margin-bottom:4px;">Análisis comparativo automático</div>'
+        + '<div style="color:#475569;">Reciente: <strong>' + CompMotor.escHtml(rec.proyecto || 'Sin nombre') + '</strong> (' + CompMotor.escHtml(rec.fecha || '') + ')'
+        + ' · Anterior: <strong>' + CompMotor.escHtml(antTxt) + '</strong>'
+        + (antFecha ? ' (' + CompMotor.escHtml(antFecha) + ')' : '') + '</div>';
+}
+function csActualizarResumenAnalisis() {
+    var resumen = document.getElementById('cs-resumen-auto');
+    var res = window._compPdfData || window._compManualData;
+    if (resumen && res && res.reciente) {
+        resumen.style.display = '';
+        resumen.innerHTML = csHtmlResumenAnalisis(res);
+    }
+}
+window.csActualizarResumenAnalisis = csActualizarResumenAnalisis;
+
 function csResetResumenComparacionSemanal() {
     var resumen = document.getElementById('cs-resumen-auto');
     if (resumen) {
         resumen.style.display = '';
         resumen.innerHTML = '<div style="font-weight:700;color:#1e3a2f;margin-bottom:4px;">Análisis comparativo automático</div>'
-            + '<div style="color:#6b7280;">Activa el interruptor para comparar cada frente de hoy con su último registro histórico anterior (sin límite de tiempo, matching por nombre).</div>';
+            + '<div style="color:#6b7280;">Activa el interruptor para comparar cada frente con su último registro histórico anterior.</div>';
     }
     var avisos = document.getElementById('cs-avisos');
     var pendientesEl = document.getElementById('cs-pendientes');
@@ -7990,20 +8072,7 @@ function csSemanalGenerar() {
     if (btnPdf) btnPdf.style.display = 'none';
     if (btnDash) btnDash.style.display = 'none';
 
-    if (resumen) {
-        resumen.style.display = '';
-        if (!res.comparables.length && res.omitidos.length) {
-            resumen.innerHTML = '<div style="font-weight:700;color:#1e3a2f;margin-bottom:4px;">Análisis por frente</div>'
-                + '<div style="color:#6b7280;">Ningún frente tiene historial previo con nombre similar. Revisa los avisos.</div>';
-        } else {
-            var txt = res.comparables.length + ' frente(s) con historial coincidente';
-            if (res.omitidos.length) txt += ' · ' + res.omitidos.length + ' sin historial previo';
-            resumen.innerHTML = '<div style="font-weight:700;color:#1e3a2f;margin-bottom:4px;">Análisis comparativo automático</div>'
-                + '<div style="color:#475569;">' + CompMotor.escHtml(txt) + ' · último registro anterior por frente (sin límite de días)</div>';
-        }
-    }
-
-    if (filtros) filtros.style.display = res.comparables.length ? '' : 'none';
+    if (filtros) filtros.style.display = '';
 
     ejecutarAnalisisComparativoAutomatico({
         bodyId: 'contenedor-graficas-pdf',
