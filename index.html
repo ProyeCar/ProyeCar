@@ -1489,7 +1489,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.130";
+const APP_VERSION = "1.5.131";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 
 /** Fecha de HOY en Colombia (America/Bogota) como "YYYY-MM-DD".
@@ -5695,7 +5695,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Comparación semanal (HTML pre-construido o auto-incluido si el toggle está activo)
         if (!window._compPdfHtml && window._csAbierto && window._compPdfData
-            && window._compPdfData.modo === 'auto' && window._compPdfData.comparables
+            && window._compPdfData.comparables
             && window._compPdfData.comparables.length
             && typeof construirHtmlPdfComparacionAuto === 'function') {
             if (typeof CompMotor !== 'undefined' && CompMotor.capturarGraficasParaPdf) {
@@ -7155,6 +7155,150 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     })();
 
+    function seleccionarParHistorialAutomatico() {
+        var hist = getHistorial();
+        if (!hist.length) return null;
+        var candidatos = hist.slice();
+        var contratos = [];
+        if (typeof frentes !== 'undefined' && frentes.length) {
+            frentes.forEach(function(f) {
+                var c = (f.numeroContrato || '').trim();
+                if (c && contratos.indexOf(c) < 0) contratos.push(c);
+            });
+        }
+        if (contratos.length === 1) {
+            var cNorm = contratos[0].toLowerCase();
+            candidatos = candidatos.filter(function(r) {
+                return (r.frentes || []).some(function(f) {
+                    return ((f.numeroContrato || '').trim().toLowerCase()) === cNorm;
+                });
+            });
+        }
+        candidatos.sort(function(a, b) {
+            var fa = new Date(a.fecha || 0), fb = new Date(b.fecha || 0);
+            if (fb - fa !== 0) return fb - fa;
+            return (b.id || 0) - (a.id || 0);
+        });
+        if (candidatos.length < 2) return null;
+        var par = CompMotor.ordenarRecienteAnterior(candidatos[0], candidatos[1]);
+        return {
+            reciente: par.reciente,
+            anterior: par.anterior,
+            idxReciente: hist.indexOf(par.reciente),
+            idxAnterior: hist.indexOf(par.anterior)
+        };
+    }
+
+    function poblarFiltrosComparacion(meta, ids) {
+        ids = ids || {};
+        var filtroFrenteId = ids.filtroFrente || 'filtro-frente';
+        var filtroAreaId = ids.filtroArea || 'filtro-area';
+        var selFrente = document.getElementById(filtroFrenteId);
+        var selArea = document.getElementById(filtroAreaId);
+        var prevF = selFrente ? selFrente.value : 'todos';
+        var prevA = selArea ? selArea.value : 'todas';
+        if (selFrente) {
+            var frentesOrd = typeof ordenarNombresFrentesConSeleccion === 'function'
+                ? ordenarNombresFrentesConSeleccion(meta.frentes) : meta.frentes.slice();
+            selFrente.innerHTML = '<option value="todos">Todos los frentes</option>'
+                + frentesOrd.map(function(n) {
+                    var mark = typeof isNombreFrenteSeleccionadoInspeccion === 'function' && isNombreFrenteSeleccionadoInspeccion(n);
+                    var label = (mark ? '✓ ' : '') + n;
+                    return '<option value="' + CompMotor.escHtml(n).replace(/"/g, '&quot;') + '"' + (mark ? ' style="font-weight:700;color:#16a34a;"' : '') + '>' + CompMotor.escHtml(label) + '</option>';
+                }).join('');
+            if (frentesOrd.length === 1) selFrente.value = frentesOrd[0];
+            else if (typeof hayFrentesSeleccionadosInspeccion === 'function' && hayFrentesSeleccionadosInspeccion()) {
+                var selEn = frentesOrd.filter(function(n) { return isNombreFrenteSeleccionadoInspeccion(n); });
+                if (selEn.length === 1) selFrente.value = selEn[0];
+                else if (prevF && prevF !== 'todos' && frentesOrd.indexOf(prevF) >= 0) selFrente.value = prevF;
+            } else if (prevF && prevF !== 'todos' && frentesOrd.indexOf(prevF) >= 0) selFrente.value = prevF;
+        }
+        if (selArea) {
+            selArea.innerHTML = '<option value="todas">Todas las áreas</option>'
+                + Object.keys(meta.areas).map(function(id) {
+                    return '<option value="' + id + '">' + CompMotor.escHtml(meta.areas[id]) + '</option>';
+                }).join('');
+            if (prevA && prevA !== 'todas' && meta.areas[prevA]) selArea.value = prevA;
+        }
+        var filtroFrenteInicial = 'todos';
+        if (selFrente && selFrente.value && selFrente.value !== 'todos') filtroFrenteInicial = selFrente.value;
+        else if (typeof hayFrentesSeleccionadosInspeccion === 'function' && hayFrentesSeleccionadosInspeccion()) {
+            var selEnMeta = meta.frentes.filter(function(n) {
+                return typeof isNombreFrenteSeleccionadoInspeccion === 'function' && isNombreFrenteSeleccionadoInspeccion(n);
+            });
+            if (selEnMeta.length === 1) filtroFrenteInicial = selEnMeta[0];
+        }
+        return { filtroFrenteInicial: filtroFrenteInicial };
+    }
+
+    /** Motor único de comparación — usado por Comparar Inspecciones y Comparación semanal. */
+    function ejecutarComparacionInspecciones(reciente, anterior, opts) {
+        opts = opts || {};
+        if (!reciente || !anterior) return null;
+        var par = CompMotor.ordenarRecienteAnterior(reciente, anterior);
+        reciente = par.reciente;
+        anterior = par.anterior;
+        var hist = getHistorial();
+        window._comparisonData = {
+            reciente: reciente,
+            anterior: anterior,
+            idxReciente: hist.indexOf(reciente),
+            idxAnterior: hist.indexOf(anterior)
+        };
+        window._compManualData = CompMotor.construirManual(reciente, anterior);
+        window._compPdfData = window._compManualData;
+        var meta = CompMotor.obtenerMetadatosFiltros(window._compManualData);
+        var filtrosInit = poblarFiltrosComparacion(meta, {
+            filtroFrente: opts.filtroFrenteId || 'filtro-frente',
+            filtroArea: opts.filtroAreaId || 'filtro-area'
+        });
+        var bodyId = opts.bodyId || 'comp-resultados-body';
+        var filtroFrenteId = opts.filtroFrenteId || 'filtro-frente';
+        var filtroAreaId = opts.filtroAreaId || 'filtro-area';
+
+        function renderResultados(fF, fA) {
+            var body = document.getElementById(bodyId);
+            if (!body) return;
+            CompMotor.renderizar(body, window._compManualData, {
+                filtroFrente: fF,
+                filtroArea: fA,
+                mostrarEncabezado: opts.mostrarEncabezado !== false,
+                mostrarGuia: opts.mostrarGuia !== false,
+                compacto: !!opts.compacto,
+                idPrefix: opts.idPrefix || '',
+                onComplete: function(result) {
+                    window.graficasComparacionPDF = [];
+                    window.graficasComparacionPDF_todas = result.todas || [];
+                    if (opts.showPdfButtons) {
+                        var btnPdf = document.getElementById('btn-listo-comparacion');
+                        var btnDash = document.getElementById('btn-dashboard-ejecutivo');
+                        if (btnPdf && result.todas && result.todas.length) btnPdf.style.display = '';
+                        if (btnDash && result.todas && result.todas.length) btnDash.style.display = '';
+                    }
+                    if (opts.onComplete) opts.onComplete(result);
+                }
+            });
+        }
+
+        if (opts.bindFilters) {
+            var selF = document.getElementById(filtroFrenteId);
+            var selA = document.getElementById(filtroAreaId);
+            if (selF) selF.onchange = function() {
+                renderResultados(this.value, (document.getElementById(filtroAreaId) || {}).value || 'todas');
+            };
+            if (selA) selA.onchange = function() {
+                renderResultados((document.getElementById(filtroFrenteId) || {}).value || 'todos', this.value);
+            };
+        }
+
+        var fInit = opts.filtroFrenteInicial || filtrosInit.filtroFrenteInicial || 'todos';
+        var aInit = opts.filtroAreaInicial || 'todas';
+        renderResultados(fInit, aInit);
+        return window._compManualData;
+    }
+    window.seleccionarParHistorialAutomatico = seleccionarParHistorialAutomatico;
+    window.ejecutarComparacionInspecciones = ejecutarComparacionInspecciones;
+
     function renderComparar() {
         const hist = getHistorial();
         const selA = document.getElementById('comp-sel-a');
@@ -7180,66 +7324,25 @@ document.addEventListener('DOMContentLoaded', function() {
         if (idxA === '' || idxB === '') { alert('Selecciona dos inspecciones.'); return; }
         if (idxA === idxB) { alert('Selecciona dos inspecciones diferentes.'); return; }
 
-        var par = CompMotor.ordenarRecienteAnterior(hist[idxA], hist[idxB]);
-        var reciente = par.reciente, anterior = par.anterior;
-        window._comparisonData = {
-            reciente: reciente,
-            anterior: anterior,
-            idxReciente: hist.indexOf(reciente),
-            idxAnterior: hist.indexOf(anterior)
-        };
-        window._compManualData = CompMotor.construirManual(reciente, anterior);
-        var meta = CompMotor.obtenerMetadatosFiltros(window._compManualData);
-
-        var selectorFrenteOpts = (typeof ordenarNombresFrentesConSeleccion === 'function'
-            ? ordenarNombresFrentesConSeleccion(meta.frentes) : meta.frentes.slice()).map(function(n) {
-            var mark = typeof isNombreFrenteSeleccionadoInspeccion === 'function' && isNombreFrenteSeleccionadoInspeccion(n);
-            var label = (mark ? '✓ ' : '') + n;
-            return '<option value="' + CompMotor.escHtml(n).replace(/"/g,'&quot;') + '"' + (mark ? ' style="font-weight:700;color:#16a34a;"' : '') + '>' + CompMotor.escHtml(label) + '</option>';
-        }).join('');
-        var selectorOpts = Object.keys(meta.areas).map(function(id) {
-            return '<option value="' + id + '">' + CompMotor.escHtml(meta.areas[id]) + '</option>';
-        }).join('');
-
         document.getElementById('comp-resultado').innerHTML =
             '<div style="margin-bottom:12px;">'
             + '<label style="font-size:11px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Filtrar por frente</label>'
             + '<select id="filtro-frente" style="width:100%;padding:8px 12px;border-radius:8px;border:0.5px solid var(--color-border-tertiary);font-size:13px;background:var(--color-background-primary);color:var(--color-text-primary);">'
-            + '<option value="todos">Todos los frentes</option>' + selectorFrenteOpts + '</select></div>'
+            + '<option value="todos">Todos los frentes</option></select></div>'
             + '<div id="selector-area-comparar" style="margin-bottom:16px;">'
             + '<label style="font-size:11px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;">Filtrar por área</label>'
             + '<select id="filtro-area" style="width:100%;padding:8px 12px;border-radius:8px;border:0.5px solid var(--color-border-tertiary);font-size:13px;background:var(--color-background-primary);color:var(--color-text-primary);">'
-            + '<option value="todas">Todas las áreas</option>' + selectorOpts + '</select></div>'
+            + '<option value="todas">Todas las áreas</option></select></div>'
             + '<div id="comp-resultados-body"></div>';
 
-        function renderResultados(filtroFrente, filtroArea) {
-            CompMotor.renderizar(document.getElementById('comp-resultados-body'), window._compManualData, {
-                filtroFrente: filtroFrente,
-                filtroArea: filtroArea,
-                mostrarEncabezado: true,
-                mostrarGuia: true,
-                compacto: false
-            });
-        }
-
-        document.getElementById('filtro-frente').addEventListener('change', function() {
-            renderResultados(this.value, document.getElementById('filtro-area').value);
+        ejecutarComparacionInspecciones(hist[idxA], hist[idxB], {
+            bodyId: 'comp-resultados-body',
+            filtroFrenteId: 'filtro-frente',
+            filtroAreaId: 'filtro-area',
+            bindFilters: true,
+            mostrarEncabezado: true,
+            mostrarGuia: true
         });
-        document.getElementById('filtro-area').addEventListener('change', function() {
-            renderResultados(document.getElementById('filtro-frente').value, this.value);
-        });
-
-        var filtroInicialFrente = 'todos';
-        if (typeof hayFrentesSeleccionadosInspeccion === 'function' && hayFrentesSeleccionadosInspeccion()) {
-            var selEnMeta = meta.frentes.filter(function(n) {
-                return typeof isNombreFrenteSeleccionadoInspeccion === 'function' && isNombreFrenteSeleccionadoInspeccion(n);
-            });
-            if (selEnMeta.length === 1) filtroInicialFrente = selEnMeta[0];
-        }
-        var filtroFrenteEl = document.getElementById('filtro-frente');
-        if (filtroFrenteEl && filtroInicialFrente !== 'todos') filtroFrenteEl.value = filtroInicialFrente;
-
-        renderResultados(filtroInicialFrente, 'todas');
     };
 
     // ── Comparación semanal en PDF ──
@@ -7373,7 +7476,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function _renderizarCompPdfAuto() {
-        var data = window._compPdfData;
+        var data = window._compPdfData || window._compManualData;
         if (!data || !data.comparables) return;
         document.getElementById('btn-listo-comparacion').style.display = 'none';
         window.graficasComparacionPDF = [];
@@ -7412,308 +7515,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function _renderizarCompPdf() {
-        if (!window._compPdfData) return;
-        if (window._compPdfData.modo === 'auto') {
-            _renderizarCompPdfAuto();
-            return;
-        }
-        var inspecciones = _compPdfInspeccionesActivas();
-        var chartLabels = (window._compPdfData.labels || inspecciones.map(function(insp) { return insp.fecha || 'Sin fecha'; }));
-        var filtroFrente = document.getElementById('filtro-frente-pdf').value;
-        var filtroArea   = document.getElementById('filtro-area-pdf').value;
-        var colores = _compPdfColoresN(inspecciones.length);
-
-        if (window._compPdfCharts) {
-            window._compPdfCharts.forEach(function(ch) { try { ch.destroy(); } catch(e) {} });
-        }
-        window._compPdfCharts = [];
-        window.graficasComparacionPDF = [];
-        document.getElementById('btn-listo-comparacion').style.display = 'none';
-
-        var contenedor = document.getElementById('contenedor-graficas-pdf');
-        contenedor.innerHTML = '';
-
-        function pctCat(items) {
-            var c = 0, t = 0;
-            (items || []).forEach(function(it) {
-                if (it.cumple === true) { c++; t++; }
-                else if (it.cumple === false) { t++; }
-            });
-            return t > 0 ? Math.round(c / t * 100) : null;
-        }
-
-        var allFrentesUnion = [];
-        inspecciones.forEach(function(insp) {
-            (insp.frentes || []).forEach(function(f) {
-                if (f.nombre && allFrentesUnion.indexOf(f.nombre) === -1) allFrentesUnion.push(f.nombre);
-            });
-        });
-        var areasUnicas = [];
-        inspecciones.forEach(function(insp) {
-            (insp.frentes || []).forEach(function(f) {
-                (f.categorias || []).forEach(function(cat) {
-                    if (cat.nombre && areasUnicas.indexOf(cat.nombre) === -1) areasUnicas.push(cat.nombre);
-                });
-            });
-        });
-
-        window.graficasComparacionPDF_todas = [];
-        allFrentesUnion.forEach(function(fNombre) {
-            areasUnicas.forEach(function(areaNombre) {
-                var pcts = inspecciones.map(function(insp) {
-                    var f = (insp.frentes || []).find(function(fr) { return fr.nombre === fNombre; });
-                    var cat = f ? (f.categorias || []).find(function(c) { return c.nombre === areaNombre; }) : null;
-                    return cat ? pctCat(cat.items) : null;
-                });
-                if (pcts.every(function(p) { return p === null; })) return;
-                var p0 = pcts[0], pLast = pcts[pcts.length - 1];
-                var diff = (p0 !== null && pLast !== null) ? p0 - pLast : null;
-                window.graficasComparacionPDF_todas.push({ frenteNombre: fNombre, areaNombre: areaNombre, pcts: pcts, pctReciente: p0, pctAnterior: pLast, diff: diff });
-            });
-        });
-
-        var pendientes = [];
-
-        allFrentesUnion.forEach(function(fNombre) {
-            if (filtroFrente !== 'todos' && fNombre !== filtroFrente) return;
-            var frenteHdrCreado = false;
-
-            areasUnicas.forEach(function(areaNombre) {
-                var pcts = inspecciones.map(function(insp) {
-                    var f = (insp.frentes || []).find(function(fr) { return fr.nombre === fNombre; });
-                    var cat = f ? (f.categorias || []).find(function(c) { return c.nombre === areaNombre; }) : null;
-                    return cat ? pctCat(cat.items) : null;
-                });
-                var areaId = areaNombre;
-                inspecciones.some(function(insp) {
-                    var f = (insp.frentes || []).find(function(fr) { return fr.nombre === fNombre; });
-                    var cat = f ? (f.categorias || []).find(function(c) { return c.nombre === areaNombre; }) : null;
-                    if (cat && cat.id) { areaId = cat.id; return true; }
-                    return false;
-                });
-                if (filtroArea !== 'todas' && areaId !== filtroArea) return;
-                if (pcts.every(function(p) { return p === null; })) return;
-
-                var fRef = null;
-                inspecciones.some(function(insp) {
-                    var f = (insp.frentes || []).find(function(fr) { return fr.nombre === fNombre; });
-                    if (f) { fRef = f; return true; }
-                    return false;
-                });
-
-                if (!frenteHdrCreado) {
-                    var fHdr = document.createElement('div');
-                    fHdr.style.cssText = 'font-size:0.8rem;font-weight:700;color:#1e3a2f;margin:12px 0 4px;padding:4px 8px;background:#e8f5e9;border-radius:6px;';
-                    fHdr.innerHTML = pcIcon('construction', 16, '#1e3a2f') + ' ' + fNombre
-                        + (fRef && fRef.contratista ? ' · ' + fRef.contratista : '')
-                        + (fRef && fRef.numeroContrato ? ' · Contrato ' + fRef.numeroContrato : '');
-                    contenedor.appendChild(fHdr);
-                    frenteHdrCreado = true;
-                }
-
-                if (pcts.some(function(p) { return p === null; })) {
-                    var noComp = document.createElement('div');
-                    noComp.style.cssText = 'margin-bottom:12px;padding:10px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc;';
-                    noComp.innerHTML = '<span style="font-size:0.78rem;font-weight:600;color:#374151;">' + areaNombre.replace(/&/g,'&amp;') + '</span>'
-                        + '<div style="font-size:0.75rem;color:#94a3b8;margin-top:6px;">Sin datos completos en todas las inspecciones seleccionadas</div>';
-                    contenedor.appendChild(noComp);
-                    return;
-                }
-
-                var p0 = pcts[0], pLast = pcts[pcts.length - 1];
-                var diff = p0 - pLast;
-                var diffLabel = '', diffStyle = '';
-                if (diff > 0)      { diffLabel = '↑ +' + diff + ' pp'; diffStyle = 'background:#dcfce7;color:#15803d;'; }
-                else if (diff < 0) { diffLabel = '↓ ' + diff + ' pp';  diffStyle = 'background:#fee2e2;color:#b91c1c;'; }
-                else               { diffLabel = '= Sin cambio';        diffStyle = 'background:#f3f4f6;color:#6b7280;'; }
-
-                var chartId = 'cpdf-' + pendientes.length;
-                var varColor  = diff > 0 ? '#27500A' : diff < 0 ? '#A32D2D' : '#6b7280';
-                var varBg     = diff > 0 ? '#e9f5e0'  : diff < 0 ? '#fce8e8'  : '#f3f4f6';
-                var varBorder = diff > 0 ? '#27500A'  : diff < 0 ? '#A32D2D'  : '#d1d5db';
-                var varText   = diff > 0 ? ('↑ +' + diff + ' pp') : diff === 0 ? '= Sin cambio' : ('↓ ' + diff + ' pp');
-
-                var wrapper = document.createElement('div');
-                wrapper.style.cssText = 'margin-bottom:12px;padding:10px;border:1px solid #e2e8f0;border-radius:10px;background:#fff;';
-
-                var hdrRow = document.createElement('div');
-                hdrRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px;';
-                var areaSpan = document.createElement('span');
-                areaSpan.style.cssText = 'font-size:0.78rem;font-weight:700;color:#1e3a2f;';
-                areaSpan.textContent = areaNombre;
-                hdrRow.appendChild(areaSpan);
-                if (diffLabel) {
-                    var dSpan = document.createElement('span');
-                    dSpan.style.cssText = 'font-size:0.7rem;font-weight:700;padding:2px 8px;border-radius:20px;' + diffStyle;
-                    dSpan.textContent = diffLabel;
-                    hdrRow.appendChild(dSpan);
-                }
-                wrapper.appendChild(hdrRow);
-
-                var kpiRow = document.createElement('div');
-                kpiRow.style.cssText = 'display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;';
-                pcts.forEach(function(pct, pi) {
-                    var col = colores[pi] || '#64748b';
-                    var lbl = chartLabels[pi] || ('Período ' + (pi + 1));
-                    kpiRow.innerHTML += '<div style="flex:1;min-width:72px;background:#f8fafc;border:1.5px solid ' + col + ';border-radius:8px;padding:6px 4px;text-align:center;">'
-                        + '<div style="font-size:0.45rem;font-weight:700;color:' + col + ';text-transform:uppercase;letter-spacing:.03em;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + lbl.replace(/"/g,'') + '">' + lbl + '</div>'
-                        + '<div style="font-size:18px;font-weight:700;color:' + col + ';line-height:1.1;">' + pct + '%</div></div>';
-                });
-                kpiRow.innerHTML += '<div style="flex:1;min-width:72px;background:' + varBg + ';border:1.5px solid ' + varBorder + ';border-radius:8px;padding:6px 4px;text-align:center;">'
-                    + '<div style="font-size:0.45rem;font-weight:700;color:' + varColor + ';text-transform:uppercase;letter-spacing:.03em;margin-bottom:2px;">Variación</div>'
-                    + '<div style="font-size:12px;font-weight:700;color:' + varColor + ';line-height:1.3;">' + varText + '</div></div>';
-                wrapper.appendChild(kpiRow);
-
-                var chartPreviewDiv = document.createElement('div');
-                chartPreviewDiv.id = chartId + '-preview';
-                chartPreviewDiv.style.cssText = 'height:' + COMP_GRAFICA_TYPO.pdfPreviewH + 'px;background:#f8fafc;border-radius:6px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;';
-                chartPreviewDiv.innerHTML = '<span style="font-size:0.75rem;color:#94a3b8;">Generando gráfica…</span>';
-                wrapper.appendChild(chartPreviewDiv);
-                contenedor.appendChild(wrapper);
-
-                var tempDiv = document.createElement('div');
-                tempDiv.style.cssText = 'position:absolute;left:-9999px;top:0;width:700px;';
-                document.body.appendChild(tempDiv);
-                var canvas = document.createElement('canvas');
-                canvas.id = chartId;
-                canvas.width = COMP_GRAFICA_TYPO.pdfW;
-                canvas.height = COMP_GRAFICA_TYPO.pdfH;
-                tempDiv.appendChild(canvas);
-
-                var pctPlugin = {
-                    id: 'pp_' + chartId,
-                    afterDraw: function(chart) {
-                        var ctx = chart.ctx;
-                        chart.data.datasets.forEach(function(ds, di) {
-                            if (ds.type === 'line') return;
-                            chart.getDatasetMeta(di).data.forEach(function(bar, bi) {
-                                var v = ds.data[bi];
-                                if (v === null || v === undefined || v < 8) return;
-                                ctx.save();
-                                ctx.fillStyle = '#fff';
-                                ctx.font = 'bold ' + COMP_GRAFICA_TYPO.pdfPctBar + 'px sans-serif';
-                                ctx.textAlign = 'center';
-                                ctx.textBaseline = 'middle';
-                                ctx.fillText(v + '%', bar.x, (bar.y + bar.base) / 2);
-                                ctx.restore();
-                            });
-                        });
-                    }
-                };
-
-                var shortLabels = chartLabels.map(function(l, i) {
-                    var s = (l || '').replace(' (reciente)', '');
-                    return s.length > 12 ? s.slice(0, 10) + '…' : s;
-                });
-                pendientes.push({ chartId: chartId, frenteNombre: fNombre, areaNombre: areaNombre, pcts: pcts, diff: diff });
-                var captured = false;
-                var ch = new Chart(canvas, {
-                    type: 'bar',
-                    data: {
-                        labels: shortLabels,
-                        datasets: [
-                            {
-                                label: 'Cumple',
-                                data: pcts.slice(),
-                                backgroundColor: colores,
-                                borderRadius: 4,
-                                barPercentage: 0.65,
-                                order: 2
-                            },
-                            {
-                                label: 'No cumple',
-                                data: pcts.map(function(p) { return 100 - p; }),
-                                backgroundColor: pcts.map(function(_, i) { return i === 0 ? 'rgba(163,45,45,0.35)' : 'rgba(163,45,45,0.55)'; }),
-                                borderRadius: 4,
-                                barPercentage: 0.65,
-                                order: 2
-                            },
-                            {
-                                type: 'line',
-                                label: 'Tendencia',
-                                data: pcts.slice(),
-                                borderColor: '#27500A',
-                                backgroundColor: 'transparent',
-                                borderDash: [6, 4],
-                                borderWidth: 2,
-                                tension: 0.25,
-                                fill: false,
-                                pointBackgroundColor: colores,
-                                pointRadius: 5,
-                                pointBorderColor: '#fff',
-                                pointBorderWidth: 2,
-                                order: 1
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: false,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        animation: {
-                            onComplete: function() {
-                                if (captured) return;
-                                captured = true;
-                                var imgData = canvas.toDataURL('image/png');
-                                var prev = document.getElementById(chartId + '-preview');
-                                if (prev) {
-                                    prev.innerHTML = '';
-                                    var img = document.createElement('img');
-                                    img.src = imgData;
-                                    img.style.cssText = 'width:100%;height:100%;object-fit:contain;border-radius:4px;';
-                                    prev.appendChild(img);
-                                }
-                                window.graficasComparacionPDF.push({
-                                    frenteNombre: fNombre,
-                                    areaNombre: areaNombre,
-                                    areaId: areaId,
-                                    pcts: pcts,
-                                    labels: chartLabels,
-                                    pctReciente: p0,
-                                    pctAnterior: pLast,
-                                    diff: diff,
-                                    imgData: imgData
-                                });
-                                if (window.graficasComparacionPDF.length === pendientes.length) {
-                                    document.getElementById('btn-listo-comparacion').style.display = '';
-                                }
-                                document.body.removeChild(tempDiv);
-                            }
-                        },
-                        scales: {
-                            x: { grid: { display: false }, ticks: { font: { size: COMP_GRAFICA_TYPO.pdfTick }, maxRotation: 45, minRotation: 0 } },
-                            y: {
-                                min: 0, max: 100,
-                                ticks: { callback: function(v) { return v + '%'; }, font: { size: COMP_GRAFICA_TYPO.pdfTick }, stepSize: 10 },
-                                grid: { color: 'rgba(0,0,0,0.15)', borderDash: [4, 4] }
-                            }
-                        }
-                    },
-                    plugins: [pctPlugin]
-                });
-                window._compPdfCharts.push(ch);
-            });
-        });
-
-        if (pendientes.length === 0) {
-            contenedor.innerHTML = '<div style="font-size:0.8rem;color:#6b7280;padding:8px 0;">Sin datos para mostrar con los filtros actuales.</div>';
-            return;
-        }
+        _renderizarCompPdfAuto();
     }
 
     function generarInformeConComparacion() {
-        var graficas = window.graficasComparacionPDF;
-        var compD = window._compPdfData || {};
-        if (compD.modo === 'auto') {
-            if (!compD.comparables || !compD.comparables.length) { alert('No hay frentes comparables para generar el PDF.'); return; }
-        } else if (!graficas || graficas.length === 0) {
-            alert('Primero genera las gráficas de comparación.');
+        var compD = window._compPdfData || window._compManualData || {};
+        if (!compD.comparables || !compD.comparables.length) {
+            alert('No hay datos de comparación para generar el PDF.');
             return;
         }
 
         function eH(s) { return (s || '').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-        if (compD.modo === 'auto') {
+        {
             var btnComp = document.getElementById('btn-listo-comparacion');
             var btnOrigHtml = btnComp ? btnComp.innerHTML : '';
             if (btnComp) { btnComp.disabled = true; btnComp.textContent = 'Generando gráficas…'; }
@@ -7732,103 +7546,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             return;
         }
-
-        var inspecciones = _compPdfInspeccionesActivas();
-        var labels = compD.labels || inspecciones.map(function(insp) { return insp.fecha || 'Sin fecha'; });
-
-        var todasG = (window.graficasComparacionPDF_todas && window.graficasComparacionPDF_todas.length > 0)
-            ? window.graficasComparacionPDF_todas : graficas;
-        var totalAreas = todasG.length;
-        var sumDiff = 0, countDiff = 0;
-        todasG.forEach(function(g) { if (g.diff !== null) { sumDiff += g.diff; countDiff++; } });
-        var diffProm = countDiff > 0 ? Math.round(sumDiff / countDiff) : 0;
-        var areasParts = todasG.map(function(g) {
-            var diffStr = g.diff !== null ? ' (' + (g.diff >= 0 ? '↑+' : '↓') + g.diff + 'pp)' : '';
-            var pctTxt = g.pcts && g.pcts.length ? g.pcts[0] + '%' : (g.pctReciente !== null ? g.pctReciente + '%' : 'N/A');
-            return g.areaNombre + ': ' + pctTxt + diffStr;
-        }).join('. ');
-        var rangoFechas = inspecciones.length
-            ? (inspecciones[inspecciones.length - 1].fecha || '') + ' → ' + (inspecciones[0].fecha || '')
-            : '';
-        var resumen = rangoFechas + '. '
-            + inspecciones.length + ' inspección(es) comparada(s). '
-            + totalAreas + ' área(s) evaluada(s). '
-            + (areasParts ? areasParts + '. ' : '')
-            + 'Variación promedio (reciente vs más antigua): ' + diffProm + 'pp.';
-
-        var h = '<div style="page-break-before:always;margin-top:20px;">';
-        h += '<h3 style="font-size:12pt;font-weight:700;color:#1e3a2f;margin-bottom:12px;page-break-after:avoid;break-after:avoid;">Comparación Semanal de Cumplimiento</h3>';
-        var parMan = resolverParComparacionPdf({ reciente: compD.reciente || (inspecciones.length ? inspecciones[0] : null), anterior: compD.anterior || (inspecciones.length ? inspecciones[inspecciones.length - 1] : null), comparables: compD.comparables });
-        h += htmlEncabezadoParComparacion(parMan.reciente, parMan.anterior, { escFn: eH, pdfMode: true });
-        h += '<div style="background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;padding:12px;margin:16px 0;font-size:9pt;">'
-            + 'Resumen de tendencia: ' + eH(resumen) + '</div>';
-
-        var filtroFrentePdfMan = (document.getElementById('filtro-frente-pdf') || {}).value || 'todos';
-        var filtroAreaPdfMan = (document.getElementById('filtro-area-pdf') || {}).value || 'todas';
-        var frenteGroups = {};
-        graficas.forEach(function(g) {
-            if (filtroFrentePdfMan !== 'todos' && g.frenteNombre !== filtroFrentePdfMan) return;
-            if (filtroAreaPdfMan !== 'todas' && g.areaId !== filtroAreaPdfMan && g.areaNombre !== filtroAreaPdfMan) return;
-            var key = g.frenteNombre || 'Sin nombre';
-            if (!frenteGroups[key]) frenteGroups[key] = [];
-            frenteGroups[key].push(g);
-        });
-        var pdfZonaMan = null;
-        // Igual que en modo auto: el primer frente no duplica el salto del contenedor de sección.
-        var esPrimerFrenteMan = true;
-        Object.keys(frenteGroups).forEach(function(fNombre) {
-            var items = frenteGroups[fNombre];
-            if (!items.length) return;
-            var frData = typeof resolverFrentePdf === 'function'
-                ? resolverFrentePdf({ nombre: fNombre }, inspecciones[0])
-                : { nombre: fNombre };
-            var esCienagaMan = typeof esFrenteGrupoCienaga === 'function' && esFrenteGrupoCienaga(frData);
-            var abreZonaMan = esCienagaMan && ZONA_CIENAGA !== pdfZonaMan;
-            if (esCienagaMan) pdfZonaMan = ZONA_CIENAGA; else pdfZonaMan = null;
-            h += esPrimerFrenteMan ? '<div>' : '<div class="frente-pg">';
-            esPrimerFrenteMan = false;
-            if (abreZonaMan) h += htmlPdfEncabezadoZona(ZONA_CIENAGA, frData.municipio, eH);
-            h += htmlPdfFichaUbicacionFrente(frData, eH);
-            items.forEach(function(g) {
-            var dLabel = '', dStyle = '';
-            if (g.diff !== null) {
-                if (g.diff > 0)      { dLabel = '↑ +' + g.diff + ' pp'; dStyle = 'background:#dcfce7;color:#15803d;'; }
-                else if (g.diff < 0) { dLabel = '↓ ' + g.diff + ' pp';  dStyle = 'background:#fee2e2;color:#b91c1c;'; }
-                else                 { dLabel = '= Sin cambio';               dStyle = 'background:#f3f4f6;color:#6b7280;'; }
-            }
-            h += '<div style="margin-bottom:16px;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;page-break-inside:avoid;">';
-            h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px;">';
-            h += '<span style="font-size:9.5pt;font-weight:700;color:#1e3a2f;">' + eH(g.areaNombre) + '</span>';
-            if (dLabel) h += '<span style="font-size:7.5pt;font-weight:700;padding:2px 8px;border-radius:20px;' + dStyle + '">' + dLabel + '</span>';
-            h += '</div>';
-            h += '<div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">';
-            var pcts = g.pcts || [g.pctAnterior, g.pctReciente].filter(function(v) { return v !== null && v !== undefined; });
-            var gLabels = g.labels || labels;
-            pcts.forEach(function(pct, pi) {
-                var col = _compPdfColoresN(pcts.length)[pi] || '#64748b';
-                h += '<div style="text-align:center;flex:1;min-width:70px;"><div style="font-size:18pt;font-weight:800;color:' + col + ';line-height:1;">' + pct + '%</div>'
-                    + '<div style="font-size:7pt;color:' + col + ';font-weight:600;">' + eH(gLabels[pi] || ('P' + (pi + 1))) + '</div></div>';
-                if (pi < pcts.length - 1) h += '<div style="color:#94a3b8;font-size:9pt;align-self:center;">|</div>';
-            });
-            h += '</div>';
-            h += '<img src="' + g.imgData + '" style="width:100%;border:1px solid #e2e8f0;border-radius:6px;display:block;"/>';
-            h += '</div>';
-            });
-            h += '</div>';
-        });
-
-        h += '<div style="background:#f8fafc;border-radius:8px;padding:10px 14px;margin-top:8px;page-break-inside:avoid;break-inside:avoid;">';
-        h += '<div style="font-size:8pt;font-weight:700;color:#374151;margin-bottom:6px;">Guía de colores</div>';
-        h += '<div style="display:flex;flex-direction:column;gap:3px;">'
-            + '<div style="display:flex;align-items:center;gap:6px;font-size:8pt;"><div style="width:12px;height:12px;border-radius:2px;background:#27500A;flex-shrink:0;"></div>Verde = Cumplimiento por período (más reciente a la izquierda)</div>'
-            + '<div style="display:flex;align-items:center;gap:6px;font-size:8pt;"><div style="width:12px;height:12px;border-radius:2px;background:#A32D2D;flex-shrink:0;"></div>Rojo = No cumple</div>'
-            + '<div style="font-size:8pt;color:#6b7280;margin-top:4px;">La variación compara el período más reciente contra el más antiguo seleccionado.</div>'
-            + '</div></div>';
-        h += '</div>';
-
-        window._compPdfHtml = h;
-        window._pdfWin = window.open('', '_blank');
-        generarInformeDireccion();
     }
 
     function csCardInfoInspeccion(insp) {
@@ -8017,80 +7734,14 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('filtro-area-pdf').addEventListener('change', _renderizarCompPdf);
 </script>
 <script>
-// ── Comparación Semanal — automática por todos los frentes ──
+// ── Comparación Semanal — reutiliza motor de Comparar Inspecciones ──
 var _csAbierto = false;
 window._csAbierto = false;
-
-function csNormStr(s) { return CompMotor.normStr(s); }
-
-function csFrenteMatch(f, nombre, contratista, numeroContrato, zonaOpcional) {
-    var ref = { zona: zonaOpcional || '', nombre: nombre, contratista: contratista, numeroContrato: numeroContrato };
-    if (typeof window.frenteMatchUnificado === 'function') return window.frenteMatchUnificado(f, ref);
-    return CompMotor.frenteMatch(f, ref);
-}
-
-function csClonarInspeccion(insp) {
-    try { return JSON.parse(JSON.stringify(insp || {})); } catch (e) { return insp || {}; }
-}
-
-function csZonaFrenteRef(f) {
-    return (typeof esFrenteGrupoCienaga === 'function' && esFrenteGrupoCienaga(f)) ? ZONA_CIENAGA : (f.zona || '');
-}
-
-function csInspeccionActualParaComparar() {
-    if (typeof saveToLocal === 'function') saveToLocal();
-    var fechaEl = document.getElementById('fecha');
-    if (fechaEl) {
-        var fechaNorm = normalizarFechaInspeccionYMD(fechaEl.value);
-        if (fechaEl.value !== fechaNorm) fechaEl.value = fechaNorm;
-    }
-    var areasEval = csObtenerFiltroAreasActivas();
-    var frentesBase = typeof frentes !== 'undefined' ? frentes : [];
-    var frentesFiltrados = typeof window.frentesParaInspeccionActiva === 'function'
-        ? window.frentesParaInspeccionActiva(frentesBase, areasEval)
-        : frentesBase;
-    return {
-        proyecto: (document.getElementById('proyecto') || {}).value || '',
-        fecha: (document.getElementById('fecha') || {}).value || '',
-        ubicacion: (document.getElementById('ubicacion') || {}).value || '',
-        inspector: (document.getElementById('inspector') || {}).value || '',
-        frentes: csClonarInspeccion(frentesFiltrados),
-        areasEvaluadas: areasEval.slice()
-    };
-}
-
-function csSnapshotActual() {
-    return csInspeccionActualParaComparar();
-}
-
-function csCumpleSnapshotFrente(insp, fRef) {
-    var inf = csFiltrarInspeccionPorFrente(insp, fRef.nombre, fRef.contratista, fRef.numeroContrato, csZonaFrenteRef(fRef));
-    var f = (inf.frentes || [])[0];
-    if (!f) return '';
-    var parts = [];
-    (f.categorias || []).forEach(function(cat) {
-        (cat.items || []).forEach(function(it) {
-            if (it && it.id) parts.push(it.id + ':' + String(it.cumple));
-        });
-    });
-    return parts.sort().join('|');
-}
-
-/** Elige inspección anterior: si la más reciente es idéntica a la actual, usa la previa (comparación semanal real). */
-function csHistorialPorId(id) {
-    if (id == null) return null;
-    var hist = typeof getHistorial === 'function' ? getHistorial() : [];
-    for (var i = 0; i < hist.length; i++) {
-        if (hist[i].id === id) return hist[i];
-    }
-    return null;
-}
 
 function limpiarCachesComparacionSemanal() {
     window._compPdfData = null;
     window._compPdfHtml = null;
     window._comparisonData = null;
-    window._compManualData = null;
     if (window.comparacionSemanal) {
         window.comparacionSemanal.inspeccion1 = null;
         window.comparacionSemanal.inspeccion2 = null;
@@ -8103,12 +7754,13 @@ window.limpiarCachesComparacionSemanal = limpiarCachesComparacionSemanal;
 
 function csResetResumenComparacionSemanal() {
     var resumen = document.getElementById('cs-resumen-auto');
+    if (resumen) {
+        resumen.style.display = '';
+        resumen.innerHTML = '<div style="font-weight:700;color:#1e3a2f;margin-bottom:4px;">Comparación automática</div>'
+            + '<div style="color:#6b7280;">Activa el interruptor para comparar las dos inspecciones más recientes del historial.</div>';
+    }
     var avisos = document.getElementById('cs-avisos');
     var pendientesEl = document.getElementById('cs-pendientes');
-    if (resumen) {
-        resumen.innerHTML = '<div style="font-weight:700;color:#1e3a2f;margin-bottom:4px;">Comparación automática</div>'
-            + '<div style="color:#6b7280;">Activa el interruptor para recalcular con el historial actual.</div>';
-    }
     if (avisos) { avisos.style.display = 'none'; avisos.innerHTML = ''; }
     if (pendientesEl) { pendientesEl.style.display = 'none'; pendientesEl.innerHTML = ''; }
     var filtros = document.getElementById('filtros-comp-pdf');
@@ -8119,272 +7771,58 @@ function csResetResumenComparacionSemanal() {
     if (btnDash) btnDash.style.display = 'none';
 }
 
+function csSemanalGenerar() {
+    if (typeof CompMotor !== 'undefined' && CompMotor.destruirCharts) CompMotor.destruirCharts();
+    window._compPdfHtml = null;
+    var contenedor = document.getElementById('contenedor-graficas-pdf');
+    var resumen = document.getElementById('cs-resumen-auto');
+    var btnPdf = document.getElementById('btn-listo-comparacion');
+    var btnDash = document.getElementById('btn-dashboard-ejecutivo');
+    var filtros = document.getElementById('filtros-comp-pdf');
+    var par = typeof seleccionarParHistorialAutomatico === 'function' ? seleccionarParHistorialAutomatico() : null;
+    if (!par) {
+        if (contenedor) contenedor.innerHTML = '<div style="font-size:0.8rem;color:#6b7280;padding:8px 0;">Se necesitan al menos 2 inspecciones en el historial para comparar.</div>';
+        if (resumen) {
+            resumen.style.display = '';
+            resumen.innerHTML = '<div style="color:#6b7280;">Archiva al menos dos inspecciones en el historial para activar la comparación automática.</div>';
+        }
+        if (filtros) filtros.style.display = 'none';
+        if (btnPdf) btnPdf.style.display = 'none';
+        if (btnDash) btnDash.style.display = 'none';
+        window._compPdfData = null;
+        window._compManualData = null;
+        return;
+    }
+    if (resumen) {
+        resumen.style.display = '';
+        resumen.innerHTML = '<div style="font-weight:700;color:#1e3a2f;margin-bottom:4px;">Comparación automática</div>'
+            + '<div style="color:#475569;">Reciente: <strong>' + CompMotor.escHtml(par.reciente.proyecto || 'Sin nombre') + '</strong> (' + CompMotor.escHtml(par.reciente.fecha || '') + ')'
+            + ' · Anterior: <strong>' + CompMotor.escHtml(par.anterior.proyecto || 'Sin nombre') + '</strong> (' + CompMotor.escHtml(par.anterior.fecha || '') + ')</div>';
+    }
+    if (filtros) filtros.style.display = '';
+    if (contenedor) contenedor.innerHTML = '';
+    if (btnPdf) btnPdf.style.display = 'none';
+    if (btnDash) btnDash.style.display = 'none';
+    if (window.comparacionSemanal) {
+        window.comparacionSemanal.inspeccion1 = par.anterior;
+        window.comparacionSemanal.inspeccion2 = par.reciente;
+    }
+    ejecutarComparacionInspecciones(par.reciente, par.anterior, {
+        bodyId: 'contenedor-graficas-pdf',
+        filtroFrenteId: 'filtro-frente-pdf',
+        filtroAreaId: 'filtro-area-pdf',
+        mostrarEncabezado: true,
+        mostrarGuia: true,
+        showPdfButtons: true,
+        idPrefix: 'pdf-'
+    });
+}
+
 function csInvalidarComparacionSemanal() {
-    limpiarCachesComparacionSemanal();
     if (_csAbierto) csSemanalGenerar();
     else csResetResumenComparacionSemanal();
 }
 window.csInvalidarComparacionSemanal = csInvalidarComparacionSemanal;
-
-function csSeleccionarMatchAnterior(confirmed, actualInsp, fRef) {
-    if (!confirmed || !confirmed.length) return null;
-    var snapActual = csCumpleSnapshotFrente(actualInsp, fRef);
-    for (var i = 0; i < confirmed.length; i++) {
-        var cand = confirmed[i];
-        if (!cand.insp || cand.insp.id == null || !csHistorialPorId(cand.insp.id)) continue;
-        var snapCand = csCumpleSnapshotFrente(cand.insp, fRef);
-        if (i === 0 && snapActual === snapCand && confirmed.length > 1) continue;
-        return cand;
-    }
-    return null;
-}
-
-function csBuscarHistorialCoincidente(frenteRef, contratistaArg, numeroContratoArg) {
-    var fActual;
-    if (typeof frenteRef === 'object' && frenteRef !== null && frenteRef.nombre !== undefined) {
-        fActual = frenteRef;
-    } else {
-        fActual = { zona: '', nombre: frenteRef || '', contratista: contratistaArg || '', numeroContrato: numeroContratoArg || '' };
-    }
-    var hist = typeof getHistorial === 'function' ? getHistorial() : JSON.parse(localStorage.getItem('cardique_historial') || '[]');
-    var idsVivos = {};
-    hist.forEach(function(r) { if (r && r.id != null) idsVivos[r.id] = true; });
-    var confirmed = [], tentative = [];
-    hist.forEach(function(reg) {
-        if (!reg || reg.id == null || !idsVivos[reg.id]) return;
-        (reg.frentes || []).forEach(function(hf) {
-            var mc = typeof clasificarMatchFrente === 'function' ? clasificarMatchFrente(fActual, hf) : { level: 'none' };
-            if (mc.level === 'exact' || mc.level === 'legacy') {
-                confirmed.push({ insp: reg, frenteHist: hf, level: mc.level });
-            } else if (mc.level === 'tentative') {
-                if (typeof isMatchConfirmedFor === 'function' && isMatchConfirmedFor(fActual, hf)) {
-                    confirmed.push({ insp: reg, frenteHist: hf, level: 'confirmed' });
-                } else {
-                    tentative.push({ insp: reg, frenteHist: hf });
-                }
-            }
-        });
-    });
-    confirmed.sort(function(a, b) { return new Date(b.insp.fecha || 0) - new Date(a.insp.fecha || 0); });
-    tentative.sort(function(a, b) { return new Date(b.insp.fecha || 0) - new Date(a.insp.fecha || 0); });
-    return { confirmed: confirmed, tentative: tentative, legacyList: confirmed.map(function(c) { return c.insp; }) };
-}
-
-function csFiltrarInspeccionPorFrente(insp, nombre, contratista, numeroContrato, zonaOpcional) {
-    var copia = csClonarInspeccion(insp);
-    var ref = { zona: zonaOpcional || '', nombre: nombre, contratista: contratista, numeroContrato: numeroContrato };
-    var ff = (copia.frentes || []).filter(function(f) {
-        return csFrenteMatch(f, nombre, contratista, numeroContrato, zonaOpcional);
-    });
-    copia.frentes = ff.length ? ff : [{ zona: ref.zona, nombre: nombre, contratista: contratista, numeroContrato: numeroContrato, categorias: [] }];
-    return copia;
-}
-
-function csEscHtml(s) { return CompMotor.escHtml(s); }
-
-function csObtenerFiltroAreasActivas() {
-    if (typeof obtenerFiltroCategoriasActivas === 'function') return obtenerFiltroCategoriasActivas();
-    return [];
-}
-
-function csResolverTodasComparaciones() {
-    if (typeof frentes === 'undefined' || !frentes.length) return { comparables: [], omitidos: [], pendientes: [] };
-    var comparables = [], omitidos = [], pendientes = [];
-    var filtroActivo = csObtenerFiltroAreasActivas();
-    var actualGlobal = csInspeccionActualParaComparar();
-    var frentesActivos = actualGlobal.frentes || [];
-    frentesActivos.forEach(function(f) {
-        var busqueda = csBuscarHistorialCoincidente(f);
-        if (!busqueda.confirmed.length) {
-            busqueda.tentative.forEach(function(t) {
-                pendientes.push({ frente: f, tentative: t });
-            });
-        }
-        if (!busqueda.confirmed.length) {
-            omitidos.push({ nombre: f.nombre || 'Sin nombre', contratista: f.contratista, numeroContrato: f.numeroContrato, zona: f.zona || '', tienePendiente: busqueda.tentative.length > 0 });
-            return;
-        }
-        var best = csSeleccionarMatchAnterior(busqueda.confirmed, actualGlobal, f);
-        if (!best || !best.insp || best.insp.id == null) return;
-        var anteriorReg = csHistorialPorId(best.insp.id);
-        if (!anteriorReg) return;
-        var actual = csFiltrarInspeccionPorFrente(actualGlobal, f.nombre, f.contratista, f.numeroContrato, csZonaFrenteRef(f));
-        var anteriorInsp = csFiltrarInspeccionPorFrente(csClonarInspeccion(anteriorReg), f.nombre, f.contratista, f.numeroContrato, csZonaFrenteRef(f));
-        var filtroIds = typeof areasEvaluadasParaComparacion === 'function'
-            ? areasEvaluadasParaComparacion(actual, anteriorInsp, filtroActivo)
-            : filtroActivo;
-        var built = CompMotor.construirDesdePar(actual, anteriorInsp, [f], { modo: 'auto', filtroAreaIds: filtroIds });
-        if (built.comparables[0]) comparables.push(built.comparables[0]);
-    });
-    var anteriorGlobal = comparables.length ? comparables[0].anterior : null;
-    return { modo: 'auto', comparables: comparables, omitidos: omitidos, pendientes: pendientes, reciente: actualGlobal, anterior: anteriorGlobal };
-}
-
-function csActualizarResumenUI() {
-    var res = csResolverTodasComparaciones();
-    var resumen = document.getElementById('cs-resumen-auto');
-    var avisos = document.getElementById('cs-avisos');
-    var pendientesEl = document.getElementById('cs-pendientes');
-    var filtroIds = csObtenerFiltroAreasActivas();
-    var filtroTxt = filtroIds.length ? (' · Filtro activo: ' + filtroIds.length + ' área(s)') : '';
-
-    if (pendientesEl) {
-        var listaPend = res.pendientes || [];
-        if (!listaPend.length) {
-            pendientesEl.style.display = 'none';
-            pendientesEl.innerHTML = '';
-        } else {
-            pendientesEl.innerHTML = '<div style="font-weight:700;margin-bottom:8px;">Posible coincidencia — confirmar</div>'
-                + listaPend.map(function(p) {
-                    var ct = p.frente.numeroContrato ? ' · Contrato ' + csEscHtml(p.frente.numeroContrato) : '';
-                    var nomNuevo = (p.frente.zona ? (p.frente.zona + ' · ') : '') + (p.frente.nombre || '');
-                    var nomAnt = p.tentative.frenteHist.nombre || '';
-                    return '<div class="cs-pendiente-item">'
-                        + '<span style="flex:1;min-width:180px;">'
-                        + '<div><strong>Actual:</strong> ' + csEscHtml(nomNuevo) + ct + '</div>'
-                        + '<div style="margin-top:2px;"><strong>Histórico:</strong> «' + csEscHtml(nomAnt) + '» (' + csEscHtml(p.tentative.insp.fecha || '') + ')</div>'
-                        + '</span>'
-                        + '<button type="button" class="btn-confirmar-match"'
-                        + ' data-hist-id="' + (p.tentative.insp.id != null ? p.tentative.insp.id : '') + '"'
-                        + ' data-hist-nom="' + csEscHtml(nomAnt).replace(/"/g, '&quot;') + '"'
-                        + ' data-hist-cont="' + csEscHtml(p.tentative.frenteHist.contratista || '').replace(/"/g, '&quot;') + '"'
-                        + ' data-hist-ctr="' + csEscHtml(p.tentative.frenteHist.numeroContrato || p.frente.numeroContrato || '').replace(/"/g, '&quot;') + '"'
-                        + ' data-hist-zona="' + csEscHtml(p.tentative.frenteHist.zona || '').replace(/"/g, '&quot;') + '"'
-                        + ' data-f-nom="' + csEscHtml(p.frente.nombre || '').replace(/"/g, '&quot;') + '"'
-                        + ' data-f-zona="' + csEscHtml(p.frente.zona || '').replace(/"/g, '&quot;') + '"'
-                        + ' data-f-cont="' + csEscHtml(p.frente.contratista || '').replace(/"/g, '&quot;') + '"'
-                        + ' data-f-ctr="' + csEscHtml(p.frente.numeroContrato || '').replace(/"/g, '&quot;') + '"'
-                        + '>Aceptar</button>'
-                        + '</div>';
-                }).join('');
-            pendientesEl.style.display = '';
-            pendientesEl.querySelectorAll('.btn-confirmar-match').forEach(function(btn) {
-                btn.onclick = function() {
-                    var histIdAttr = btn.getAttribute('data-hist-id');
-                    var histId = histIdAttr ? parseInt(histIdAttr, 10) : null;
-                    if (typeof window.confirmarMatchFrente === 'function') {
-                        window.confirmarMatchFrente(
-                            {
-                                zona: btn.getAttribute('data-f-zona') || '',
-                                nombre: btn.getAttribute('data-f-nom'),
-                                contratista: btn.getAttribute('data-f-cont'),
-                                numeroContrato: btn.getAttribute('data-f-ctr')
-                            },
-                            isNaN(histId) ? null : histId,
-                            btn.getAttribute('data-hist-nom'),
-                            {
-                                zona: btn.getAttribute('data-hist-zona') || '',
-                                nombre: btn.getAttribute('data-hist-nom'),
-                                contratista: btn.getAttribute('data-hist-cont'),
-                                numeroContrato: btn.getAttribute('data-hist-ctr')
-                            }
-                        );
-                    }
-                    csSemanalGenerar();
-                };
-            });
-        }
-    }
-
-    if (resumen) {
-        if (!res.comparables.length) {
-            resumen.innerHTML = '<div style="font-weight:700;color:#1e3a2f;margin-bottom:4px;">Comparación automática</div>'
-                + '<div style="color:#6b7280;">' + ((res.pendientes && res.pendientes.length) ? 'Hay coincidencias pendientes de confirmar arriba.' : 'No hay frentes con historial previo coincidente para comparar.') + '</div>';
-            resumen.style.display = '';
-        } else {
-            var lineas = res.comparables.map(function(c) {
-                var ct = c.frente.numeroContrato ? ' · Contrato ' + csEscHtml(c.frente.numeroContrato) : '';
-                return '<div style="margin-bottom:3px;"><span style="color:#16a34a;font-weight:600;">✓</span> '
-                    + csEscHtml(c.frente.nombre) + ct
-                    + ' <span style="color:#94a3b8;">vs ' + csEscHtml(c.fechaAnterior) + '</span></div>';
-            }).join('');
-            var selTxt = (typeof window.hayFrentesSeleccionadosInspeccion === 'function' && window.hayFrentesSeleccionadosInspeccion())
-                ? ' · Solo frentes seleccionados' : '';
-            resumen.innerHTML = '<div style="font-weight:700;color:#1e3a2f;margin-bottom:6px;">Comparación automática — '
-                + res.comparables.length + ' frente(s)' + filtroTxt + selTxt + '</div>' + lineas;
-            resumen.style.display = '';
-        }
-    }
-
-    if (avisos) {
-        if (!res.omitidos.length) {
-            avisos.style.display = 'none';
-            avisos.innerHTML = '';
-        } else {
-            avisos.innerHTML = res.omitidos.map(function(o) {
-                var msg = o.tienePendiente
-                    ? 'Frente ' + csEscHtml(o.nombre) + ' — posible coincidencia pendiente de confirmar'
-                    : 'Frente ' + csEscHtml(o.nombre) + ' sin historial previo — no incluido en comparación';
-                return '<div style="margin-bottom:4px;">' + msg + '</div>';
-            }).join('');
-            avisos.style.display = '';
-        }
-    }
-    return res;
-}
-
-function csPoblarFiltrosPdf(res) {
-    var nombres = res.comparables.map(function(c) { return c.frente.nombre; });
-    if (typeof window.ordenarNombresFrentesConSeleccion === 'function') {
-        nombres = window.ordenarNombresFrentesConSeleccion(nombres);
-    }
-    var areasMap = {};
-    res.comparables.forEach(function(c) {
-        (c.areas || []).forEach(function(a) {
-            if (a.id) areasMap[a.id] = a.nombre;
-        });
-    });
-    var sff = document.getElementById('filtro-frente-pdf');
-    var prevF = sff ? sff.value : 'todos';
-    if (sff) {
-        sff.innerHTML = '<option value="todos">Todos los frentes</option>'
-            + nombres.map(function(n) {
-                var mark = typeof window.isNombreFrenteSeleccionadoInspeccion === 'function' && window.isNombreFrenteSeleccionadoInspeccion(n);
-                var label = (mark ? '✓ ' : '') + n;
-                return '<option value="' + csEscHtml(n).replace(/"/g,'&quot;') + '"' + (mark ? ' style="font-weight:700;color:#16a34a;"' : '') + '>' + csEscHtml(label) + '</option>';
-            }).join('');
-        if (nombres.length === 1) sff.value = nombres[0];
-        else if (typeof window.hayFrentesSeleccionadosInspeccion === 'function' && window.hayFrentesSeleccionadosInspeccion()) {
-            var selEnComp = nombres.filter(function(n) {
-                return window.isNombreFrenteSeleccionadoInspeccion(n);
-            });
-            if (selEnComp.length === 1) sff.value = selEnComp[0];
-            else if (prevF && prevF !== 'todos' && nombres.indexOf(prevF) >= 0) sff.value = prevF;
-        } else if (prevF && prevF !== 'todos' && nombres.indexOf(prevF) >= 0) sff.value = prevF;
-    }
-    var sfa = document.getElementById('filtro-area-pdf');
-    var prevA = sfa ? sfa.value : 'todas';
-    if (sfa) {
-        sfa.innerHTML = '<option value="todas">Todas las áreas</option>'
-            + Object.keys(areasMap).map(function(id) {
-                return '<option value="' + id + '">' + csEscHtml(areasMap[id]) + '</option>';
-            }).join('');
-        if (prevA && prevA !== 'todas' && areasMap[prevA]) sfa.value = prevA;
-    }
-    var filtros = document.getElementById('filtros-comp-pdf');
-    if (filtros) filtros.style.display = res.comparables.length ? '' : 'none';
-}
-
-function csSemanalGenerar() {
-    limpiarCachesComparacionSemanal();
-    var res = csActualizarResumenUI();
-    var contenedor = document.getElementById('contenedor-graficas-pdf');
-    var btnPdf = document.getElementById('btn-listo-comparacion');
-    var btnDash = document.getElementById('btn-dashboard-ejecutivo');
-    if (!res.comparables.length) {
-        if (contenedor) contenedor.innerHTML = '<div style="font-size:0.8rem;color:#6b7280;padding:8px 0;">No hay frentes comparables con historial previo.</div>';
-        if (btnPdf) btnPdf.style.display = 'none';
-        if (btnDash) btnDash.style.display = 'none';
-        window._compPdfData = null;
-        return;
-    }
-    csPoblarFiltrosPdf(res);
-    window._compPdfData = res;
-    if (contenedor) contenedor.innerHTML = '';
-    if (btnPdf) btnPdf.style.display = 'none';
-    if (btnDash) btnDash.style.display = 'none';
-    if (typeof _renderizarCompPdf === 'function') _renderizarCompPdf();
-}
 
 function csRefrescarSiAbierto() {
     csInvalidarComparacionSemanal();
@@ -8400,7 +7838,6 @@ function csToggle() {
         body.style.display = '';
         sw.style.background = '#16a34a';
         knob.style.transform = 'translateX(18px)';
-        limpiarCachesComparacionSemanal();
         csSemanalGenerar();
     } else {
         body.style.display = 'none';

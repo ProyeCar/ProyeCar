@@ -1,5 +1,5 @@
-// build: 2026-07-15-normalizar-fecha-comparacion-semanal
-const APP_VERSION = '1.5.130';
+// build: 2026-07-15-unificar-motor-comparacion-semanal
+const APP_VERSION = '1.5.131';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {
