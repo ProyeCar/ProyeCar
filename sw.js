@@ -1,5 +1,5 @@
-// build: 2026-07-14-fix-fecha-zona-horaria-local
-const APP_VERSION = '1.5.127';
+// build: 2026-07-14-fix-fecha-borrador-viejo-dia
+const APP_VERSION = '1.5.128';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {

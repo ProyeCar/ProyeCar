@@ -1489,7 +1489,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.127";
+const APP_VERSION = "1.5.128";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 
 /** Fecha de HOY en Colombia (America/Bogota) como "YYYY-MM-DD".
@@ -3584,6 +3584,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch (e) {}
         }
 
+        var fechaBumped = false;
         if (loaded) {
             frentes = loaded.frentes;
             proyectoInput.value = loaded.proyecto || "";
@@ -3605,6 +3606,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 { nombre: "Frente 2 - Box Matagente", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" }
             ]);
         }
+        // Fecha de inspección: un borrador de un día anterior no debe arrastrar su fecha vieja.
+        // Si el campo quedó vacío o con una fecha anterior a HOY (Colombia), se pone HOY.
+        // (No se toca una fecha futura ni la de hoy; el usuario puede editarla manualmente si necesita fecha pasada.)
+        (function normalizarFechaInspeccionActual() {
+            var hoy = fechaHoyLocalYMD();
+            var actual = (fechaInput.value || '').trim();
+            var esYMD = /^\d{4}-\d{2}-\d{2}$/.test(actual);
+            if (!actual || (esYMD && actual < hoy)) {
+                if (actual !== hoy) { fechaInput.value = hoy; fechaBumped = true; }
+            }
+        })();
+
         // Backfill item.obs para ítems calificados sin observación
         var obsBackfillChanged = false;
         frentes.forEach(function(f) {
@@ -3621,7 +3634,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             });
         });
-        if (obsBackfillChanged) saveToLocal();
+        if (obsBackfillChanged || fechaBumped) saveToLocal();
         renderFrentes();
     }
     const savedLogo = localStorage.getItem("cardique_logo");
