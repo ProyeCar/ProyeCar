@@ -1489,7 +1489,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.131";
+const APP_VERSION = "1.5.132";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 
 /** Fecha de HOY en Colombia (America/Bogota) como "YYYY-MM-DD".
@@ -1766,10 +1766,10 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="card-header"><h2><span class="icon-box icon-box-verde"><span class="pc-icon-hydrate" data-i="construction" data-s="20" data-c="#1a5c35"></span></span>Frentes de obra</h2></div>
         <div id="frentes-container"></div>
         <button id="agregar-frente" class="btn-agregar-frente"><span class="pc-icon-hydrate" data-i="plus" data-s="18" data-c="#ffffff"></span> Agregar nuevo frente</button>
-        <!-- ── Comparación Semanal ── -->
+        <!-- ── Análisis comparativo de inspecciones ── -->
         <div id="cs-seccion" style="margin-top:16px;border:1px solid #bbf7d0;border-radius:14px;overflow:hidden;">
             <div id="cs-toggle-row" onclick="csToggle()" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:linear-gradient(135deg,#f0fdf4,#f8fafc);cursor:pointer;user-select:none;">
-                <span style="font-size:0.88rem;font-weight:700;color:#1e3a2f;display:inline-flex;align-items:center;gap:6px;"><span class="pc-icon-hydrate" data-i="bar-chart-2" data-s="16" data-c="#1e3a2f"></span> Incluir comparación semanal</span>
+                <span style="font-size:0.88rem;font-weight:700;color:#1e3a2f;display:inline-flex;align-items:center;gap:6px;"><span class="pc-icon-hydrate" data-i="bar-chart-2" data-s="16" data-c="#1e3a2f"></span> Análisis comparativo de inspecciones</span>
                 <div id="cs-toggle-switch" style="width:40px;height:22px;background:#d1d5db;border-radius:11px;position:relative;flex-shrink:0;">
                     <div id="cs-toggle-knob" style="position:absolute;top:3px;left:3px;width:16px;height:16px;background:white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.25);"></div>
                 </div>
@@ -1786,7 +1786,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
                 <div id="contenedor-graficas-pdf" style="margin-top:8px;"></div>
-                <button id="btn-listo-comparacion" onclick="generarInformeConComparacion()" style="display:none;width:100%;background:linear-gradient(135deg,#0d9488,#14b8a6);color:white;border:none;border-radius:12px;padding:13px;font-size:0.9rem;font-weight:700;cursor:pointer;margin-top:8px;align-items:center;justify-content:center;gap:6px;"><span class="pc-icon-hydrate" data-i="file-down" data-s="16" data-c="#fff"></span> Generar comparación semanal en PDF</button>
+                <button id="btn-listo-comparacion" onclick="generarInformeConComparacion()" style="display:none;width:100%;background:linear-gradient(135deg,#0d9488,#14b8a6);color:white;border:none;border-radius:12px;padding:13px;font-size:0.9rem;font-weight:700;cursor:pointer;margin-top:8px;align-items:center;justify-content:center;gap:6px;"><span class="pc-icon-hydrate" data-i="file-down" data-s="16" data-c="#fff"></span> Generar análisis comparativo en PDF</button>
                 <button id="btn-dashboard-ejecutivo" onclick="generarDashboardEjecutivo()" style="display:none;width:100%;background:linear-gradient(135deg,#1e3a2f,#2b9348);color:white;border:none;border-radius:12px;padding:13px;font-size:0.9rem;font-weight:700;cursor:pointer;margin-top:8px;align-items:center;justify-content:center;gap:6px;"><span class="pc-icon-hydrate" data-i="clipboard-list" data-s="16" data-c="#fff"></span> Generar Dashboard Ejecutivo (2 páginas)</button>
             </div>
         </div>
@@ -2069,7 +2069,7 @@ document.addEventListener('DOMContentLoaded', function() {
         renderBlocks('localStorage', lsBlocks);
         renderBlocks('sessionStorage', ssBlocks);
 
-        html += '<div style="font-weight:700;margin:12px 0 6px;color:#1e3a2f;">Memoria comparación semanal</div>';
+        html += '<div style="font-weight:700;margin:12px 0 6px;color:#1e3a2f;">Memoria análisis comparativo</div>';
         html += '<pre style="padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;white-space:pre-wrap;word-break:break-all;font-size:0.68rem;">'
             + proyecarEscHtmlDiag(JSON.stringify(mem, null, 2)) + '</pre>';
 
@@ -3186,12 +3186,12 @@ document.addEventListener('DOMContentLoaded', function() {
         var histFull = frenteNormSinAcentos(frenteTextoMatchCompleto(histF));
         var actFull = frenteNormSinAcentos(frenteTextoMatchCompleto(actual));
 
-        // Contención parcial del nombre limpio (mín. 4 chars)
-        if (actClean && histClean && Math.min(actClean.length, histClean.length) >= 4) {
+        // Contención parcial del nombre limpio (mín. 3 chars para sectores cortos tipo "Box")
+        if (actClean && histClean && Math.min(actClean.length, histClean.length) >= 3) {
             if (actClean.indexOf(histClean) >= 0 || histClean.indexOf(actClean) >= 0) return true;
         }
-        if (actClean && histFull && actClean.length >= 4 && histFull.indexOf(actClean) >= 0) return true;
-        if (histClean && actFull && histClean.length >= 4 && actFull.indexOf(histClean) >= 0) return true;
+        if (actClean && histFull && actClean.length >= 3 && histFull.indexOf(actClean) >= 0) return true;
+        if (histClean && actFull && histClean.length >= 3 && actFull.indexOf(histClean) >= 0) return true;
 
         var actCienaga = esFrenteGrupoCienaga(actual) || nombreContieneCienaga(actual.nombre) || nombreContieneCienaga(actual.zona);
         var histCienaga = esFrenteGrupoCienaga(histF) || nombreContieneCienaga(histF.nombre) || nombreContieneCienaga(histF.zona);
@@ -3213,32 +3213,20 @@ document.addEventListener('DOMContentLoaded', function() {
         return frenteNombreFlexibleCoincide(actual, histF);
     }
     /**
-     * Motor único de matching (Comparar Inspecciones + comparación semanal).
-     * Prioridad: 1) N° contrato  2) nombre flexible  3) tentative si solo contrato.
+     * Motor único de matching (Comparar Inspecciones + análisis comparativo).
+     * Prioridad: 1) nombre flexible  2) N° contrato refuerza  3) sin nombre similar → sin match.
      */
     function clasificarMatchFrente(actual, histF) {
         if (!actual || !histF) return { level: 'none' };
-        var sameContract = frenteContratoNumeroCoincide(actual, histF);
         var nameExact = frenteNombreExacto(actual, histF);
         var nameFlex = frenteNombreFlexibleCoincide(actual, histF);
+        var sameContract = frenteContratoNumeroCoincide(actual, histF);
 
-        if (sameContract) {
-            if (nameExact) return { level: 'exact' };
-            if (nameFlex) return { level: 'legacy' };
-            // Mismo contrato, sin palabras en común → confirmar manualmente
-            return { level: 'tentative', histF: histF };
+        if (nameExact || nameFlex) {
+            if (sameContract) return { level: 'exact' };
+            return { level: 'legacy' };
         }
-
-        // Sin N° de contrato en ambos lados: permitir match por nombre (+ contratista si existe)
-        var ca = frenteNumeroContratoNorm(actual);
-        var cb = frenteNumeroContratoNorm(histF);
-        if (!ca && !cb) {
-            var sameContratista = frenteNormStr(actual.contratista) === frenteNormStr(histF.contratista);
-            var contratistaVacio = !frenteNormStr(actual.contratista) && !frenteNormStr(histF.contratista);
-            if (nameExact && (sameContratista || contratistaVacio)) return { level: 'exact' };
-            if (nameFlex && (sameContratista || contratistaVacio)) return { level: 'legacy' };
-            if (nameFlex) return { level: 'tentative', histF: histF };
-        }
+        if (sameContract) return { level: 'tentative', histF: histF };
         return { level: 'none' };
     }
     function frenteMatchUnificado(f, ref) {
@@ -4795,13 +4783,14 @@ document.addEventListener('DOMContentLoaded', function() {
             + 'Ítems: ' + totalMej + ' mejoraron, ' + totalEmp + ' empeoraron, ' + totalIg + ' iguales.';
         var par = resolverParComparacionPdf(compD);
         var h = '<div style="page-break-before:always;margin-top:20px;font-size:16px;">';
-        h += '<h3 style="font-size:1rem;font-weight:700;color:#1e3a2f;margin-bottom:12px;page-break-after:avoid;break-after:avoid;">Comparación Semanal por Frente</h3>';
+        h += '<h3 style="font-size:1rem;font-weight:700;color:#1e3a2f;margin-bottom:12px;page-break-after:avoid;break-after:avoid;">Análisis comparativo de inspecciones por Frente</h3>';
         h += htmlEncabezadoParComparacion(par.reciente, par.anterior, { escFn: eH, pdfMode: true });
         h += '<div style="background:#f3f4f6;border:1px solid #d1d5db;border-radius:8px;padding:12px;margin-bottom:14px;font-size:0.78rem;line-height:1.45;">' + eH(resumen) + '</div>';
         if (compD.omitidos && compD.omitidos.length) {
             h += '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px;margin-bottom:14px;font-size:0.78rem;color:#b45309;line-height:1.45;">';
             compD.omitidos.forEach(function(o) {
-                h += '<div>Frente ' + eH(o.nombre) + ' sin historial previo — no incluido en comparación</div>';
+                var nomO = o.nomDisplay || o.nombre || 'Sin nombre';
+                h += '<div>Sin historial previo para ' + eH(nomO) + '</div>';
             });
             h += '</div>';
         }
@@ -5065,7 +5054,7 @@ document.addEventListener('DOMContentLoaded', function() {
         h += '<div class="dash-charts">';
         h += '<div class="dash-title" style="text-align:center;margin-bottom:10px;">'
             + '<div style="font-size:14pt;font-weight:800;color:#1e3a2f;letter-spacing:.02em;">DASHBOARD EJECUTIVO</div>'
-            + '<div style="font-size:9pt;color:#64748b;margin-top:3px;">Comparación semanal — vista gráfica</div></div>';
+            + '<div style="font-size:9pt;color:#64748b;margin-top:3px;">Análisis comparativo — vista gráfica</div></div>';
         // Municipio y Zona NO se muestran aquí: se aclaran una sola vez más abajo,
         // en el encabezado agrupado de la zona (Ciénaga de la Virgen). Las tarjetas
         // ANTERIOR / MÁS RECIENTE quedan con su contenido original (nombre + fecha).
@@ -5134,7 +5123,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function generarDashboardEjecutivo() {
         var compD = window._compPdfData;
         if (!compD || !compD.comparables || !compD.comparables.length) {
-            alert('No hay datos de comparación semanal para generar el dashboard.');
+            alert('No hay datos de análisis comparativo para generar el dashboard.');
             return;
         }
         if (typeof CompMotor === 'undefined' || !CompMotor.capturarGraficasParaPdf) {
@@ -7155,6 +7144,189 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     })();
 
+    function inspeccionActualParaAnalisis() {
+        if (typeof saveToLocal === 'function') saveToLocal();
+        var fechaEl = document.getElementById('fecha');
+        if (fechaEl) {
+            var fechaNorm = normalizarFechaInspeccionYMD(fechaEl.value);
+            if (fechaEl.value !== fechaNorm) fechaEl.value = fechaNorm;
+        }
+        var areasEval = typeof obtenerFiltroCategoriasActivas === 'function' ? obtenerFiltroCategoriasActivas() : [];
+        var frentesBase = typeof frentes !== 'undefined' ? frentes : [];
+        var frentesFiltrados = typeof frentesParaInspeccionActiva === 'function'
+            ? frentesParaInspeccionActiva(frentesBase, areasEval)
+            : frentesBase;
+        return {
+            proyecto: (document.getElementById('proyecto') || {}).value || '',
+            fecha: (document.getElementById('fecha') || {}).value || '',
+            ubicacion: (document.getElementById('ubicacion') || {}).value || '',
+            inspector: (document.getElementById('inspector') || {}).value || '',
+            frentes: JSON.parse(JSON.stringify(frentesFiltrados)),
+            areasEvaluadas: areasEval.slice()
+        };
+    }
+
+    /** Busca el registro histórico más reciente cuyo frente coincide por nombre (flexible). */
+    function buscarHistorialFrentePorNombre(fActual, fechaActual) {
+        var hist = getHistorial();
+        var candidatos = [];
+        var fechaRef = fechaActual ? new Date(fechaActual).getTime() : 0;
+        hist.forEach(function(reg) {
+            if (!reg || !reg.frentes) return;
+            if (fechaActual && !isNaN(fechaRef)) {
+                var regFecha = new Date(reg.fecha || 0).getTime();
+                if (!isNaN(regFecha) && regFecha >= fechaRef) return;
+            }
+            (reg.frentes || []).forEach(function(hf) {
+                var mc = clasificarMatchFrente(fActual, hf);
+                if (mc.level === 'exact' || mc.level === 'legacy') {
+                    candidatos.push({
+                        insp: reg, frenteHist: hf, level: mc.level,
+                        fecha: reg.fecha || '', id: reg.id
+                    });
+                }
+            });
+        });
+        candidatos.sort(function(a, b) {
+            var fa = new Date(a.fecha || 0).getTime(), fb = new Date(b.fecha || 0).getTime();
+            if (fb !== fa) return fb - fa;
+            var ca = frenteContratoNumeroCoincide(fActual, a.frenteHist);
+            var cb = frenteContratoNumeroCoincide(fActual, b.frenteHist);
+            if (ca && !cb) return -1;
+            if (cb && !ca) return 1;
+            if (a.level === 'exact' && b.level !== 'exact') return -1;
+            if (b.level === 'exact' && a.level !== 'exact') return 1;
+            return (b.id || 0) - (a.id || 0);
+        });
+        return candidatos.length ? candidatos[0] : null;
+    }
+
+    /** Resuelve comparables frente a frente: cada frente actual busca su propio historial por nombre. */
+    function resolverAnalisisComparativoPorFrente() {
+        var actual = inspeccionActualParaAnalisis();
+        var filtroIds = actual.areasEvaluadas || [];
+        var frentesActivos = actual.frentes || [];
+        var comparables = [], omitidos = [];
+        if (!frentesActivos.length) {
+            return { modo: 'auto', reciente: actual, anterior: null, comparables: [], omitidos: [], sinFrentes: true };
+        }
+        frentesActivos.forEach(function(f) {
+            var match = buscarHistorialFrentePorNombre(f, actual.fecha);
+            var nomDisplay = limpiarNombreFrenteParaMatch(f.nombre) || f.nombre || 'Sin nombre';
+            if (!match) {
+                omitidos.push({
+                    nombre: f.nombre || 'Sin nombre',
+                    nomDisplay: nomDisplay,
+                    contratista: f.contratista,
+                    numeroContrato: f.numeroContrato
+                });
+                return;
+            }
+            var filtroArea = typeof areasEvaluadasParaComparacion === 'function'
+                ? areasEvaluadasParaComparacion(actual, match.insp, filtroIds)
+                : filtroIds;
+            var built = CompMotor.construirDesdePar(actual, match.insp, [f], { modo: 'auto', filtroAreaIds: filtroArea });
+            if (built.comparables && built.comparables[0]) comparables.push(built.comparables[0]);
+        });
+        return {
+            modo: 'auto',
+            reciente: actual,
+            anterior: comparables.length ? comparables[0].anterior : null,
+            comparables: comparables,
+            omitidos: omitidos
+        };
+    }
+
+    /** Análisis comparativo automático — matching por nombre de frente, no par global de historial. */
+    function ejecutarAnalisisComparativoAutomatico(opts) {
+        opts = opts || {};
+        var res = resolverAnalisisComparativoPorFrente();
+        window._compManualData = res;
+        window._compPdfData = res;
+        var hist = getHistorial();
+        if (res.comparables.length) {
+            var primAnterior = res.comparables[0].anterior;
+            window._comparisonData = {
+                reciente: res.reciente,
+                anterior: primAnterior,
+                idxReciente: -1,
+                idxAnterior: hist.indexOf(primAnterior)
+            };
+        } else {
+            window._comparisonData = null;
+        }
+        if (!window.comparacionSemanal) window.comparacionSemanal = {};
+        window.comparacionSemanal.inspeccion1 = res.comparables.length ? res.comparables[0].anterior : null;
+        window.comparacionSemanal.inspeccion2 = res.reciente;
+
+        var avisos = document.getElementById('cs-avisos');
+        if (avisos) {
+            if (res.omitidos && res.omitidos.length) {
+                avisos.style.display = '';
+                avisos.innerHTML = res.omitidos.map(function(o) {
+                    var nom = o.nomDisplay || o.nombre || 'Sin nombre';
+                    return '<div style="margin-bottom:4px;"><strong>Sin historial previo para ' + CompMotor.escHtml(nom) + '</strong></div>';
+                }).join('');
+            } else {
+                avisos.style.display = 'none';
+                avisos.innerHTML = '';
+            }
+        }
+
+        var meta = CompMotor.obtenerMetadatosFiltros(res);
+        var filtrosInit = poblarFiltrosComparacion(meta, {
+            filtroFrente: opts.filtroFrenteId || 'filtro-frente-pdf',
+            filtroArea: opts.filtroAreaId || 'filtro-area-pdf'
+        });
+        var bodyId = opts.bodyId || 'contenedor-graficas-pdf';
+        var filtroFrenteId = opts.filtroFrenteId || 'filtro-frente-pdf';
+        var filtroAreaId = opts.filtroAreaId || 'filtro-area-pdf';
+
+        function renderResultados(fF, fA) {
+            var body = document.getElementById(bodyId);
+            if (!body) return;
+            if (!res.comparables.length) {
+                body.innerHTML = '';
+                return;
+            }
+            CompMotor.renderizar(body, res, {
+                filtroFrente: fF,
+                filtroArea: fA,
+                mostrarEncabezado: opts.mostrarEncabezado !== false,
+                mostrarGuia: opts.mostrarGuia !== false,
+                compacto: !!opts.compacto,
+                idPrefix: opts.idPrefix || '',
+                onComplete: function(result) {
+                    window.graficasComparacionPDF = [];
+                    window.graficasComparacionPDF_todas = result.todas || [];
+                    if (opts.showPdfButtons) {
+                        var btnPdf = document.getElementById('btn-listo-comparacion');
+                        var btnDash = document.getElementById('btn-dashboard-ejecutivo');
+                        if (btnPdf && result.todas && result.todas.length) btnPdf.style.display = '';
+                        if (btnDash && result.todas && result.todas.length) btnDash.style.display = '';
+                    }
+                    if (opts.onComplete) opts.onComplete(result);
+                }
+            });
+        }
+
+        if (opts.bindFilters) {
+            var selF = document.getElementById(filtroFrenteId);
+            var selA = document.getElementById(filtroAreaId);
+            if (selF) selF.onchange = function() {
+                renderResultados(this.value, (document.getElementById(filtroAreaId) || {}).value || 'todas');
+            };
+            if (selA) selA.onchange = function() {
+                renderResultados((document.getElementById(filtroFrenteId) || {}).value || 'todos', this.value);
+            };
+        }
+
+        var fInit = opts.filtroFrenteInicial || filtrosInit.filtroFrenteInicial || 'todos';
+        var aInit = opts.filtroAreaInicial || 'todas';
+        renderResultados(fInit, aInit);
+        return res;
+    }
+
     function seleccionarParHistorialAutomatico() {
         var hist = getHistorial();
         if (!hist.length) return null;
@@ -7296,6 +7468,8 @@ document.addEventListener('DOMContentLoaded', function() {
         renderResultados(fInit, aInit);
         return window._compManualData;
     }
+    window.resolverAnalisisComparativoPorFrente = resolverAnalisisComparativoPorFrente;
+    window.ejecutarAnalisisComparativoAutomatico = ejecutarAnalisisComparativoAutomatico;
     window.seleccionarParHistorialAutomatico = seleccionarParHistorialAutomatico;
     window.ejecutarComparacionInspecciones = ejecutarComparacionInspecciones;
 
@@ -7685,7 +7859,7 @@ document.addEventListener('DOMContentLoaded', function() {
         modal.innerHTML =
             '<div style="background:white;border-radius:20px;padding:24px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.25);">' +
               '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">' +
-                '<h3 style="font-size:1rem;font-weight:700;color:#1e3a2f;margin:0;display:flex;align-items:center;gap:8px;">' + pcIcon('bar-chart-2', 18, '#1e3a2f') + ' Comparación Semanal</h3>' +
+                '<h3 style="font-size:1rem;font-weight:700;color:#1e3a2f;margin:0;display:flex;align-items:center;gap:8px;">' + pcIcon('bar-chart-2', 18, '#1e3a2f') + ' Análisis comparativo de inspecciones</h3>' +
                 '<button id="cs-close" aria-label="Cerrar" style="background:none;border:none;box-shadow:none;color:#6b7280;font-size:1.1rem;cursor:pointer;padding:4px 8px;line-height:1;display:inline-flex;align-items:center;">' + pcIcon('x', 18, '#6b7280') + '</button>' +
               '</div>' +
               '<div style="display:flex;align-items:center;justify-content:space-between;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;margin-bottom:10px;">' +
@@ -7734,7 +7908,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('filtro-area-pdf').addEventListener('change', _renderizarCompPdf);
 </script>
 <script>
-// ── Comparación Semanal — reutiliza motor de Comparar Inspecciones ──
+// ── Análisis comparativo de inspecciones — matching por frente ──
 var _csAbierto = false;
 window._csAbierto = false;
 
@@ -7756,8 +7930,8 @@ function csResetResumenComparacionSemanal() {
     var resumen = document.getElementById('cs-resumen-auto');
     if (resumen) {
         resumen.style.display = '';
-        resumen.innerHTML = '<div style="font-weight:700;color:#1e3a2f;margin-bottom:4px;">Comparación automática</div>'
-            + '<div style="color:#6b7280;">Activa el interruptor para comparar las dos inspecciones más recientes del historial.</div>';
+        resumen.innerHTML = '<div style="font-weight:700;color:#1e3a2f;margin-bottom:4px;">Análisis comparativo automático</div>'
+            + '<div style="color:#6b7280;">Activa el interruptor para comparar cada frente inspeccionado hoy con su historial previo (matching por nombre).</div>';
     }
     var avisos = document.getElementById('cs-avisos');
     var pendientesEl = document.getElementById('cs-pendientes');
@@ -7779,13 +7953,10 @@ function csSemanalGenerar() {
     var btnPdf = document.getElementById('btn-listo-comparacion');
     var btnDash = document.getElementById('btn-dashboard-ejecutivo');
     var filtros = document.getElementById('filtros-comp-pdf');
-    var par = typeof seleccionarParHistorialAutomatico === 'function' ? seleccionarParHistorialAutomatico() : null;
-    if (!par) {
-        if (contenedor) contenedor.innerHTML = '<div style="font-size:0.8rem;color:#6b7280;padding:8px 0;">Se necesitan al menos 2 inspecciones en el historial para comparar.</div>';
-        if (resumen) {
-            resumen.style.display = '';
-            resumen.innerHTML = '<div style="color:#6b7280;">Archiva al menos dos inspecciones en el historial para activar la comparación automática.</div>';
-        }
+
+    var res = typeof resolverAnalisisComparativoPorFrente === 'function' ? resolverAnalisisComparativoPorFrente() : null;
+    if (!res) {
+        if (contenedor) contenedor.innerHTML = '<div style="font-size:0.8rem;color:#6b7280;padding:8px 0;">No se pudo ejecutar el análisis comparativo.</div>';
         if (filtros) filtros.style.display = 'none';
         if (btnPdf) btnPdf.style.display = 'none';
         if (btnDash) btnDash.style.display = 'none';
@@ -7793,21 +7964,41 @@ function csSemanalGenerar() {
         window._compManualData = null;
         return;
     }
-    if (resumen) {
-        resumen.style.display = '';
-        resumen.innerHTML = '<div style="font-weight:700;color:#1e3a2f;margin-bottom:4px;">Comparación automática</div>'
-            + '<div style="color:#475569;">Reciente: <strong>' + CompMotor.escHtml(par.reciente.proyecto || 'Sin nombre') + '</strong> (' + CompMotor.escHtml(par.reciente.fecha || '') + ')'
-            + ' · Anterior: <strong>' + CompMotor.escHtml(par.anterior.proyecto || 'Sin nombre') + '</strong> (' + CompMotor.escHtml(par.anterior.fecha || '') + ')</div>';
+
+    if (res.sinFrentes) {
+        if (contenedor) contenedor.innerHTML = '<div style="font-size:0.8rem;color:#6b7280;padding:8px 0;">Agrega al menos un frente en la inspección actual para analizar.</div>';
+        if (resumen) {
+            resumen.style.display = '';
+            resumen.innerHTML = '<div style="color:#6b7280;">No hay frentes activos en la inspección de hoy.</div>';
+        }
+        if (filtros) filtros.style.display = 'none';
+        if (btnPdf) btnPdf.style.display = 'none';
+        if (btnDash) btnDash.style.display = 'none';
+        window._compPdfData = res;
+        window._compManualData = res;
+        return;
     }
-    if (filtros) filtros.style.display = '';
+
     if (contenedor) contenedor.innerHTML = '';
     if (btnPdf) btnPdf.style.display = 'none';
     if (btnDash) btnDash.style.display = 'none';
-    if (window.comparacionSemanal) {
-        window.comparacionSemanal.inspeccion1 = par.anterior;
-        window.comparacionSemanal.inspeccion2 = par.reciente;
+
+    if (resumen) {
+        resumen.style.display = '';
+        if (!res.comparables.length && res.omitidos.length) {
+            resumen.innerHTML = '<div style="font-weight:700;color:#1e3a2f;margin-bottom:4px;">Análisis por frente</div>'
+                + '<div style="color:#6b7280;">Ningún frente tiene historial previo con nombre similar. Revisa los avisos.</div>';
+        } else {
+            var txt = res.comparables.length + ' frente(s) con historial coincidente';
+            if (res.omitidos.length) txt += ' · ' + res.omitidos.length + ' sin historial previo';
+            resumen.innerHTML = '<div style="font-weight:700;color:#1e3a2f;margin-bottom:4px;">Análisis comparativo automático</div>'
+                + '<div style="color:#475569;">' + CompMotor.escHtml(txt) + ' · matching por nombre de frente/sector</div>';
+        }
     }
-    ejecutarComparacionInspecciones(par.reciente, par.anterior, {
+
+    if (filtros) filtros.style.display = res.comparables.length ? '' : 'none';
+
+    ejecutarAnalisisComparativoAutomatico({
         bodyId: 'contenedor-graficas-pdf',
         filtroFrenteId: 'filtro-frente-pdf',
         filtroAreaId: 'filtro-area-pdf',
