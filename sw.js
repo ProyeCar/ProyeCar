@@ -1,5 +1,5 @@
-// build: 2026-07-15-sync-historial-comparacion-semanal
-const APP_VERSION = '1.5.129';
+// build: 2026-07-15-normalizar-fecha-comparacion-semanal
+const APP_VERSION = '1.5.130';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {

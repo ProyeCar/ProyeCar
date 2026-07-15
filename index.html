@@ -1489,7 +1489,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.129";
+const APP_VERSION = "1.5.130";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 
 /** Fecha de HOY en Colombia (America/Bogota) como "YYYY-MM-DD".
@@ -1508,6 +1508,16 @@ function fechaHoyLocalYMD() {
   }
 }
 window.fechaHoyLocalYMD = fechaHoyLocalYMD;
+
+/** Normaliza YYYY-MM-DD de inspección: vacío o anterior a HOY (Colombia) → hoy. */
+function normalizarFechaInspeccionYMD(fechaStr) {
+  var hoy = fechaHoyLocalYMD();
+  var actual = (fechaStr || '').trim();
+  var esYMD = /^\d{4}-\d{2}-\d{2}$/.test(actual);
+  if (!actual || (esYMD && actual < hoy)) return hoy;
+  return actual;
+}
+window.normalizarFechaInspeccionYMD = normalizarFechaInspeccionYMD;
 const VERSION_NOTIFIED_KEY = 'proyecar_version_notificada';
 var _pwaRecargando = false;
 
@@ -3607,16 +3617,8 @@ document.addEventListener('DOMContentLoaded', function() {
             ]);
         }
         // Fecha de inspección: un borrador de un día anterior no debe arrastrar su fecha vieja.
-        // Si el campo quedó vacío o con una fecha anterior a HOY (Colombia), se pone HOY.
-        // (No se toca una fecha futura ni la de hoy; el usuario puede editarla manualmente si necesita fecha pasada.)
-        (function normalizarFechaInspeccionActual() {
-            var hoy = fechaHoyLocalYMD();
-            var actual = (fechaInput.value || '').trim();
-            var esYMD = /^\d{4}-\d{2}-\d{2}$/.test(actual);
-            if (!actual || (esYMD && actual < hoy)) {
-                if (actual !== hoy) { fechaInput.value = hoy; fechaBumped = true; }
-            }
-        })();
+        var fechaNorm = normalizarFechaInspeccionYMD(fechaInput.value);
+        if (fechaInput.value !== fechaNorm) { fechaInput.value = fechaNorm; fechaBumped = true; }
 
         // Backfill item.obs para ítems calificados sin observación
         var obsBackfillChanged = false;
@@ -6345,12 +6347,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         const stats = calcularPct(data.frentes, areasEval);
         const ahoraArchivo = new Date();
+        const fechaInspeccion = normalizarFechaInspeccionYMD(data.fecha);
+        if (fechaInput.value !== fechaInspeccion) fechaInput.value = fechaInspeccion;
         const registro = {
             id: Date.now(),
             archivedAt: fechaHoraArchivoColombia(ahoraArchivo),
             proyecto: data.proyecto,
-            fecha: fechaArchivoColombia(ahoraArchivo),
-            fechaInspeccionCampo: data.fecha || '',
+            fecha: fechaInspeccion,
+            fechaInspeccionCampo: fechaInspeccion,
             inspector: data.inspector,
             ubicacion: data.ubicacion,
             areasEvaluadas: areasEval,
@@ -8035,6 +8039,11 @@ function csZonaFrenteRef(f) {
 
 function csInspeccionActualParaComparar() {
     if (typeof saveToLocal === 'function') saveToLocal();
+    var fechaEl = document.getElementById('fecha');
+    if (fechaEl) {
+        var fechaNorm = normalizarFechaInspeccionYMD(fechaEl.value);
+        if (fechaEl.value !== fechaNorm) fechaEl.value = fechaNorm;
+    }
     var areasEval = csObtenerFiltroAreasActivas();
     var frentesBase = typeof frentes !== 'undefined' ? frentes : [];
     var frentesFiltrados = typeof window.frentesParaInspeccionActiva === 'function'
@@ -8397,6 +8406,7 @@ function csToggle() {
         body.style.display = 'none';
         sw.style.background = '#d1d5db';
         knob.style.transform = 'translateX(0)';
+        csResetResumenComparacionSemanal();
     }
 }
 </script>
