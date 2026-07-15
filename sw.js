@@ -1,5 +1,5 @@
-// build: 2026-07-13-match-contrato-nombre-flex
-const APP_VERSION = '1.5.125';
+// build: 2026-07-14-design-tokens-fase-a
+const APP_VERSION = '1.5.126';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {
