@@ -1522,7 +1522,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.141";
+const APP_VERSION = "1.5.142";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -4852,6 +4852,142 @@ document.addEventListener('DOMContentLoaded', function() {
         var bajo = area.pctReciente !== null && area.pctReciente !== undefined && area.pctReciente < 70;
         return pend || emp || bajo;
     }
+
+    function htmlBarraAccionesPdf(opts) {
+        opts = opts || {};
+        var compact = !!opts.compact;
+        var barStyle = compact
+            ? 'position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#0d3321,#1a5c35);padding:10px 14px;display:flex;gap:10px;align-items:center;'
+            : '';
+        var btnBack = compact
+            ? 'background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:20px;padding:7px 14px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0'
+            : 'background:rgba(255,255,255,.15);color:white;border:1px solid rgba(255,255,255,.4);border-radius:40px;padding:8px 16px;font-size:14px;font-weight:700;cursor:pointer;font-family:Calibri,Arial,sans-serif;flex-shrink:0';
+        var btnPrint = compact
+            ? 'background:#f59e0b;color:#fff;border:none;border-radius:20px;padding:8px 18px;font-weight:800;cursor:pointer;font-family:inherit;flex-shrink:0'
+            : 'background:#f59e0b;color:white;border:none;border-radius:40px;padding:10px 22px;font-size:15px;font-weight:800;cursor:pointer;font-family:Calibri,Arial,sans-serif;flex-shrink:0';
+        var spacer = compact
+            ? '<div class="spacer-dash" style="height:48px"></div>'
+            : '<div class="spacer"></div>';
+        var barOpen = compact
+            ? '<div class="no-print-bar" style="' + barStyle + '">'
+            : '<div class="no-print-bar">';
+        return barOpen
+            + '<button type="button" id="pc-pdf-volver" style="' + btnBack + '">&#8592; Volver</button>'
+            + '<button type="button" id="pc-pdf-imprimir" style="' + btnPrint + '">&#128424; Imprimir / Guardar PDF</button>'
+            + '</div>' + spacer;
+    }
+
+    function scriptAccionesPdfInforme() {
+        return '<script>(function(){'
+            + 'function pcPdfCerrar(){try{window.focus();if(window.opener&&!window.opener.closed){window.close();return;}}catch(e){}'
+            + 'try{window.close();}catch(e2){}'
+            + 'try{if(window.history.length>1){window.history.back();return;}}catch(e3){}'
+            + 'try{if(window.opener&&!window.opener.closed){window.opener.focus();}}catch(e4){}}'
+            + 'function pcPdfImprimir(){try{window.focus();setTimeout(function(){window.print();},150);}catch(e){}}'
+            + 'function pcPdfCablear(){var v=document.getElementById("pc-pdf-volver");var p=document.getElementById("pc-pdf-imprimir");'
+            + 'if(v)v.addEventListener("click",function(ev){ev.preventDefault();pcPdfCerrar();});'
+            + 'if(p)p.addEventListener("click",function(ev){ev.preventDefault();pcPdfImprimir();});}'
+            + 'if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",pcPdfCablear);}else{pcPdfCablear();}'
+            + '})();<\/script>';
+    }
+
+    function cablearBarraPdfVentana(win) {
+        if (!win || win.closed) return;
+        try {
+            var doc = win.document;
+            if (!doc) return;
+            var imprimir = function(ev) {
+                if (ev) ev.preventDefault();
+                try { win.focus(); setTimeout(function() { win.print(); }, 150); } catch (e) {}
+            };
+            var cerrar = function(ev) {
+                if (ev) ev.preventDefault();
+                try {
+                    if (win.opener && !win.opener.closed) { win.close(); return; }
+                } catch (e) {}
+                try { win.close(); } catch (e2) {}
+                try {
+                    if (win.history && win.history.length > 1) { win.history.back(); return; }
+                } catch (e3) {}
+                try {
+                    if (win.opener && !win.opener.closed) { win.opener.focus(); }
+                } catch (e4) {}
+            };
+            var btnP = doc.getElementById('pc-pdf-imprimir');
+            var btnV = doc.getElementById('pc-pdf-volver');
+            if (btnP) {
+                btnP.onclick = imprimir;
+                btnP.addEventListener('click', imprimir);
+            }
+            if (btnV) {
+                btnV.onclick = cerrar;
+                btnV.addEventListener('click', cerrar);
+            }
+        } catch (e) {}
+    }
+
+    function entregarHtmlEnVentanaPdf(h, pdfWin) {
+        pdfWin = pdfWin || window._pdfWin;
+        function trasEntrega(win, blobUrl) {
+            if (!win || win.closed) return;
+            var cablear = function() { cablearBarraPdfVentana(win); };
+            try {
+                if (win.document && win.document.readyState === 'complete') {
+                    cablear();
+                } else {
+                    win.addEventListener('load', function onLoad() {
+                        win.removeEventListener('load', onLoad);
+                        cablear();
+                    });
+                    setTimeout(cablear, 250);
+                }
+            } catch (e) {
+                setTimeout(cablear, 250);
+            }
+            if (blobUrl) {
+                setTimeout(function() { try { URL.revokeObjectURL(blobUrl); } catch (e2) {} }, 60000);
+            }
+        }
+        if (pdfWin && !pdfWin.closed) {
+            try {
+                pdfWin.document.open('text/html', 'replace');
+                pdfWin.document.write(h);
+                pdfWin.document.close();
+                pdfWin.focus();
+                trasEntrega(pdfWin);
+                return pdfWin;
+            } catch (e) {
+                try {
+                    var bu = URL.createObjectURL(new Blob([h], { type: 'text/html;charset=utf-8' }));
+                    pdfWin.location.href = bu;
+                    pdfWin.focus();
+                    trasEntrega(pdfWin, bu);
+                    return pdfWin;
+                } catch (e2) {}
+            }
+        }
+        try {
+            var bu2 = URL.createObjectURL(new Blob([h], { type: 'text/html;charset=utf-8' }));
+            var w2 = window.open(bu2, '_blank');
+            if (!w2) {
+                var a = document.createElement('a');
+                a.href = bu2;
+                a.target = '_blank';
+                a.rel = 'noopener';
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(function() { document.body.removeChild(a); }, 500);
+            } else {
+                trasEntrega(w2, bu2);
+            }
+            return w2;
+        } catch (e3) {
+            alert('Permite ventanas emergentes para ver el informe PDF.');
+            return null;
+        }
+    }
+    window.entregarHtmlEnVentanaPdf = entregarHtmlEnVentanaPdf;
+
     function construirHtmlDashboardEjecutivo(compD, graficas) {
         compD = compD || {};
         graficas = graficas || [];
@@ -4903,10 +5039,7 @@ document.addEventListener('DOMContentLoaded', function() {
             + '.dash-footer{margin-top:14px;padding-top:8px;border-top:1px solid #d1d5db;font-size:8pt;color:#64748b;page-break-inside:avoid}'
             + '@media print{.no-print-bar,.spacer-dash{display:none!important}}';
         var h = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Dashboard Ejecutivo CARDIQUE</title><style>' + CSS + '</style></head><body>';
-        h += '<div class="no-print-bar" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#0d3321,#1a5c35);padding:10px 14px;display:flex;gap:10px;">'
-            + '<button onclick="window.close()" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:20px;padding:7px 14px;font-weight:700;cursor:pointer;font-family:inherit">&#8592; Volver</button>'
-            + '<button onclick="window.print()" style="background:#f59e0b;color:#fff;border:none;border-radius:20px;padding:8px 18px;font-weight:800;cursor:pointer;font-family:inherit">&#128424; Imprimir / Guardar PDF</button></div>';
-        h += '<div class="spacer-dash" style="height:48px"></div>';
+        h += htmlBarraAccionesPdf({ compact: true });
 
         var totalGraficas = chartSlots.length;
         h += '<div class="dash-charts">';
@@ -4975,7 +5108,9 @@ document.addEventListener('DOMContentLoaded', function() {
         h += '<div class="dash-footer">'
             + '<div style="margin-bottom:3px;"><strong>Responsable:</strong> ' + esc(inspector) + '</div>'
             + '<div>Generado el ' + esc(fechaGen) + ' &middot; CARDIQUE &mdash; Área Técnica de Planeación &middot; Documento ejecutivo</div>'
-            + '</div></div></body></html>';
+            + '</div></div>';
+        h += scriptAccionesPdfInforme();
+        h += '</body></html>';
         return h;
     }
     function generarDashboardEjecutivo() {
@@ -4997,36 +5132,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (btnDash) { btnDash.disabled = false; btnDash.innerHTML = btnOrigHtml; }
         }
         function entregarDashboard(h) {
-            // document.write directo sobre la ventana pre-abierta; fallback a Blob URL
-            // (NO data: URL, que Chrome bloquea al navegar la pestaña).
-            if (window._pdfWin && !window._pdfWin.closed) {
-                try {
-                    window._pdfWin.document.open('text/html', 'replace');
-                    window._pdfWin.document.write(h);
-                    window._pdfWin.document.close();
-                    window._pdfWin.focus();
-                } catch (e) {
-                    try {
-                        var bu = URL.createObjectURL(new Blob([h], { type: 'text/html;charset=utf-8' }));
-                        window._pdfWin.location.href = bu;
-                        setTimeout(function() { URL.revokeObjectURL(bu); }, 60000);
-                    } catch (e2) {}
-                }
-            } else {
-                try {
-                    var bu2 = URL.createObjectURL(new Blob([h], { type: 'text/html;charset=utf-8' }));
-                    var w2 = window.open(bu2, '_blank');
-                    if (!w2) {
-                        var a = document.createElement('a');
-                        a.href = bu2; a.target = '_blank'; a.rel = 'noopener';
-                        document.body.appendChild(a); a.click();
-                        setTimeout(function() { document.body.removeChild(a); }, 500);
-                    }
-                    setTimeout(function() { URL.revokeObjectURL(bu2); }, 60000);
-                } catch (e3) {
-                    alert('Permite ventanas emergentes para ver el dashboard.');
-                }
-            }
+            entregarHtmlEnVentanaPdf(h, window._pdfWin);
             window._pdfWin = null;
         }
         CompMotor.capturarGraficasParaPdf(compD, {
@@ -5271,10 +5377,7 @@ document.addEventListener('DOMContentLoaded', function() {
             + '<\/head><body>';
 
         // Barra de herramientas (oculta al imprimir)
-        h += '<div class="no-print-bar">'
-            + '<button onclick="window.close()" style="background:rgba(255,255,255,.15);color:white;border:1px solid rgba(255,255,255,.4);border-radius:40px;padding:8px 16px;font-size:14px;font-weight:700;cursor:pointer;font-family:Calibri,Arial,sans-serif;flex-shrink:0">&#8592; Volver</button>'
-            + '<button onclick="window.print()" style="background:#f59e0b;color:white;border:none;border-radius:40px;padding:10px 22px;font-size:15px;font-weight:800;cursor:pointer;font-family:Calibri,Arial,sans-serif;flex-shrink:0">&#128424; Imprimir / Guardar PDF</button>'
-            + '</div><div class="spacer"></div>';
+        h += htmlBarraAccionesPdf({ compact: false });
 
         // Portada
         h += '<div class="portada">';
@@ -5580,6 +5683,7 @@ document.addEventListener('DOMContentLoaded', function() {
             window.graficasComparacionPDF = null;
         }
 
+        h += scriptAccionesPdfInforme();
         h += '<\/body><\/html>';
 
         if (window._informeHtmlCallback) {
@@ -5592,32 +5696,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // ── 9. Abrir informe ──
-        // document.write() sobre la ventana pre-abierta: sin URL en pie de página,
-        // sin bloqueo de popup en iOS Safari, datos y fotos visibles
-        if (window._pdfWin && !window._pdfWin.closed) {
-            try {
-                window._pdfWin.document.open('text/html', 'replace');
-                window._pdfWin.document.write(h);
-                window._pdfWin.document.close();
-                window._pdfWin.focus();
-            } catch(e) {
-                var fb  = new Blob([h], {type:'text/html;charset=utf-8'});
-                var fbu = URL.createObjectURL(fb);
-                window._pdfWin.location.href = fbu;
-                setTimeout(function(){ URL.revokeObjectURL(fbu); }, 60000);
-            }
-        } else {
-            var fb  = new Blob([h], {type:'text/html;charset=utf-8'});
-            var fbu = URL.createObjectURL(fb);
-            var w2 = window.open(fbu, '_blank');
-            if (!w2) {
-                var a4  = document.createElement('a');
-                a4.href = fbu; a4.target = '_blank'; a4.rel = 'noopener';
-                document.body.appendChild(a4); a4.click();
-                setTimeout(function(){ document.body.removeChild(a4); }, 500);
-            }
-            setTimeout(function(){ URL.revokeObjectURL(fbu); }, 60000);
-        }
+        entregarHtmlEnVentanaPdf(h, window._pdfWin);
         window._pdfWin = null;
 
         // Sincronizar informe con Supabase + R2 (offline-first, ver sincronizarInforme)
