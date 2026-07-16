@@ -1522,7 +1522,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.145";
+const APP_VERSION = "1.5.146";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -4930,96 +4930,98 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     window.cerrarOverlayPdf = cerrarOverlayPdf;
 
-    // Inyecta CSS en el HTML del informe ANTES de cargarlo en el iframe sandboxed
-    // (sin allow-same-origin no se puede tocar contentDocument desde el padre).
-    function inyectarCssOcultarBarraPdf(html) {
-        var css = '<style id="pc-pdf-overlay-hide">.no-print-bar{display:none!important}.spacer,.spacer-dash{display:none!important}</style>';
-        if (/<\/head>/i.test(html)) {
-            return html.replace(/<\/head>/i, css + '</head>');
+    // Prepara el HTML del informe para el overlay sandboxed (sin allow-same-origin):
+    // - viewport + CSS de pantalla a ancho completo (evita vista "comprimida")
+    // - Imprimir/Volver viven DENTRO del iframe: print() con gesto real del usuario
+    //   (Chrome bloquea contentWindow.print() desde el padre en iframes de origen opaco)
+    // - Volver avisa al padre con postMessage (window.close no cierra el overlay)
+    function prepararHtmlVistaPdfOverlay(html, hintText) {
+        var headBits = '';
+        if (!/name=["']viewport["']/i.test(html)) {
+            headBits += '<meta name="viewport" content="width=device-width,initial-scale=1">';
         }
-        if (/<body[\s>]/i.test(html)) {
-            return html.replace(/<body([^>]*)>/i, '<body$1>' + css);
+        headBits += '<style id="pc-pdf-overlay-screen">'
+            + 'html{width:100%!important;height:100%;margin:0;padding:0;-webkit-text-size-adjust:100%;text-size-adjust:100%}'
+            + 'body{width:100%!important;max-width:100%!important;margin:0!important;min-height:100%;box-sizing:border-box}'
+            + '@media screen{'
+            + '.no-print-bar{position:fixed!important;top:0;left:0;right:0;z-index:9999;display:flex!important;align-items:center;gap:10px;'
+            + 'padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top,0px));'
+            + 'background:linear-gradient(135deg,#0d3321,#1a5c35)!important;box-sizing:border-box}'
+            + '.spacer,.spacer-dash{display:block!important;height:56px!important;flex-shrink:0}'
+            + '.pc-pdf-hint{background:#ecfdf5;color:#166534;font-size:12.5px;line-height:1.4;padding:8px 14px;border-bottom:1px solid #bbf7d0}'
+            + '}'
+            + '@media print{.pc-pdf-hint{display:none!important}}'
+            + '</style>';
+        headBits += '<script>(function(){'
+            + 'function pcPrint(ev){if(ev){ev.preventDefault();ev.stopPropagation();}try{window.focus();window.print();}catch(e){}}'
+            + 'function pcClose(ev){if(ev){ev.preventDefault();ev.stopPropagation();}'
+            + 'try{if(window.parent&&window.parent!==window){window.parent.postMessage({type:"pc-pdf-close"},"*");return;}}catch(e){}'
+            + 'try{window.close();}catch(e2){}}'
+            + 'function wire(){var p=document.getElementById("pc-pdf-imprimir");var v=document.getElementById("pc-pdf-volver");'
+            + 'if(p){p.onclick=null;p.addEventListener("click",pcPrint,true);}if(v){v.onclick=null;v.addEventListener("click",pcClose,true);}}'
+            + 'if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",wire);else wire();'
+            + '})();<\/script>';
+
+        var out = html || '';
+        if (/<\/head>/i.test(out)) {
+            out = out.replace(/<\/head>/i, headBits + '</head>');
+        } else if (/<body[\s>]/i.test(out)) {
+            out = out.replace(/<body([^>]*)>/i, '<body$1>' + headBits);
+        } else {
+            out = headBits + out;
         }
-        return css + html;
+        if (hintText) {
+            var hintHtml = '<div class="pc-pdf-hint" id="pc-pdf-hint"></div>'
+                + '<script>(function(){var el=document.getElementById("pc-pdf-hint");if(el)el.textContent='
+                + JSON.stringify(String(hintText)) + ';})();<\/script>';
+            // Inserta el hint justo después de la barra de acciones (o al inicio del body).
+            if (/class="no-print-bar"/i.test(out)) {
+                out = out.replace(/(class="no-print-bar"[^>]*>[\s\S]*?<\/div>)/i, '$1' + hintHtml);
+            } else if (/<body[^>]*>/i.test(out)) {
+                out = out.replace(/<body([^>]*)>/i, '<body$1>' + hintHtml);
+            }
+        }
+        return out;
     }
 
     // Entrega el informe DENTRO de la app como overlay a pantalla completa con un
-    // <iframe> sandboxed. Evita window.open/popups y aísla scripts del informe
-    // del origen de la PWA (sin allow-same-origin → no acceso a localStorage/IndexedDB).
-    // opts.hint: mensaje opcional no-bloqueante (p. ej. instrucción de WhatsApp).
+    // <iframe> sandboxed SIN allow-same-origin (scripts del informe no leen storage).
+    // Imprimir/Volver están en el documento del iframe (gesto de usuario → print permitido).
     function entregarHtmlEnVentanaPdf(h, opts) {
         opts = opts || {};
         if (!opts.hint && window._pdfHintPendiente) {
             opts.hint = window._pdfHintPendiente;
         }
         window._pdfHintPendiente = null;
-        // Cierra cualquier popup heredado del modelo anterior, por si quedó abierto.
         try { if (window._pdfWin && !window._pdfWin.closed) window._pdfWin.close(); } catch (e) {}
         window._pdfWin = null;
         cerrarOverlayPdf();
 
         var overlay = document.createElement('div');
         overlay.id = 'pc-pdf-overlay';
-        overlay.style.cssText = 'position:fixed;inset:0;z-index:100000;background:#525659;display:flex;flex-direction:column;';
-
-        var toolbar = document.createElement('div');
-        toolbar.style.cssText = 'flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top));background:linear-gradient(135deg,#0d3321,#1a5c35);box-shadow:0 2px 10px rgba(0,0,0,.3);';
-
-        var btnVolver = document.createElement('button');
-        btnVolver.type = 'button';
-        btnVolver.id = 'pc-pdf-volver';
-        btnVolver.textContent = '\u2190 Volver';
-        btnVolver.style.cssText = 'background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:40px;padding:9px 18px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;';
-
-        var btnImprimir = document.createElement('button');
-        btnImprimir.type = 'button';
-        btnImprimir.id = 'pc-pdf-imprimir';
-        btnImprimir.textContent = '\uD83D\uDDA8 Imprimir / Guardar PDF';
-        btnImprimir.style.cssText = 'background:#f59e0b;color:#fff;border:none;border-radius:40px;padding:10px 22px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;flex-shrink:0;margin-left:auto;';
-
-        toolbar.appendChild(btnVolver);
-        toolbar.appendChild(btnImprimir);
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:100000;background:#525659;display:flex;flex-direction:column;width:100%;height:100%;';
 
         var frame = document.createElement('iframe');
         frame.id = 'pc-pdf-frame';
-        frame.style.cssText = 'flex:1 1 auto;width:100%;border:0;background:#fff;';
+        frame.style.cssText = 'flex:1 1 auto;width:100%;height:100%;min-height:0;border:0;background:#fff;';
         frame.setAttribute('title', 'Vista del informe PDF');
-        // Sin allow-same-origin: origen opaco → scripts del informe no leen storage de la app.
-        // allow-scripts: Chart.js / init de gráficas. allow-modals: diálogo de impresión.
+        // Sin allow-same-origin: origen opaco → no acceso a localStorage/IndexedDB de la PWA.
+        // allow-scripts + allow-modals: gráficas e impresión iniciada DENTRO del iframe.
         frame.setAttribute('sandbox', 'allow-scripts allow-modals allow-downloads');
-
-        overlay.appendChild(toolbar);
-
-        if (opts.hint) {
-            var hint = document.createElement('div');
-            hint.style.cssText = 'flex:0 0 auto;background:#ecfdf5;color:#166534;font-size:12.5px;line-height:1.4;padding:8px 14px;border-bottom:1px solid #bbf7d0;';
-            hint.textContent = opts.hint;
-            overlay.appendChild(hint);
-        }
 
         overlay.appendChild(frame);
         document.body.appendChild(overlay);
         document.documentElement.classList.add('pc-pdf-open');
 
-        var imprimir = function(ev) {
-            if (ev) { ev.preventDefault(); ev.stopPropagation(); }
-            try {
-                var w = frame.contentWindow;
-                if (w) { w.focus(); w.print(); }
-                else { window.print(); }
-            } catch (e) {
-                try { window.print(); } catch (e2) {}
-            }
-        };
-        var volver = function(ev) {
-            if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+        function onMsg(ev) {
+            if (!ev || !ev.data || ev.data.type !== 'pc-pdf-close') return;
+            if (ev.source !== frame.contentWindow) return;
+            window.removeEventListener('message', onMsg);
             cerrarOverlayPdf();
-        };
-        btnImprimir.addEventListener('click', imprimir);
-        btnVolver.addEventListener('click', volver);
+        }
+        window.addEventListener('message', onMsg);
 
-        // CSS de ocultar barra interna va embebido en el HTML (sandbox bloquea contentDocument).
-        var htmlVista = inyectarCssOcultarBarraPdf(h || '');
+        var htmlVista = prepararHtmlVistaPdfOverlay(h || '', opts.hint || '');
         try {
             frame.srcdoc = htmlVista;
         } catch (e) {
@@ -5087,7 +5089,9 @@ document.addEventListener('DOMContentLoaded', function() {
             + '.dash-hallazgo{font-size:9pt;color:#374151;line-height:1.45;margin:3px 0 0 10px;overflow-wrap:break-word;word-wrap:break-word;word-break:normal;hyphens:none;-webkit-hyphens:none}'
             + '.dash-footer{margin-top:14px;padding-top:8px;border-top:1px solid #d1d5db;font-size:8pt;color:#64748b;page-break-inside:avoid}'
             + '@media print{.no-print-bar,.spacer-dash{display:none!important}}';
-        var h = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Dashboard Ejecutivo CARDIQUE</title><style>' + CSS + '</style></head><body>';
+        var h = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
+            + '<meta name="viewport" content="width=device-width,initial-scale=1">'
+            + '<title>Dashboard Ejecutivo CARDIQUE</title><style>' + CSS + '</style></head><body>';
         h += htmlBarraAccionesPdf({ compact: true });
 
         var totalGraficas = chartSlots.length;
