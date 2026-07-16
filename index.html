@@ -1522,7 +1522,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.138";
+const APP_VERSION = "1.5.139";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -5792,24 +5792,14 @@ document.addEventListener('DOMContentLoaded', function() {
     var _pdfLibsPromise = null;
     function cargarMotorPdfWhatsApp() {
         if (_pdfLibsPromise) return _pdfLibsPromise;
-        _pdfLibsPromise = Promise.all([
-            new Promise(function(resolve, reject) {
-                if (window.html2canvas) { resolve(); return; }
-                var s = document.createElement('script');
-                s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
-                s.onload = resolve;
-                s.onerror = function() { reject(new Error('No se pudo cargar el motor PDF (html2canvas). Verifica tu conexión.')); };
-                document.head.appendChild(s);
-            }),
-            new Promise(function(resolve, reject) {
-                if (window.jspdf && window.jspdf.jsPDF) { resolve(); return; }
-                var s = document.createElement('script');
-                s.src = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js';
-                s.onload = resolve;
-                s.onerror = function() { reject(new Error('No se pudo cargar el motor PDF (jsPDF). Verifica tu conexión.')); };
-                document.head.appendChild(s);
-            })
-        ]);
+        _pdfLibsPromise = new Promise(function(resolve, reject) {
+            if (window.html2pdf) { resolve(); return; }
+            var s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js';
+            s.onload = function() { resolve(); };
+            s.onerror = function() { reject(new Error('No se pudo cargar el motor PDF. Verifica tu conexión.')); };
+            document.head.appendChild(s);
+        });
         return _pdfLibsPromise;
     }
 
@@ -5822,55 +5812,68 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
         return Promise.all(waits).then(function() {
-            return new Promise(function(r) { setTimeout(r, 350); });
+            return new Promise(function(r) { setTimeout(r, 500); });
         });
     }
 
-    async function convertirHtmlAPdfBlob(htmlString) {
-        await cargarMotorPdfWhatsApp();
-        var jsPDF = window.jspdf.jsPDF;
+    function prepararIframePdfExport(htmlString) {
         var iframe = document.createElement('iframe');
         iframe.setAttribute('aria-hidden', 'true');
-        iframe.style.cssText = 'position:fixed;left:-10000px;top:0;width:794px;height:1123px;border:0;visibility:hidden;';
+        iframe.setAttribute('tabindex', '-1');
+        // Sin visibility:hidden: html2canvas no captura bien contenido oculto.
+        iframe.style.cssText = 'position:fixed;left:-12000px;top:0;width:794px;min-height:1123px;border:0;opacity:1;pointer-events:none;';
         document.body.appendChild(iframe);
         var idoc = iframe.contentDocument;
         idoc.open();
         idoc.write(htmlString);
         idoc.close();
         var inj = idoc.createElement('style');
-        inj.textContent = '.no-print-bar,.spacer,.spacer-dash{display:none!important}';
+        inj.textContent = [
+            '.no-print-bar,.spacer,.spacer-dash{display:none!important}',
+            'html,body{margin:0;padding:0;background:#fff!important;width:794px;max-width:794px}',
+            'body{-webkit-print-color-adjust:exact;print-color-adjust:exact}',
+            '.portada{page-break-after:always!important;break-after:page!important}',
+            '.frente-pg{page-break-before:always!important;break-before:page!important}',
+            '.dash-resumen{page-break-before:always!important;break-before:page!important}'
+        ].join('');
         idoc.head.appendChild(inj);
-        await esperarRecursosIframePdf(idoc);
-        return new Promise(function(resolve, reject) {
-            try {
-                var pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
-                pdf.html(idoc.body, {
-                    callback: function(doc) {
-                        try {
-                            resolve(doc.output('blob'));
-                        } catch (e) {
-                            reject(e);
-                        } finally {
-                            if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-                        }
-                    },
-                    margin: [20, 15, 25, 15],
-                    autoPaging: 'text',
-                    html2canvas: {
-                        scale: 0.8,
-                        useCORS: true,
-                        logging: false,
-                        allowTaint: true,
-                        windowWidth: 794
-                    },
-                    width: 180,
-                    windowWidth: 794
-                });
-            } catch (e) {
-                if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-                reject(e);
+        return { iframe: iframe, doc: idoc, body: idoc.body };
+    }
+
+    async function convertirHtmlAPdfBlob(htmlString) {
+        await cargarMotorPdfWhatsApp();
+        var ctx = prepararIframePdfExport(htmlString);
+        try {
+            await esperarRecursosIframePdf(ctx.doc);
+            var blob = await window.html2pdf().set({
+                margin: [10, 8, 12, 8],
+                filename: 'documento.pdf',
+                image: { type: 'jpeg', quality: 0.96 },
+                html2canvas: {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    allowTaint: true,
+                    backgroundColor: '#ffffff',
+                    scrollX: 0,
+                    scrollY: -window.scrollY,
+                    windowWidth: 794,
+                    width: 794
+                },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
+                pagebreak: {
+                    mode: ['css', 'legacy'],
+                    before: ['.frente-pg', '.dash-resumen'],
+                    avoid: ['.photo-card', '.photo-row', '.ck-table tr', '.kpi-row', '.dash-chart-cell', '.obs-block', '.rec-block', '.mini-kpi-row']
+                }
+            }).from(ctx.body).outputPdf('blob');
+            if (!blob || blob.size < 800) {
+                throw new Error('El PDF generado está vacío o corrupto.');
             }
-        });
+            return blob;
+        } finally {
+            if (ctx.iframe.parentNode) ctx.iframe.parentNode.removeChild(ctx.iframe);
+        }
     }
 
     function mostrarOverlayGenerandoPdfWhatsApp() {
