@@ -1522,7 +1522,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.144";
+const APP_VERSION = "1.5.145";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -4930,9 +4930,22 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     window.cerrarOverlayPdf = cerrarOverlayPdf;
 
+    // Inyecta CSS en el HTML del informe ANTES de cargarlo en el iframe sandboxed
+    // (sin allow-same-origin no se puede tocar contentDocument desde el padre).
+    function inyectarCssOcultarBarraPdf(html) {
+        var css = '<style id="pc-pdf-overlay-hide">.no-print-bar{display:none!important}.spacer,.spacer-dash{display:none!important}</style>';
+        if (/<\/head>/i.test(html)) {
+            return html.replace(/<\/head>/i, css + '</head>');
+        }
+        if (/<body[\s>]/i.test(html)) {
+            return html.replace(/<body([^>]*)>/i, '<body$1>' + css);
+        }
+        return css + html;
+    }
+
     // Entrega el informe DENTRO de la app como overlay a pantalla completa con un
-    // <iframe>. Evita window.open/popups (poco fiables en PWA standalone) y garantiza
-    // que "Volver" e "Imprimir/Guardar PDF" respondan siempre (son DOM real de la app).
+    // <iframe> sandboxed. Evita window.open/popups y aísla scripts del informe
+    // del origen de la PWA (sin allow-same-origin → no acceso a localStorage/IndexedDB).
     // opts.hint: mensaje opcional no-bloqueante (p. ej. instrucción de WhatsApp).
     function entregarHtmlEnVentanaPdf(h, opts) {
         opts = opts || {};
@@ -4955,13 +4968,13 @@ document.addEventListener('DOMContentLoaded', function() {
         var btnVolver = document.createElement('button');
         btnVolver.type = 'button';
         btnVolver.id = 'pc-pdf-volver';
-        btnVolver.innerHTML = '&#8592; Volver';
+        btnVolver.textContent = '\u2190 Volver';
         btnVolver.style.cssText = 'background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:40px;padding:9px 18px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;';
 
         var btnImprimir = document.createElement('button');
         btnImprimir.type = 'button';
         btnImprimir.id = 'pc-pdf-imprimir';
-        btnImprimir.innerHTML = '&#128424; Imprimir / Guardar PDF';
+        btnImprimir.textContent = '\uD83D\uDDA8 Imprimir / Guardar PDF';
         btnImprimir.style.cssText = 'background:#f59e0b;color:#fff;border:none;border-radius:40px;padding:10px 22px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;flex-shrink:0;margin-left:auto;';
 
         toolbar.appendChild(btnVolver);
@@ -4971,6 +4984,9 @@ document.addEventListener('DOMContentLoaded', function() {
         frame.id = 'pc-pdf-frame';
         frame.style.cssText = 'flex:1 1 auto;width:100%;border:0;background:#fff;';
         frame.setAttribute('title', 'Vista del informe PDF');
+        // Sin allow-same-origin: origen opaco → scripts del informe no leen storage de la app.
+        // allow-scripts: Chart.js / init de gráficas. allow-modals: diálogo de impresión.
+        frame.setAttribute('sandbox', 'allow-scripts allow-modals allow-downloads');
 
         overlay.appendChild(toolbar);
 
@@ -5002,25 +5018,13 @@ document.addEventListener('DOMContentLoaded', function() {
         btnImprimir.addEventListener('click', imprimir);
         btnVolver.addEventListener('click', volver);
 
-        // Al cargar el iframe, ocultamos la barra interna del informe (usamos la del
-        // overlay) para no duplicar controles.
-        frame.addEventListener('load', function() {
-            try {
-                var doc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document);
-                if (doc) {
-                    var st = doc.createElement('style');
-                    st.textContent = '.no-print-bar{display:none!important}.spacer,.spacer-dash{display:none!important}';
-                    (doc.head || doc.documentElement).appendChild(st);
-                }
-            } catch (e) {}
-        });
-
-        // srcdoc: renderiza el HTML aislado en el mismo origen, sin popup ni blob.
+        // CSS de ocultar barra interna va embebido en el HTML (sandbox bloquea contentDocument).
+        var htmlVista = inyectarCssOcultarBarraPdf(h || '');
         try {
-            frame.srcdoc = h;
+            frame.srcdoc = htmlVista;
         } catch (e) {
             try {
-                var bu = URL.createObjectURL(new Blob([h], { type: 'text/html;charset=utf-8' }));
+                var bu = URL.createObjectURL(new Blob([htmlVista], { type: 'text/html;charset=utf-8' }));
                 frame.src = bu;
                 setTimeout(function() { try { URL.revokeObjectURL(bu); } catch (e2) {} }, 60000);
             } catch (e3) {}
@@ -5032,7 +5036,11 @@ document.addEventListener('DOMContentLoaded', function() {
     function construirHtmlDashboardEjecutivo(compD, graficas) {
         compD = compD || {};
         graficas = graficas || [];
-        function esc(s) { return (s || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+        function esc(s) {
+            return (s || '').toString()
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
         var comparables = compD.comparables || [];
         var filtroFrente = (document.getElementById('filtro-frente-pdf') || {}).value || 'todos';
         var filtroArea = (document.getElementById('filtro-area-pdf') || {}).value || 'todas';
@@ -5364,7 +5372,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
         // ── 7. Helpers ──
-        function esc(v) { return (v||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+        function esc(v) {
+            return (v || '').toString()
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
         function pie(c,n,s,sz) {
             var tot=c+n+s; if(!tot) return '<svg width="'+sz+'" height="'+sz+'"><circle cx="'+sz/2+'" cy="'+sz/2+'" r="'+(sz/2-4)+'" fill="#e2e8f0"/></svg>';
             var cx=sz/2,cy=sz/2,r=sz/2-6,cols=['#2b9348','#dc2626','#6b7280'],vs=[c,n,s],p='',a=-90;
