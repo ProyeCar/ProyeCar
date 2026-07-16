@@ -1522,7 +1522,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.143";
+const APP_VERSION = "1.5.144";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -1821,8 +1821,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
                 <div id="contenedor-graficas-pdf" style="margin-top:8px;"></div>
-                <button id="btn-listo-comparacion" onclick="generarInformeConComparacion()" style="display:none;width:100%;background:linear-gradient(135deg,#0d9488,#14b8a6);color:white;border:none;border-radius:12px;padding:13px;font-size:0.9rem;font-weight:700;cursor:pointer;margin-top:8px;align-items:center;justify-content:center;gap:6px;"><span class="pc-icon-hydrate" data-i="file-down" data-s="16" data-c="#fff"></span> Generar análisis comparativo en PDF</button>
-                <button id="btn-dashboard-ejecutivo" onclick="generarDashboardEjecutivo()" style="display:none;width:100%;background:linear-gradient(135deg,#1e3a2f,#2b9348);color:white;border:none;border-radius:12px;padding:13px;font-size:0.9rem;font-weight:700;cursor:pointer;margin-top:8px;align-items:center;justify-content:center;gap:6px;"><span class="pc-icon-hydrate" data-i="clipboard-list" data-s="16" data-c="#fff"></span> Generar Dashboard Ejecutivo (2 páginas)</button>
             </div>
         </div>
     </div>
@@ -1856,10 +1854,6 @@ document.addEventListener('DOMContentLoaded', function() {
             <button id="exportar-items-custom" class="herramienta-card herramienta-card--verde">
                 <span class="herramienta-icon-ring"><span class="pc-icon-hydrate" data-i="bar-chart-2" data-s="22" data-c="#1a5c35"></span></span>
                 <span class="herramienta-label">Compartir inspección</span>
-            </button>
-            <button id="generar-pdf" class="herramienta-card herramienta-card--ambar">
-                <span class="herramienta-icon-ring"><span class="pc-icon-hydrate" data-i="file-text" data-s="22" data-c="#d97706"></span></span>
-                <span class="herramienta-label">Generar informe para Dirección</span>
             </button>
         </div>
         <div class="herramientas-actions">
@@ -5268,12 +5262,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
 
-        btnGenerarPdf.onclick = function() {
-        // El informe se muestra en un overlay in-app (sin popups): no hace falta
-        // abrir ventana desde el gesto.
-        window._pdfWin = null;
-        generarInformeDireccion();
-    };
+        if (btnGenerarPdf) {
+            btnGenerarPdf.onclick = function() {
+                // El informe se muestra en un overlay in-app (sin popups): no hace falta
+                // abrir ventana desde el gesto.
+                window._pdfWin = null;
+                generarInformeDireccion();
+            };
+        }
 
     async function generarInformeDireccion() {
         // ── 1. Blur para que iOS Safari confirme el valor activo ──
@@ -5836,7 +5832,7 @@ document.addEventListener('DOMContentLoaded', function() {
             opts.push({
                 id: 'informe',
                 label: 'Informe general',
-                desc: 'Igual que «Generar PDF» en Herramientas'
+                desc: 'Informe de supervisión por frente de obra'
             });
         }
         var compD = asegurarDatosComparacionWhatsApp();
@@ -5844,12 +5840,12 @@ document.addEventListener('DOMContentLoaded', function() {
             opts.push({
                 id: 'comparativo',
                 label: 'Análisis comparativo en PDF',
-                desc: 'Igual que el botón verde de análisis comparativo'
+                desc: 'Comparación entre inspecciones con gráficas'
             });
             opts.push({
                 id: 'dashboard',
                 label: 'Dashboard Ejecutivo',
-                desc: 'Igual que «Dashboard Ejecutivo (2 páginas)»'
+                desc: 'Resumen ejecutivo en 2 páginas'
             });
         }
         return opts;
@@ -7790,7 +7786,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         document.getElementById('filtros-comp-pdf').style.display = '';
         document.getElementById('contenedor-graficas-pdf').innerHTML = '';
-        document.getElementById('btn-listo-comparacion').style.display = 'none';
         var labels = inspecciones.map(function(insp, i) {
             return (insp.fecha || 'Sin fecha') + (i === 0 ? ' (reciente)' : '');
         });
@@ -7831,7 +7826,6 @@ document.addEventListener('DOMContentLoaded', function() {
         var data = window._compPdfData || window._compManualData;
         if (!data || !data.comparables) return;
         if (typeof csActualizarResumenAnalisis === 'function') csActualizarResumenAnalisis();
-        document.getElementById('btn-listo-comparacion').style.display = 'none';
         window.graficasComparacionPDF = [];
         window.graficasComparacionPDF_todas = [];
         var contenedor = document.getElementById('contenedor-graficas-pdf');
