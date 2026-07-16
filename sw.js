@@ -1,5 +1,5 @@
-// build: 2026-07-16-whatsapp-selector-pdf-documentos
-const APP_VERSION = '1.5.137';
+// build: 2026-07-16-whatsapp-pdf-binario-jspdf
+const APP_VERSION = '1.5.138';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {

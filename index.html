@@ -1522,7 +1522,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.137";
+const APP_VERSION = "1.5.138";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -5712,7 +5712,7 @@ document.addEventListener('DOMContentLoaded', function() {
             opts.push({
                 id: 'informe',
                 label: 'Informe general',
-                desc: 'Inspección completa por frentes · imprimir como PDF'
+                desc: 'Inspección completa por frentes (PDF)'
             });
         }
         var compD = asegurarDatosComparacionWhatsApp();
@@ -5720,12 +5720,12 @@ document.addEventListener('DOMContentLoaded', function() {
             opts.push({
                 id: 'comparativo',
                 label: 'Análisis comparativo en PDF',
-                desc: 'Informe con sección comparativa de inspecciones'
+                desc: 'Informe con sección comparativa (PDF)'
             });
             opts.push({
                 id: 'dashboard',
                 label: 'Dashboard Ejecutivo',
-                desc: 'Vista ejecutiva de 2 páginas · imprimir como PDF'
+                desc: 'Vista ejecutiva de 2 páginas (PDF)'
             });
         }
         return opts;
@@ -5789,6 +5789,107 @@ document.addEventListener('DOMContentLoaded', function() {
         throw new Error('Tipo de informe no válido.');
     }
 
+    var _pdfLibsPromise = null;
+    function cargarMotorPdfWhatsApp() {
+        if (_pdfLibsPromise) return _pdfLibsPromise;
+        _pdfLibsPromise = Promise.all([
+            new Promise(function(resolve, reject) {
+                if (window.html2canvas) { resolve(); return; }
+                var s = document.createElement('script');
+                s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+                s.onload = resolve;
+                s.onerror = function() { reject(new Error('No se pudo cargar el motor PDF (html2canvas). Verifica tu conexión.')); };
+                document.head.appendChild(s);
+            }),
+            new Promise(function(resolve, reject) {
+                if (window.jspdf && window.jspdf.jsPDF) { resolve(); return; }
+                var s = document.createElement('script');
+                s.src = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js';
+                s.onload = resolve;
+                s.onerror = function() { reject(new Error('No se pudo cargar el motor PDF (jsPDF). Verifica tu conexión.')); };
+                document.head.appendChild(s);
+            })
+        ]);
+        return _pdfLibsPromise;
+    }
+
+    function esperarRecursosIframePdf(doc) {
+        var imgs = Array.prototype.slice.call(doc.querySelectorAll('img'));
+        var waits = imgs.map(function(img) {
+            if (img.complete && img.naturalWidth) return Promise.resolve();
+            return new Promise(function(resolve) {
+                img.onload = img.onerror = resolve;
+            });
+        });
+        return Promise.all(waits).then(function() {
+            return new Promise(function(r) { setTimeout(r, 350); });
+        });
+    }
+
+    async function convertirHtmlAPdfBlob(htmlString) {
+        await cargarMotorPdfWhatsApp();
+        var jsPDF = window.jspdf.jsPDF;
+        var iframe = document.createElement('iframe');
+        iframe.setAttribute('aria-hidden', 'true');
+        iframe.style.cssText = 'position:fixed;left:-10000px;top:0;width:794px;height:1123px;border:0;visibility:hidden;';
+        document.body.appendChild(iframe);
+        var idoc = iframe.contentDocument;
+        idoc.open();
+        idoc.write(htmlString);
+        idoc.close();
+        var inj = idoc.createElement('style');
+        inj.textContent = '.no-print-bar,.spacer,.spacer-dash{display:none!important}';
+        idoc.head.appendChild(inj);
+        await esperarRecursosIframePdf(idoc);
+        return new Promise(function(resolve, reject) {
+            try {
+                var pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
+                pdf.html(idoc.body, {
+                    callback: function(doc) {
+                        try {
+                            resolve(doc.output('blob'));
+                        } catch (e) {
+                            reject(e);
+                        } finally {
+                            if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+                        }
+                    },
+                    margin: [20, 15, 25, 15],
+                    autoPaging: 'text',
+                    html2canvas: {
+                        scale: 0.8,
+                        useCORS: true,
+                        logging: false,
+                        allowTaint: true,
+                        windowWidth: 794
+                    },
+                    width: 180,
+                    windowWidth: 794
+                });
+            } catch (e) {
+                if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+                reject(e);
+            }
+        });
+    }
+
+    function mostrarOverlayGenerandoPdfWhatsApp() {
+        var prev = document.getElementById('wa-pdf-generando');
+        if (prev) prev.remove();
+        var el = document.createElement('div');
+        el.id = 'wa-pdf-generando';
+        el.style.cssText = 'position:fixed;inset:0;z-index:10070;background:rgba(13,51,33,0.55);display:flex;align-items:center;justify-content:center;padding:20px;';
+        el.innerHTML = '<div style="background:#fff;border-radius:14px;padding:20px 24px;text-align:center;max-width:280px;box-shadow:0 12px 40px rgba(0,0,0,0.2);">'
+            + '<div style="font-weight:700;color:#1e3a2f;margin-bottom:6px;">Generando PDF…</div>'
+            + '<div style="font-size:0.78rem;color:#64748b;line-height:1.45;">Puede tardar unos segundos según el tamaño del informe.</div></div>';
+        document.body.appendChild(el);
+    }
+
+    function ocultarOverlayGenerandoPdfWhatsApp() {
+        var el = document.getElementById('wa-pdf-generando');
+        if (el) el.remove();
+    }
+
     async function compartirArchivoWhatsApp(file, mensajeCorto) {
         if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
             await navigator.share({
@@ -5805,7 +5906,7 @@ document.addEventListener('DOMContentLoaded', function() {
         a.click();
         setTimeout(function() { URL.revokeObjectURL(url); }, 5000);
         window.open(construirUrlWhatsApp(mensajeCorto), '_blank', 'noopener');
-        alert('Archivo descargado. Adjúntalo en WhatsApp desde el chat que se abrió.');
+        alert('PDF descargado. Adjúntalo en WhatsApp desde el chat que se abrió.');
     }
 
     function metaWhatsAppPdf(tipo) {
@@ -5831,16 +5932,19 @@ document.addEventListener('DOMContentLoaded', function() {
         var fecha = (document.getElementById('fecha') || {}).value || fechaHoyLocalYMD();
         var fab = document.getElementById('wa-fab');
         if (fab) fab.disabled = true;
+        mostrarOverlayGenerandoPdfWhatsApp();
         try {
             var html = await generarHtmlInformeWhatsApp(tipo);
+            var pdfBlob = await convertirHtmlAPdfBlob(html);
             var slug = String(proyecto).replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'informe';
             var meta = metaWhatsAppPdf(tipo);
-            var file = new File([html], 'ProyeCar_' + meta.archivo + '_' + slug + '_' + fecha + '.html', { type: 'text/html;charset=utf-8' });
-            var msg = meta.mensaje + ' — ' + proyecto + ' (' + fecha + '). Abre el archivo adjunto e imprime como PDF si lo necesitas.';
+            var file = new File([pdfBlob], 'ProyeCar_' + meta.archivo + '_' + slug + '_' + fecha + '.pdf', { type: 'application/pdf' });
+            var msg = meta.mensaje + ' — ' + proyecto + ' (' + fecha + ').';
             await compartirArchivoWhatsApp(file, msg);
         } catch (e) {
-            alert((e && e.message) ? e.message : 'No se pudo preparar el informe para WhatsApp.');
+            alert((e && e.message) ? e.message : 'No se pudo generar el PDF para WhatsApp.');
         } finally {
+            ocultarOverlayGenerandoPdfWhatsApp();
             if (fab) fab.disabled = false;
         }
     }
