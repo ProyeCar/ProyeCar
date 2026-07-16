@@ -1522,7 +1522,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.142";
+const APP_VERSION = "1.5.143";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -4926,65 +4926,112 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (e) {}
     }
 
-    function entregarHtmlEnVentanaPdf(h, pdfWin) {
-        pdfWin = pdfWin || window._pdfWin;
-        function trasEntrega(win, blobUrl) {
-            if (!win || win.closed) return;
-            var cablear = function() { cablearBarraPdfVentana(win); };
+    // Cierra cualquier overlay de PDF abierto previamente.
+    function cerrarOverlayPdf() {
+        var prev = document.getElementById('pc-pdf-overlay');
+        if (prev) {
+            try { prev.parentNode.removeChild(prev); } catch (e) {}
+        }
+        document.documentElement.classList.remove('pc-pdf-open');
+    }
+    window.cerrarOverlayPdf = cerrarOverlayPdf;
+
+    // Entrega el informe DENTRO de la app como overlay a pantalla completa con un
+    // <iframe>. Evita window.open/popups (poco fiables en PWA standalone) y garantiza
+    // que "Volver" e "Imprimir/Guardar PDF" respondan siempre (son DOM real de la app).
+    // opts.hint: mensaje opcional no-bloqueante (p. ej. instrucción de WhatsApp).
+    function entregarHtmlEnVentanaPdf(h, opts) {
+        opts = opts || {};
+        if (!opts.hint && window._pdfHintPendiente) {
+            opts.hint = window._pdfHintPendiente;
+        }
+        window._pdfHintPendiente = null;
+        // Cierra cualquier popup heredado del modelo anterior, por si quedó abierto.
+        try { if (window._pdfWin && !window._pdfWin.closed) window._pdfWin.close(); } catch (e) {}
+        window._pdfWin = null;
+        cerrarOverlayPdf();
+
+        var overlay = document.createElement('div');
+        overlay.id = 'pc-pdf-overlay';
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:100000;background:#525659;display:flex;flex-direction:column;';
+
+        var toolbar = document.createElement('div');
+        toolbar.style.cssText = 'flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top));background:linear-gradient(135deg,#0d3321,#1a5c35);box-shadow:0 2px 10px rgba(0,0,0,.3);';
+
+        var btnVolver = document.createElement('button');
+        btnVolver.type = 'button';
+        btnVolver.id = 'pc-pdf-volver';
+        btnVolver.innerHTML = '&#8592; Volver';
+        btnVolver.style.cssText = 'background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:40px;padding:9px 18px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0;';
+
+        var btnImprimir = document.createElement('button');
+        btnImprimir.type = 'button';
+        btnImprimir.id = 'pc-pdf-imprimir';
+        btnImprimir.innerHTML = '&#128424; Imprimir / Guardar PDF';
+        btnImprimir.style.cssText = 'background:#f59e0b;color:#fff;border:none;border-radius:40px;padding:10px 22px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;flex-shrink:0;margin-left:auto;';
+
+        toolbar.appendChild(btnVolver);
+        toolbar.appendChild(btnImprimir);
+
+        var frame = document.createElement('iframe');
+        frame.id = 'pc-pdf-frame';
+        frame.style.cssText = 'flex:1 1 auto;width:100%;border:0;background:#fff;';
+        frame.setAttribute('title', 'Vista del informe PDF');
+
+        overlay.appendChild(toolbar);
+
+        if (opts.hint) {
+            var hint = document.createElement('div');
+            hint.style.cssText = 'flex:0 0 auto;background:#ecfdf5;color:#166534;font-size:12.5px;line-height:1.4;padding:8px 14px;border-bottom:1px solid #bbf7d0;';
+            hint.textContent = opts.hint;
+            overlay.appendChild(hint);
+        }
+
+        overlay.appendChild(frame);
+        document.body.appendChild(overlay);
+        document.documentElement.classList.add('pc-pdf-open');
+
+        var imprimir = function(ev) {
+            if (ev) { ev.preventDefault(); ev.stopPropagation(); }
             try {
-                if (win.document && win.document.readyState === 'complete') {
-                    cablear();
-                } else {
-                    win.addEventListener('load', function onLoad() {
-                        win.removeEventListener('load', onLoad);
-                        cablear();
-                    });
-                    setTimeout(cablear, 250);
+                var w = frame.contentWindow;
+                if (w) { w.focus(); w.print(); }
+                else { window.print(); }
+            } catch (e) {
+                try { window.print(); } catch (e2) {}
+            }
+        };
+        var volver = function(ev) {
+            if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+            cerrarOverlayPdf();
+        };
+        btnImprimir.addEventListener('click', imprimir);
+        btnVolver.addEventListener('click', volver);
+
+        // Al cargar el iframe, ocultamos la barra interna del informe (usamos la del
+        // overlay) para no duplicar controles.
+        frame.addEventListener('load', function() {
+            try {
+                var doc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document);
+                if (doc) {
+                    var st = doc.createElement('style');
+                    st.textContent = '.no-print-bar{display:none!important}.spacer,.spacer-dash{display:none!important}';
+                    (doc.head || doc.documentElement).appendChild(st);
                 }
-            } catch (e) {
-                setTimeout(cablear, 250);
-            }
-            if (blobUrl) {
-                setTimeout(function() { try { URL.revokeObjectURL(blobUrl); } catch (e2) {} }, 60000);
-            }
-        }
-        if (pdfWin && !pdfWin.closed) {
-            try {
-                pdfWin.document.open('text/html', 'replace');
-                pdfWin.document.write(h);
-                pdfWin.document.close();
-                pdfWin.focus();
-                trasEntrega(pdfWin);
-                return pdfWin;
-            } catch (e) {
-                try {
-                    var bu = URL.createObjectURL(new Blob([h], { type: 'text/html;charset=utf-8' }));
-                    pdfWin.location.href = bu;
-                    pdfWin.focus();
-                    trasEntrega(pdfWin, bu);
-                    return pdfWin;
-                } catch (e2) {}
-            }
-        }
+            } catch (e) {}
+        });
+
+        // srcdoc: renderiza el HTML aislado en el mismo origen, sin popup ni blob.
         try {
-            var bu2 = URL.createObjectURL(new Blob([h], { type: 'text/html;charset=utf-8' }));
-            var w2 = window.open(bu2, '_blank');
-            if (!w2) {
-                var a = document.createElement('a');
-                a.href = bu2;
-                a.target = '_blank';
-                a.rel = 'noopener';
-                document.body.appendChild(a);
-                a.click();
-                setTimeout(function() { document.body.removeChild(a); }, 500);
-            } else {
-                trasEntrega(w2, bu2);
-            }
-            return w2;
-        } catch (e3) {
-            alert('Permite ventanas emergentes para ver el informe PDF.');
-            return null;
+            frame.srcdoc = h;
+        } catch (e) {
+            try {
+                var bu = URL.createObjectURL(new Blob([h], { type: 'text/html;charset=utf-8' }));
+                frame.src = bu;
+                setTimeout(function() { try { URL.revokeObjectURL(bu); } catch (e2) {} }, 60000);
+            } catch (e3) {}
         }
+        return overlay;
     }
     window.entregarHtmlEnVentanaPdf = entregarHtmlEnVentanaPdf;
 
@@ -5123,8 +5170,8 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('El motor de gráficos no está disponible.');
             return;
         }
-        // Ventana abierta SINCRÓNICAMENTE desde el gesto (evita bloqueo de popups).
-        window._pdfWin = window.open('', '_blank');
+        // El dashboard se muestra en overlay in-app (sin popups).
+        window._pdfWin = null;
         var btnDash = document.getElementById('btn-dashboard-ejecutivo');
         var btnOrigHtml = btnDash ? btnDash.innerHTML : '';
         if (btnDash) { btnDash.disabled = true; btnDash.textContent = 'Generando dashboard…'; }
@@ -5132,8 +5179,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (btnDash) { btnDash.disabled = false; btnDash.innerHTML = btnOrigHtml; }
         }
         function entregarDashboard(h) {
-            entregarHtmlEnVentanaPdf(h, window._pdfWin);
-            window._pdfWin = null;
+            entregarHtmlEnVentanaPdf(h);
         }
         CompMotor.capturarGraficasParaPdf(compD, {
             filtroFrente: (document.getElementById('filtro-frente-pdf') || {}).value || 'todos',
@@ -5223,9 +5269,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
         btnGenerarPdf.onclick = function() {
-        // iOS Safari requiere window.open() SINCRÓNICO desde el gesto del usuario
-        // Si se llama después de async/await, Safari lo bloquea como popup
-        window._pdfWin = window.open('', '_blank');
+        // El informe se muestra en un overlay in-app (sin popups): no hace falta
+        // abrir ventana desde el gesto.
+        window._pdfWin = null;
         generarInformeDireccion();
     };
 
@@ -5696,8 +5742,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // ── 9. Abrir informe ──
-        entregarHtmlEnVentanaPdf(h, window._pdfWin);
-        window._pdfWin = null;
+        entregarHtmlEnVentanaPdf(h);
 
         // Sincronizar informe con Supabase + R2 (offline-first, ver sincronizarInforme)
         try {
@@ -5810,11 +5855,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return opts;
     }
 
-    function mostrarAvisoPdfWhatsappListo() {
-        setTimeout(function() {
-            alert('Informe abierto en una nueva pestaña.\n\n1. Pulsa «Imprimir / Guardar PDF» en la barra superior.\n2. Guarda el PDF en tu dispositivo.\n3. Compártelo por WhatsApp adjuntando el archivo.');
-        }, 350);
-    }
+    var WA_PDF_HINT = 'Pulsa «Imprimir / Guardar PDF», guarda el archivo y adjúntalo en WhatsApp.';
 
     function dispararGeneradorPdfExistente(tipo) {
         if (tipo === 'mensaje') {
@@ -5826,9 +5867,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (tipo === 'informe') {
             window._compPdfHtml = null;
-            window._pdfWin = window.open('', '_blank');
+            window._pdfWin = null;
+            window._pdfHintPendiente = WA_PDF_HINT;
             generarInformeDireccion();
-            mostrarAvisoPdfWhatsappListo();
             return;
         }
         if (tipo === 'comparativo') {
@@ -5837,9 +5878,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert('No hay datos de comparación para generar el PDF.');
                 return;
             }
-            window._pdfWin = window.open('', '_blank');
+            window._pdfWin = null;
+            window._pdfHintPendiente = WA_PDF_HINT;
             generarInformeConComparacion();
-            mostrarAvisoPdfWhatsappListo();
             return;
         }
         if (tipo === 'dashboard') {
@@ -5848,8 +5889,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert('No hay datos para el Dashboard Ejecutivo.');
                 return;
             }
+            window._pdfHintPendiente = WA_PDF_HINT;
             generarDashboardEjecutivo();
-            mostrarAvisoPdfWhatsappListo();
         }
     }
 
@@ -7850,9 +7891,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (btnComp) { btnComp.disabled = false; btnComp.innerHTML = btnOrigHtml; }
                 window.graficasComparacionPDF = graficasPdf;
                 window._compPdfHtml = construirHtmlPdfComparacionAuto(compD, graficasPdf);
-                if (!window._pdfWin || window._pdfWin.closed) {
-                    window._pdfWin = window.open('', '_blank');
-                }
+                window._pdfWin = null;
                 generarInformeDireccion();
             }).catch(function() {
                 if (btnComp) { btnComp.disabled = false; btnComp.innerHTML = btnOrigHtml; }
