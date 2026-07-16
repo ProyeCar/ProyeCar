@@ -1,5 +1,5 @@
-// build: 2026-07-16-whatsapp-pdf-acciones-manuales
-const APP_VERSION = '1.5.140';
+// build: 2026-07-16-whatsapp-reusa-generadores-pdf
+const APP_VERSION = '1.5.141';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {

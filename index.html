@@ -1522,7 +1522,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.140";
+const APP_VERSION = "1.5.141";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -5712,7 +5712,7 @@ document.addEventListener('DOMContentLoaded', function() {
             opts.push({
                 id: 'informe',
                 label: 'Informe general',
-                desc: 'Inspección completa por frentes (PDF)'
+                desc: 'Igual que «Generar PDF» en Herramientas'
             });
         }
         var compD = asegurarDatosComparacionWhatsApp();
@@ -5720,241 +5720,57 @@ document.addEventListener('DOMContentLoaded', function() {
             opts.push({
                 id: 'comparativo',
                 label: 'Análisis comparativo en PDF',
-                desc: 'Informe con sección comparativa (PDF)'
+                desc: 'Igual que el botón verde de análisis comparativo'
             });
             opts.push({
                 id: 'dashboard',
                 label: 'Dashboard Ejecutivo',
-                desc: 'Vista ejecutiva de 2 páginas (PDF)'
+                desc: 'Igual que «Dashboard Ejecutivo (2 páginas)»'
             });
         }
         return opts;
     }
 
-    function generarHtmlInformeDireccionAsync(opts) {
-        opts = opts || {};
-        return new Promise(function(resolve, reject) {
-            window._informeHtmlCallback = resolve;
-            window._informeHtmlReject = reject;
-            var savedCompHtml = window._compPdfHtml;
-            if (!opts.incluirComparacion) window._compPdfHtml = null;
-            window._pdfWin = null;
-            generarInformeDireccion().catch(function(e) {
-                window._informeHtmlCallback = null;
-                window._informeHtmlReject = null;
-                if (!opts.incluirComparacion) window._compPdfHtml = savedCompHtml;
-                reject(e);
-            });
-        });
+    function mostrarAvisoPdfWhatsappListo() {
+        setTimeout(function() {
+            alert('Informe abierto en una nueva pestaña.\n\n1. Pulsa «Imprimir / Guardar PDF» en la barra superior.\n2. Guarda el PDF en tu dispositivo.\n3. Compártelo por WhatsApp adjuntando el archivo.');
+        }, 350);
     }
 
-    async function generarHtmlInformeWhatsApp(tipo) {
-        var proyecto = (document.getElementById('proyecto') || {}).value || 'Informe';
-        var fecha = (document.getElementById('fecha') || {}).value || fechaHoyLocalYMD();
-        var filtrosComp = {
-            filtroFrente: (document.getElementById('filtro-frente-pdf') || {}).value || 'todos',
-            filtroArea: (document.getElementById('filtro-area-pdf') || {}).value || 'todas'
-        };
-        if (tipo === 'informe') {
-            return generarHtmlInformeDireccionAsync({ incluirComparacion: false });
-        }
-        if (tipo === 'comparativo') {
-            var compD = window._compPdfData;
-            if (!compD || !compD.comparables || !compD.comparables.length) {
-                throw new Error('No hay datos de análisis comparativo.');
-            }
-            if (typeof CompMotor !== 'undefined' && CompMotor.capturarGraficasParaPdf) {
-                var graficasComp = await CompMotor.capturarGraficasParaPdf(compD, filtrosComp);
-                window._compPdfHtml = construirHtmlPdfComparacionAuto(compD, graficasComp || []);
-            }
-            return generarHtmlInformeDireccionAsync({ incluirComparacion: true });
-        }
-        if (tipo === 'dashboard') {
-            var compDash = window._compPdfData;
-            if (!compDash || !compDash.comparables || !compDash.comparables.length) {
-                throw new Error('No hay datos para el dashboard.');
-            }
-            if (typeof CompMotor === 'undefined' || !CompMotor.capturarGraficasParaPdf) {
-                throw new Error('Motor de gráficos no disponible.');
-            }
-            var graficasDash = await CompMotor.capturarGraficasParaPdf(compDash, Object.assign({}, filtrosComp, {
-                canvasW: COMP_GRAFICA_TYPO.dashW,
-                canvasH: COMP_GRAFICA_TYPO.dashH,
-                tickSizeX: COMP_GRAFICA_TYPO.tickX * 2,
-                tickSizeY: COMP_GRAFICA_TYPO.tickY * 2,
-                pctFontSize: COMP_GRAFICA_TYPO.pctBar * 2
-            }));
-            return construirHtmlDashboardEjecutivo(compDash, graficasDash || []);
-        }
-        throw new Error('Tipo de informe no válido.');
-    }
-
-    var _pdfLibsPromise = null;
-    function cargarMotorPdfWhatsApp() {
-        if (_pdfLibsPromise) return _pdfLibsPromise;
-        _pdfLibsPromise = new Promise(function(resolve, reject) {
-            if (window.html2pdf) { resolve(); return; }
-            var s = document.createElement('script');
-            s.src = 'https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js';
-            s.onload = function() { resolve(); };
-            s.onerror = function() { reject(new Error('No se pudo cargar el motor PDF. Verifica tu conexión.')); };
-            document.head.appendChild(s);
-        });
-        return _pdfLibsPromise;
-    }
-
-    function esperarRecursosIframePdf(doc) {
-        var imgs = Array.prototype.slice.call(doc.querySelectorAll('img'));
-        var waits = imgs.map(function(img) {
-            if (img.complete && img.naturalWidth) return Promise.resolve();
-            return new Promise(function(resolve) {
-                img.onload = img.onerror = resolve;
-            });
-        });
-        return Promise.all(waits).then(function() {
-            return new Promise(function(r) { setTimeout(r, 500); });
-        });
-    }
-
-    function prepararIframePdfExport(htmlString) {
-        var iframe = document.createElement('iframe');
-        iframe.setAttribute('aria-hidden', 'true');
-        iframe.setAttribute('tabindex', '-1');
-        // Sin visibility:hidden: html2canvas no captura bien contenido oculto.
-        iframe.style.cssText = 'position:fixed;left:-12000px;top:0;width:794px;min-height:1123px;border:0;opacity:1;pointer-events:none;';
-        document.body.appendChild(iframe);
-        var idoc = iframe.contentDocument;
-        idoc.open();
-        idoc.write(htmlString);
-        idoc.close();
-        var inj = idoc.createElement('style');
-        inj.textContent = [
-            '.no-print-bar,.spacer,.spacer-dash{display:none!important}',
-            'html,body{margin:0;padding:0;background:#fff!important;width:794px;max-width:794px}',
-            'body{-webkit-print-color-adjust:exact;print-color-adjust:exact}',
-            '.portada{page-break-after:always!important;break-after:page!important}',
-            '.frente-pg{page-break-before:always!important;break-before:page!important}',
-            '.dash-resumen{page-break-before:always!important;break-before:page!important}'
-        ].join('');
-        idoc.head.appendChild(inj);
-        return { iframe: iframe, doc: idoc, body: idoc.body };
-    }
-
-    async function convertirHtmlAPdfBlob(htmlString) {
-        await cargarMotorPdfWhatsApp();
-        var ctx = prepararIframePdfExport(htmlString);
-        try {
-            await esperarRecursosIframePdf(ctx.doc);
-            var blob = await window.html2pdf().set({
-                margin: [10, 8, 12, 8],
-                filename: 'documento.pdf',
-                image: { type: 'jpeg', quality: 0.96 },
-                html2canvas: {
-                    scale: 2,
-                    useCORS: true,
-                    logging: false,
-                    allowTaint: true,
-                    backgroundColor: '#ffffff',
-                    scrollX: 0,
-                    scrollY: -window.scrollY,
-                    windowWidth: 794,
-                    width: 794
-                },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
-                pagebreak: {
-                    mode: ['css', 'legacy'],
-                    before: ['.frente-pg', '.dash-resumen'],
-                    avoid: ['.photo-card', '.photo-row', '.ck-table tr', '.kpi-row', '.dash-chart-cell', '.obs-block', '.rec-block', '.mini-kpi-row']
-                }
-            }).from(ctx.body).outputPdf('blob');
-            if (!blob || blob.size < 800) {
-                throw new Error('El PDF generado está vacío o corrupto.');
-            }
-            return blob;
-        } finally {
-            if (ctx.iframe.parentNode) ctx.iframe.parentNode.removeChild(ctx.iframe);
-        }
-    }
-
-    function mostrarOverlayGenerandoPdfWhatsApp() {
-        var prev = document.getElementById('wa-pdf-generando');
-        if (prev) prev.remove();
-        var el = document.createElement('div');
-        el.id = 'wa-pdf-generando';
-        el.style.cssText = 'position:fixed;inset:0;z-index:10070;background:rgba(13,51,33,0.55);display:flex;align-items:center;justify-content:center;padding:20px;';
-        el.innerHTML = '<div style="background:#fff;border-radius:14px;padding:20px 24px;text-align:center;max-width:280px;box-shadow:0 12px 40px rgba(0,0,0,0.2);">'
-            + '<div style="font-weight:700;color:#1e3a2f;margin-bottom:6px;">Generando PDF…</div>'
-            + '<div style="font-size:0.78rem;color:#64748b;line-height:1.45;">Puede tardar unos segundos según el tamaño del informe.</div></div>';
-        document.body.appendChild(el);
-    }
-
-    function ocultarOverlayGenerandoPdfWhatsApp() {
-        var el = document.getElementById('wa-pdf-generando');
-        if (el) el.remove();
-    }
-
-    function descargarArchivoPdf(file) {
-        var url = URL.createObjectURL(file);
-        var a = document.createElement('a');
-        a.href = url;
-        a.download = file.name;
-        a.click();
-        setTimeout(function() { URL.revokeObjectURL(url); }, 8000);
-    }
-
-    async function compartirArchivoPdfNativo(file, mensajeCorto) {
-        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({
-                title: file.name,
-                text: mensajeCorto,
-                files: [file]
-            });
-            return true;
-        }
-        return false;
-    }
-
-    async function generarArchivoPdfWhatsapp(tipo) {
-        var proyecto = (document.getElementById('proyecto') || {}).value || 'Informe';
-        var fecha = (document.getElementById('fecha') || {}).value || fechaHoyLocalYMD();
-        var html = await generarHtmlInformeWhatsApp(tipo);
-        var pdfBlob = await convertirHtmlAPdfBlob(html);
-        var slug = String(proyecto).replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'informe';
-        var meta = metaWhatsAppPdf(tipo);
-        var file = new File([pdfBlob], 'ProyeCar_' + meta.archivo + '_' + slug + '_' + fecha + '.pdf', { type: 'application/pdf' });
-        var msg = meta.mensaje + ' — ' + proyecto + ' (' + fecha + ').';
-        return { file: file, msg: msg };
-    }
-
-    async function ejecutarAccionPdfWhatsApp(tipo, accion) {
-        var fab = document.getElementById('wa-fab');
-        if (accion === 'mensaje') {
+    function dispararGeneradorPdfExistente(tipo) {
+        if (tipo === 'mensaje') {
             var proyecto = (document.getElementById('proyecto') || {}).value || 'Informe';
             var fecha = (document.getElementById('fecha') || {}).value || fechaHoyLocalYMD();
-            var meta = metaWhatsAppPdf(tipo);
-            var msg = meta.mensaje + ' — ' + proyecto + ' (' + fecha + ').';
+            var msg = metaWhatsAppPdf('informe').mensaje + ' — ' + proyecto + ' (' + fecha + ').';
             window.open(construirUrlWhatsApp(msg), '_blank', 'noopener');
             return;
         }
-        if (fab) fab.disabled = true;
-        mostrarOverlayGenerandoPdfWhatsApp();
-        try {
-            var pack = await generarArchivoPdfWhatsapp(tipo);
-            if (accion === 'descargar') {
-                descargarArchivoPdf(pack.file);
-                alert('PDF descargado: ' + pack.file.name + '\n\nAbre WhatsApp, elige el chat y adjunta el archivo desde Descargas o Archivos.');
-            } else if (accion === 'compartir') {
-                var compartido = await compartirArchivoPdfNativo(pack.file, pack.msg);
-                if (!compartido) {
-                    descargarArchivoPdf(pack.file);
-                    alert('PDF descargado. Tu dispositivo no permite elegir app al compartir — adjúntalo manualmente en WhatsApp.');
-                }
+        if (tipo === 'informe') {
+            window._compPdfHtml = null;
+            window._pdfWin = window.open('', '_blank');
+            generarInformeDireccion();
+            mostrarAvisoPdfWhatsappListo();
+            return;
+        }
+        if (tipo === 'comparativo') {
+            var compD = asegurarDatosComparacionWhatsApp();
+            if (!compD) {
+                alert('No hay datos de comparación para generar el PDF.');
+                return;
             }
-        } catch (e) {
-            alert((e && e.message) ? e.message : 'No se pudo generar el PDF.');
-        } finally {
-            ocultarOverlayGenerandoPdfWhatsApp();
-            if (fab) fab.disabled = false;
+            window._pdfWin = window.open('', '_blank');
+            generarInformeConComparacion();
+            mostrarAvisoPdfWhatsappListo();
+            return;
+        }
+        if (tipo === 'dashboard') {
+            var compDash = asegurarDatosComparacionWhatsApp();
+            if (!compDash) {
+                alert('No hay datos para el Dashboard Ejecutivo.');
+                return;
+            }
+            generarDashboardEjecutivo();
+            mostrarAvisoPdfWhatsappListo();
         }
     }
 
@@ -5976,39 +5792,6 @@ document.addEventListener('DOMContentLoaded', function() {
         return map[tipo] || map.informe;
     }
 
-    function mostrarAccionesPdfWhatsApp(tipo, label) {
-        var prev = document.getElementById('modal-wa-acciones');
-        if (prev) prev.remove();
-        var overlay = document.createElement('div');
-        overlay.id = 'modal-wa-acciones';
-        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(13,51,33,0.45);z-index:10060;display:flex;align-items:flex-end;justify-content:center;padding:12px;padding-bottom:calc(12px + env(safe-area-inset-bottom));';
-        overlay.innerHTML = '<div style="background:#fff;width:100%;max-width:400px;border-radius:16px;padding:16px 14px;box-shadow:0 20px 60px rgba(13,51,33,0.2);">'
-            + '<div style="font-weight:800;font-size:0.95rem;color:#1e3a2f;margin-bottom:4px;display:flex;align-items:center;gap:8px;">'
-            + pcIcon('file-text', 18, '#1a5c35') + ' ' + (label || 'Documento PDF') + '</div>'
-            + '<div style="font-size:0.75rem;color:#64748b;margin-bottom:14px;line-height:1.45;">Elige cómo enviar el PDF. No se adjunta solo en WhatsApp: tú decides descargar, compartir o abrir el chat.</div>'
-            + '<button type="button" data-accion="descargar" style="width:100%;text-align:left;padding:12px 14px;border:1px solid #bbf7d0;border-radius:12px;background:#f0fdf4;margin-bottom:8px;cursor:pointer;font-family:inherit;">'
-            + '<div style="font-weight:700;font-size:0.88rem;color:#166534;display:flex;align-items:center;gap:8px;">' + pcIcon('download', 16, '#166534') + ' Descargar PDF</div>'
-            + '<div style="font-size:0.72rem;color:#64748b;margin-top:4px;padding-left:24px;">Guarda el archivo y adjúntalo tú en WhatsApp</div></button>'
-            + '<button type="button" data-accion="compartir" style="width:100%;text-align:left;padding:12px 14px;border:1px solid #e2e8f0;border-radius:12px;background:#fff;margin-bottom:8px;cursor:pointer;font-family:inherit;">'
-            + '<div style="font-weight:700;font-size:0.88rem;color:#1e3a2f;display:flex;align-items:center;gap:8px;">' + pcIcon('share-2', 16, '#1a5c35') + ' Compartir PDF</div>'
-            + '<div style="font-size:0.72rem;color:#64748b;margin-top:4px;padding-left:24px;">Elige WhatsApp u otra app del sistema</div></button>'
-            + '<button type="button" data-accion="mensaje" style="width:100%;text-align:left;padding:12px 14px;border:1px solid #dcfce7;border-radius:12px;background:#fff;margin-bottom:8px;cursor:pointer;font-family:inherit;">'
-            + '<div style="font-weight:700;font-size:0.88rem;color:#16a34a;display:flex;align-items:center;gap:8px;">' + pcIcon('message-circle', 16, '#16a34a') + ' Solo mensaje en WhatsApp</div>'
-            + '<div style="font-size:0.72rem;color:#64748b;margin-top:4px;padding-left:24px;">Abre el chat con texto, sin generar PDF</div></button>'
-            + '<button type="button" id="wa-acciones-cancel" style="width:100%;padding:10px;border:none;border-radius:10px;background:#f1f5f9;color:#475569;font-weight:600;cursor:pointer;margin-top:4px;">Cancelar</button>'
-            + '</div>';
-        document.body.appendChild(overlay);
-        overlay.querySelectorAll('[data-accion]').forEach(function(btn) {
-            btn.onclick = function() {
-                var accion = btn.getAttribute('data-accion');
-                overlay.remove();
-                ejecutarAccionPdfWhatsApp(tipo, accion);
-            };
-        });
-        document.getElementById('wa-acciones-cancel').onclick = function() { overlay.remove(); };
-        overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
-    }
-
     function mostrarSelectorPdfWhatsApp(opciones) {
         var prev = document.getElementById('modal-wa-informe');
         if (prev) prev.remove();
@@ -6024,17 +5807,19 @@ document.addEventListener('DOMContentLoaded', function() {
         overlay.innerHTML = '<div style="background:#fff;width:100%;max-width:400px;border-radius:16px;padding:16px 14px;box-shadow:0 20px 60px rgba(13,51,33,0.2);">'
             + '<div style="font-weight:800;font-size:0.95rem;color:#1e3a2f;margin-bottom:4px;display:flex;align-items:center;gap:8px;">'
             + pcIcon('message-circle', 18, '#16a34a') + ' Compartir por WhatsApp</div>'
-            + '<div style="font-size:0.75rem;color:#64748b;margin-bottom:12px;">Elige el documento PDF y cómo enviarlo</div>'
+            + '<div style="font-size:0.75rem;color:#64748b;margin-bottom:12px;line-height:1.45;">Abre el mismo informe que ya genera ProyeCar. Guarda el PDF con «Imprimir / Guardar PDF» y adjúntalo en WhatsApp.</div>'
             + itemsHtml
-            + '<button type="button" id="wa-informe-cancel" style="width:100%;padding:10px;border:none;border-radius:10px;background:#f1f5f9;color:#475569;font-weight:600;cursor:pointer;margin-top:4px;">Cancelar</button>'
+            + '<button type="button" data-id="mensaje" class="wa-informe-opt" style="width:100%;text-align:left;padding:10px 14px;border:1px dashed #bbf7d0;border-radius:12px;background:#fafffe;margin-top:4px;cursor:pointer;font-family:inherit;">'
+            + '<div style="font-weight:600;font-size:0.82rem;color:#16a34a;display:flex;align-items:center;gap:8px;">'
+            + pcIcon('message-circle', 15, '#16a34a') + ' Solo mensaje de texto en WhatsApp</div></button>'
+            + '<button type="button" id="wa-informe-cancel" style="width:100%;padding:10px;border:none;border-radius:10px;background:#f1f5f9;color:#475569;font-weight:600;cursor:pointer;margin-top:8px;">Cancelar</button>'
             + '</div>';
         document.body.appendChild(overlay);
         overlay.querySelectorAll('.wa-informe-opt').forEach(function(btn) {
             btn.onclick = function() {
                 var id = btn.getAttribute('data-id');
-                var op = opciones.find(function(o) { return o.id === id; });
                 overlay.remove();
-                mostrarAccionesPdfWhatsApp(id, op ? op.label : 'Documento PDF');
+                dispararGeneradorPdfExistente(id);
             };
         });
         document.getElementById('wa-informe-cancel').onclick = function() { overlay.remove(); };
@@ -7986,7 +7771,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (btnComp) { btnComp.disabled = false; btnComp.innerHTML = btnOrigHtml; }
                 window.graficasComparacionPDF = graficasPdf;
                 window._compPdfHtml = construirHtmlPdfComparacionAuto(compD, graficasPdf);
-                window._pdfWin = window.open('', '_blank');
+                if (!window._pdfWin || window._pdfWin.closed) {
+                    window._pdfWin = window.open('', '_blank');
+                }
                 generarInformeDireccion();
             }).catch(function() {
                 if (btnComp) { btnComp.disabled = false; btnComp.innerHTML = btnOrigHtml; }
