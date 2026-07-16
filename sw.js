@@ -1,5 +1,5 @@
-// build: 2026-07-15-whatsapp-fab-pdf-compartir
-const APP_VERSION = '1.5.135';
+// build: 2026-07-15-whatsapp-dashboard-directo-check-frente
+const APP_VERSION = '1.5.136';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 
 self.addEventListener('install', event => {
