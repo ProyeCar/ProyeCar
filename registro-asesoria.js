@@ -1,6 +1,6 @@
 /**
  * Registro de Asesoría — Proceso de Planeación Estratégica (Versión 03)
- * Formulario offline, firmas táctiles reutilizables y PDF formato CARDIQUE.
+ * Formulario offline, firmas táctiles sobre línea y PDF formato CARDIQUE.
  */
 (function () {
     'use strict';
@@ -9,6 +9,7 @@
     var LS_FIRMAS = 'cardique_firmas_guardadas';
     var LOGO_URL = 'assets/cardique-logo-registro.jpg';
     var VERSION_FORMATO = '03';
+    var LINEA_ALTURA = 72;
     var _logoDataUrl = null;
 
     function leerJSON(key, def) {
@@ -34,6 +35,16 @@
         return (s || '').toString()
             .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function normalizarPersona(p) {
+        p = p || {};
+        return {
+            nombre: p.nombre || '',
+            cedula: p.cedula || '',
+            celular: p.celular || p.telefono || '',
+            entidad: p.entidad || ''
+        };
     }
 
     function obtenerRegistros() {
@@ -64,43 +75,63 @@
         }).catch(function() { return ''; });
     }
 
-    /** Componente reutilizable de firma táctil */
-    function crearFirmaTactil(mountEl, opts) {
+    function canvasVacio(ctx, canvas) {
+        var px = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        for (var pi = 0; pi < px.length; pi += 4) {
+            if (px[pi] !== 255 || px[pi + 1] !== 255 || px[pi + 2] !== 255) return false;
+        }
+        return true;
+    }
+
+    /** Firma táctil activada al tocar la línea horizontal */
+    function crearFirmaEnLinea(mountEl, opts) {
         opts = opts || {};
+        var lineLabel = opts.lineLabel || 'FIRMA';
         var signerKey = opts.signerKey || function() { return 'firmante'; };
-        var signerLabel = opts.signerLabel || 'Firmante';
-        var height = opts.height || 150;
 
         mountEl.innerHTML = ''
-            + '<div class="firma-panel">'
-            + '<div class="firma-panel-head"><span>' + escHtml(signerLabel) + '</span>'
-            + '<button type="button" class="firma-btn-usar" style="display:none;">Usar firma guardada</button></div>'
-            + '<canvas class="firma-canvas" height="' + height + '"></canvas>'
+            + '<div class="firma-linea-slot">'
+            + '<div class="firma-linea-zona" role="button" tabindex="0" aria-label="Tocar para firmar">'
+            + '<canvas class="firma-canvas-linea"></canvas>'
+            + '<img class="firma-linea-img" alt="" style="display:none">'
+            + '<span class="firma-linea-hint">Tocar la línea para firmar</span>'
+            + '</div>'
+            + '<div class="firma-linea-etiq">' + escHtml(lineLabel) + '</div>'
+            + '<div class="firma-linea-tools">'
+            + '<button type="button" class="firma-btn-usar" style="display:none;">Usar firma guardada</button>'
             + '<div class="firma-panel-actions">'
             + '<button type="button" class="firma-btn-borrar">Borrar</button>'
             + '<button type="button" class="firma-btn-aceptar">Aceptar</button>'
             + '</div>'
             + '<label class="firma-guardar-lbl"><input type="checkbox" class="firma-guardar-chk"> Guardar esta firma para futuros registros</label>'
-            + '<div class="firma-preview-wrap" style="display:none;"><img class="firma-preview" alt="Firma aceptada"/></div>'
+            + '</div>'
+            + '<button type="button" class="firma-linea-rehacer" style="display:none;">Borrar firma</button>'
             + '</div>';
 
-        var canvas = mountEl.querySelector('.firma-canvas');
+        var slot = mountEl.querySelector('.firma-linea-slot');
+        var zona = mountEl.querySelector('.firma-linea-zona');
+        var canvas = mountEl.querySelector('.firma-canvas-linea');
         var ctx = canvas.getContext('2d');
+        var img = mountEl.querySelector('.firma-linea-img');
+        var hint = mountEl.querySelector('.firma-linea-hint');
+        var tools = mountEl.querySelector('.firma-linea-tools');
         var btnBorrar = mountEl.querySelector('.firma-btn-borrar');
         var btnAceptar = mountEl.querySelector('.firma-btn-aceptar');
         var btnUsar = mountEl.querySelector('.firma-btn-usar');
+        var btnRehacer = mountEl.querySelector('.firma-linea-rehacer');
         var chkGuardar = mountEl.querySelector('.firma-guardar-chk');
-        var previewWrap = mountEl.querySelector('.firma-preview-wrap');
-        var previewImg = mountEl.querySelector('.firma-preview');
         var accepted = '';
         var isAccepted = false;
+        var isActive = false;
         var drawing = false;
 
         function resizeCanvas() {
-            var rect = canvas.getBoundingClientRect();
+            var rect = zona.getBoundingClientRect();
             var ratio = window.devicePixelRatio || 1;
-            canvas.width = Math.max(280, Math.floor(rect.width * ratio));
-            canvas.height = Math.floor(height * ratio);
+            var w = Math.max(120, Math.floor(rect.width * ratio));
+            var h = Math.floor(LINEA_ALTURA * ratio);
+            canvas.width = w;
+            canvas.height = h;
             ctx.setTransform(1, 0, 0, 1, 0, 0);
             ctx.scale(ratio, ratio);
             ctx.lineCap = 'round';
@@ -108,27 +139,24 @@
             ctx.strokeStyle = '#111827';
             ctx.lineWidth = 2.2;
             ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, rect.width, height);
-            if (accepted && isAccepted) {
-                var img = new Image();
-                img.onload = function() {
-                    ctx.drawImage(img, 0, 0, rect.width, height);
+            ctx.fillRect(0, 0, rect.width, LINEA_ALTURA);
+            if (isActive && accepted && !isAccepted) {
+                var tmp = new Image();
+                tmp.onload = function() {
+                    ctx.drawImage(tmp, 0, 0, rect.width, LINEA_ALTURA);
                 };
-                img.src = accepted;
+                tmp.src = accepted;
             }
         }
 
         function pos(ev) {
             var rect = canvas.getBoundingClientRect();
             var t = (ev.touches && ev.touches[0]) || (ev.changedTouches && ev.changedTouches[0]) || ev;
-            return {
-                x: t.clientX - rect.left,
-                y: t.clientY - rect.top
-            };
+            return { x: t.clientX - rect.left, y: t.clientY - rect.top };
         }
 
         function startDraw(ev) {
-            if (isAccepted) return;
+            if (!isActive || isAccepted) return;
             ev.preventDefault();
             drawing = true;
             var p = pos(ev);
@@ -136,7 +164,7 @@
             ctx.moveTo(p.x, p.y);
         }
         function moveDraw(ev) {
-            if (!drawing || isAccepted) return;
+            if (!drawing || !isActive || isAccepted) return;
             ev.preventDefault();
             var p = pos(ev);
             ctx.lineTo(p.x, p.y);
@@ -147,40 +175,71 @@
             drawing = false;
         }
 
+        function activar() {
+            if (isAccepted) return;
+            isActive = true;
+            slot.classList.add('firma-activa');
+            hint.style.display = 'none';
+            canvas.style.display = 'block';
+            tools.style.display = 'block';
+            btnRehacer.style.display = 'none';
+            resizeCanvas();
+            refrescarUsarGuardada();
+        }
+
+        function desactivarSinAceptar() {
+            isActive = false;
+            slot.classList.remove('firma-activa');
+            canvas.style.display = 'none';
+            tools.style.display = 'none';
+            if (!isAccepted) {
+                hint.style.display = 'block';
+                accepted = '';
+                resizeCanvas();
+            }
+        }
+
+        function mostrarAceptada(dataUrl) {
+            accepted = dataUrl;
+            isAccepted = true;
+            isActive = false;
+            img.src = dataUrl;
+            img.style.display = 'block';
+            canvas.style.display = 'none';
+            tools.style.display = 'none';
+            hint.style.display = 'none';
+            btnRehacer.style.display = 'inline-block';
+            slot.classList.remove('firma-activa');
+            slot.classList.add('firma-aceptada');
+        }
+
         function limpiarLienzo() {
             isAccepted = false;
+            isActive = false;
             accepted = '';
-            previewWrap.style.display = 'none';
-            canvas.style.display = 'block';
-            mountEl.querySelector('.firma-panel-actions').style.display = 'flex';
+            img.style.display = 'none';
+            img.src = '';
+            canvas.style.display = 'none';
+            tools.style.display = 'none';
+            hint.style.display = 'block';
+            btnRehacer.style.display = 'none';
+            chkGuardar.checked = false;
+            slot.classList.remove('firma-activa', 'firma-aceptada');
             resizeCanvas();
         }
 
         function aceptarFirma() {
             if (isAccepted) return accepted;
+            if (!isActive) activar();
             var blank = document.createElement('canvas');
             blank.width = canvas.width;
             blank.height = canvas.height;
-            var bctx = blank.getContext('2d');
-            bctx.drawImage(canvas, 0, 0);
+            blank.getContext('2d').drawImage(canvas, 0, 0);
             var data = blank.toDataURL('image/png');
-            var px = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-            var empty = true;
-            for (var pi = 0; pi < px.length; pi += 4) {
-                if (px[pi] !== 255 || px[pi + 1] !== 255 || px[pi + 2] !== 255) {
-                    empty = false;
-                    break;
-                }
-            }
-            if (empty) {
-                alert('Dibuja tu firma antes de aceptar.');
+            if (canvasVacio(ctx, canvas)) {
+                alert('Dibuja tu firma sobre la línea antes de aceptar.');
                 return '';
             }
-            accepted = data;
-            isAccepted = true;
-            previewImg.src = data;
-            previewWrap.style.display = 'block';
-            canvas.style.display = 'none';
             if (chkGuardar.checked) {
                 var id = slugId(typeof signerKey === 'function' ? signerKey() : signerKey);
                 var map = obtenerFirmasGuardadas();
@@ -194,6 +253,7 @@
                     window.renderGestionFirmasRegistro();
                 }
             }
+            mostrarAceptada(data);
             return accepted;
         }
 
@@ -201,11 +261,7 @@
             var id = slugId(typeof signerKey === 'function' ? signerKey() : signerKey);
             var map = obtenerFirmasGuardadas();
             if (!map[id]) return;
-            accepted = map[id].dataUrl;
-            isAccepted = true;
-            previewImg.src = accepted;
-            previewWrap.style.display = 'block';
-            canvas.style.display = 'none';
+            mostrarAceptada(map[id].dataUrl);
         }
 
         function refrescarUsarGuardada() {
@@ -213,6 +269,20 @@
             var map = obtenerFirmasGuardadas();
             btnUsar.style.display = map[id] ? 'inline-flex' : 'none';
         }
+
+        zona.addEventListener('click', function(ev) {
+            if (isAccepted) return;
+            if (!isActive) {
+                ev.preventDefault();
+                activar();
+            }
+        });
+        zona.addEventListener('keydown', function(ev) {
+            if ((ev.key === 'Enter' || ev.key === ' ') && !isAccepted && !isActive) {
+                ev.preventDefault();
+                activar();
+            }
+        });
 
         canvas.addEventListener('mousedown', startDraw);
         canvas.addEventListener('mousemove', moveDraw);
@@ -222,11 +292,21 @@
         canvas.addEventListener('touchmove', moveDraw, { passive: false });
         canvas.addEventListener('touchend', endDraw, { passive: false });
 
-        btnBorrar.addEventListener('click', limpiarLienzo);
+        btnBorrar.addEventListener('click', function() {
+            if (isAccepted) {
+                limpiarLienzo();
+                return;
+            }
+            resizeCanvas();
+        });
         btnAceptar.addEventListener('click', aceptarFirma);
         btnUsar.addEventListener('click', usarGuardada);
+        btnRehacer.addEventListener('click', limpiarLienzo);
 
-        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('resize', function() {
+            if (isActive && !isAccepted) resizeCanvas();
+        });
+        canvas.style.display = 'none';
         setTimeout(resizeCanvas, 50);
         refrescarUsarGuardada();
 
@@ -236,40 +316,37 @@
             getDataUrl: function() { return isAccepted ? accepted : ''; },
             setDataUrl: function(url) {
                 if (!url) { limpiarLienzo(); return; }
-                accepted = url;
-                isAccepted = true;
-                previewImg.src = url;
-                previewWrap.style.display = 'block';
-                canvas.style.display = 'none';
+                mostrarAceptada(url);
             },
             refrescarGuardada: refrescarUsarGuardada,
             isEmpty: function() { return !isAccepted; }
         };
     }
 
+    function htmlFirmaPdfLinea(dataUrl) {
+        var img = dataUrl
+            ? '<img src="' + dataUrl + '" alt="" style="max-width:96%;max-height:62px;object-fit:contain;display:block;margin:0 auto;">'
+            : '&nbsp;';
+        return '<div class="ra-firma-zona-pdf">' + img + '</div>';
+    }
+
     function construirHtmlRegistroAsesoria(datos, logoDataUrl) {
         var barFn = window.htmlBarraAccionesPdf;
         var fechaReg = ymdADmy(datos.fecha);
-        var personas = datos.personas || [];
+        var personas = (datos.personas || []).map(normalizarPersona);
         var personasHtml = '';
         if (!personas.length) {
-            personasHtml = '<tr><td style="padding:6px 8px;border:1px solid #000;color:#6b7280;font-style:italic;">Sin registros</td></tr>';
+            personasHtml = '<tr><td colspan="4" style="padding:6px 8px;border:1px solid #000;color:#6b7280;font-style:italic;">Sin registros</td></tr>';
         } else {
             personasHtml = personas.map(function(p) {
                 return '<tr>'
                     + '<td style="padding:6px 8px;border:1px solid #000;">' + escHtml(p.nombre) + '</td>'
                     + '<td style="padding:6px 8px;border:1px solid #000;">' + escHtml(p.cedula) + '</td>'
-                    + '<td style="padding:6px 8px;border:1px solid #000;">' + escHtml(p.telefono) + '</td>'
+                    + '<td style="padding:6px 8px;border:1px solid #000;">' + escHtml(p.celular) + '</td>'
+                    + '<td style="padding:6px 8px;border:1px solid #000;">' + escHtml(p.entidad) + '</td>'
                     + '</tr>';
             }).join('');
         }
-
-        var firmaFunc = datos.firmaFuncionario
-            ? '<img src="' + datos.firmaFuncionario + '" alt="Firma funcionario" style="max-width:100%;max-height:90px;object-fit:contain;display:block;margin:0 auto;">'
-            : '<div style="height:90px;"></div>';
-        var firmaUser = datos.firmaUsuario
-            ? '<img src="' + datos.firmaUsuario + '" alt="Firma usuario" style="max-width:100%;max-height:90px;object-fit:contain;display:block;margin:0 auto;">'
-            : '<div style="height:90px;"></div>';
 
         var logoCell = logoDataUrl
             ? '<img src="' + logoDataUrl + '" alt="CARDIQUE" style="width:72px;height:auto;display:block;margin:0 auto;">'
@@ -292,8 +369,9 @@
             + '.ra-desc{min-height:140px;white-space:pre-wrap;line-height:1.45}'
             + '.ra-personas{width:100%;border-collapse:collapse;margin-top:6px}'
             + '.ra-personas th,.ra-personas td{border:1px solid #000;padding:5px 6px;font-size:10pt;text-align:left}'
-            + '.ra-firmas td{text-align:center;vertical-align:bottom;height:120px}'
-            + '.ra-firma-lbl{font-weight:700;font-size:10pt;text-transform:uppercase;padding-top:6px}'
+            + '.ra-bloque-firmas-titulo{font-weight:700;font-size:10.5pt;text-transform:uppercase;padding:10px 10px 6px!important}'
+            + '.ra-firma-zona-pdf{position:relative;min-height:68px;padding:4px 6px 2px;border-bottom:1px solid #000;text-align:center;display:flex;align-items:flex-end;justify-content:center}'
+            + '.ra-firma-etiq{text-align:center;font-weight:700;font-size:10pt;text-transform:uppercase;padding-top:6px}'
             + '@media print{.no-print-bar,.spacer,.spacer-dash{display:none!important}}';
 
         var h = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
@@ -319,14 +397,18 @@
             + '<tr><td colspan="3"><span class="ra-lbl">Asunto de la asesoría:</span><div class="ra-val">' + escHtml(datos.asunto) + '</div></td></tr>'
             + '<tr><td colspan="3"><span class="ra-lbl">Descripción de las actividades realizadas durante la asesoría:</span>'
             + '<div class="ra-val ra-desc">' + escHtml(datos.descripcion).replace(/\n/g, '<br>') + '</div></td></tr>'
-            + '<tr><td colspan="3"><span class="ra-lbl">Persona(s)/Entidad(es) (nombre, cédula, teléfono):</span>'
-            + '<table class="ra-personas"><thead><tr><th>Nombre</th><th>Cédula</th><th>Teléfono</th></tr></thead><tbody>'
+            + '<tr><td colspan="3"><span class="ra-lbl">Persona(s)/Entidad(es):</span>'
+            + '<table class="ra-personas"><thead><tr><th>Nombre</th><th>Cédula</th><th>Celular</th><th>Entidad</th></tr></thead><tbody>'
             + personasHtml + '</tbody></table></td></tr>'
             + '<tr><td colspan="3"><span class="ra-lbl">Funcionario encargado de la asesoría:</span>'
             + '<div class="ra-val">' + escHtml(datos.funcionario) + '</div></td></tr>'
-            + '<tr class="ra-firmas"><td style="width:50%">' + firmaFunc
-            + '<div class="ra-firma-lbl">Firma funcionario</div></td><td style="width:50%">' + firmaUser
-            + '<div class="ra-firma-lbl">Firma de usuario</div></td></tr>'
+            + '<tr><td colspan="3" class="ra-bloque-firmas-titulo">FUNCIONARIO ENCARGADO DE LA ASESORÍA.</td></tr>'
+            + '<tr><td style="width:50%;vertical-align:bottom;border-top:none;padding-top:4px;">'
+            + htmlFirmaPdfLinea(datos.firmaFuncionario)
+            + '<div class="ra-firma-etiq">FIRMA FUNCIONARIO</div></td>'
+            + '<td style="width:50%;vertical-align:bottom;border-top:none;padding-top:4px;">'
+            + htmlFirmaPdfLinea(datos.firmaUsuario)
+            + '<div class="ra-firma-etiq">FIRMA DE USUARIO</div></td></tr>'
             + '</table></div></body></html>';
         return h;
     }
@@ -352,24 +434,28 @@
         var filas = document.querySelectorAll('#ra-personas-lista .ra-persona-row');
         var out = [];
         filas.forEach(function(row) {
-            var nombre = (row.querySelector('.ra-p-nombre') || {}).value || '';
-            var cedula = (row.querySelector('.ra-p-cedula') || {}).value || '';
-            var telefono = (row.querySelector('.ra-p-telefono') || {}).value || '';
-            if (nombre || cedula || telefono) out.push({ nombre: nombre, cedula: cedula, telefono: telefono });
+            var p = normalizarPersona({
+                nombre: (row.querySelector('.ra-p-nombre') || {}).value || '',
+                cedula: (row.querySelector('.ra-p-cedula') || {}).value || '',
+                celular: (row.querySelector('.ra-p-celular') || {}).value || '',
+                entidad: (row.querySelector('.ra-p-entidad') || {}).value || ''
+            });
+            if (p.nombre || p.cedula || p.celular || p.entidad) out.push(p);
         });
         return out;
     }
 
     function agregarFilaPersona(data) {
-        data = data || {};
+        data = normalizarPersona(data);
         var lista = document.getElementById('ra-personas-lista');
         if (!lista) return;
         var row = document.createElement('div');
         row.className = 'ra-persona-row';
         row.innerHTML = ''
-            + '<input type="text" class="ra-p-nombre" placeholder="Nombre" value="' + escHtml(data.nombre || '') + '">'
-            + '<input type="text" class="ra-p-cedula" placeholder="Cédula" value="' + escHtml(data.cedula || '') + '">'
-            + '<input type="tel" class="ra-p-telefono" placeholder="Teléfono" value="' + escHtml(data.telefono || '') + '">'
+            + '<input type="text" class="ra-p-nombre" placeholder="Nombre" value="' + escHtml(data.nombre) + '">'
+            + '<input type="text" class="ra-p-cedula" placeholder="Cédula" value="' + escHtml(data.cedula) + '">'
+            + '<input type="tel" class="ra-p-celular" placeholder="Celular" value="' + escHtml(data.celular) + '">'
+            + '<input type="text" class="ra-p-entidad" placeholder="Entidad" value="' + escHtml(data.entidad) + '">'
             + '<button type="button" class="ra-btn-quitar" title="Quitar">&#10005;</button>';
         row.querySelector('.ra-btn-quitar').onclick = function() {
             row.remove();
@@ -380,13 +466,14 @@
 
     function limpiarFormulario() {
         editandoId = null;
-        var ids = ['ra-usuario', 'ra-asunto', 'ra-descripcion', 'ra-funcionario'];
-        ids.forEach(function(id) {
+        ['ra-usuario', 'ra-asunto', 'ra-descripcion', 'ra-funcionario'].forEach(function(id) {
             var el = document.getElementById(id);
             if (el) el.value = '';
         });
         var fecha = document.getElementById('ra-fecha');
         if (fecha) fecha.value = window.fechaHoyLocalYMD ? fechaHoyLocalYMD() : '';
+        var desc = document.getElementById('ra-descripcion');
+        if (desc) desc.style.height = '';
         var lista = document.getElementById('ra-personas-lista');
         if (lista) { lista.innerHTML = ''; agregarFilaPersona(); }
         if (firmaFuncionarioPad) firmaFuncionarioPad.borrar();
@@ -402,9 +489,15 @@
         document.getElementById('ra-asunto').value = reg.asunto || '';
         document.getElementById('ra-descripcion').value = reg.descripcion || '';
         document.getElementById('ra-funcionario').value = reg.funcionario || '';
+        var desc = document.getElementById('ra-descripcion');
+        if (desc) {
+            desc.style.height = 'auto';
+            desc.style.height = desc.scrollHeight + 'px';
+        }
         var lista = document.getElementById('ra-personas-lista');
         lista.innerHTML = '';
-        (reg.personas && reg.personas.length ? reg.personas : [{}]).forEach(agregarFilaPersona);
+        var personas = (reg.personas && reg.personas.length) ? reg.personas.map(normalizarPersona) : [{}];
+        personas.forEach(agregarFilaPersona);
         if (firmaFuncionarioPad) {
             firmaFuncionarioPad.setDataUrl(reg.firmaFuncionario || '');
             firmaFuncionarioPad.refrescarGuardada();
@@ -420,16 +513,12 @@
         if (!d.asunto.trim()) { alert('Indica el asunto de la asesoría.'); return false; }
         if (!d.descripcion.trim()) { alert('Describe las actividades realizadas.'); return false; }
         if (!d.funcionario.trim()) { alert('Indica el funcionario encargado.'); return false; }
-        if (firmaFuncionarioPad && firmaFuncionarioPad.isEmpty()) {
-            firmaFuncionarioPad.aceptar();
-        }
-        if (firmaUsuarioPad && firmaUsuarioPad.isEmpty()) {
-            firmaUsuarioPad.aceptar();
-        }
+        if (firmaFuncionarioPad && firmaFuncionarioPad.isEmpty()) firmaFuncionarioPad.aceptar();
+        if (firmaUsuarioPad && firmaUsuarioPad.isEmpty()) firmaUsuarioPad.aceptar();
         d.firmaFuncionario = firmaFuncionarioPad ? firmaFuncionarioPad.getDataUrl() : '';
         d.firmaUsuario = firmaUsuarioPad ? firmaUsuarioPad.getDataUrl() : '';
-        if (!d.firmaFuncionario) { alert('La firma del funcionario es obligatoria.'); return false; }
-        if (!d.firmaUsuario) { alert('La firma del usuario es obligatoria.'); return false; }
+        if (!d.firmaFuncionario) { alert('La firma del funcionario es obligatoria. Toca la línea y firma.'); return false; }
+        if (!d.firmaUsuario) { alert('La firma del usuario es obligatoria. Toca la línea y firma.'); return false; }
         return true;
     }
 
@@ -440,9 +529,7 @@
         var now = Date.now();
         if (editandoId) {
             lista = lista.map(function(r) {
-                if (r.id === editandoId) {
-                    return Object.assign({}, r, d, { actualizadoEn: now });
-                }
+                if (r.id === editandoId) return Object.assign({}, r, d, { actualizadoEn: now });
                 return r;
             });
         } else {
@@ -464,8 +551,7 @@
             return;
         }
         obtenerLogoRegistro().then(function(logo) {
-            var html = construirHtmlRegistroAsesoria(d, logo);
-            window.entregarHtmlEnVentanaPdf(html);
+            window.entregarHtmlEnVentanaPdf(construirHtmlRegistroAsesoria(d, logo));
         });
     }
 
@@ -490,15 +576,16 @@
         }).join('');
         cont.querySelectorAll('.ra-hist-edit').forEach(function(btn) {
             btn.onclick = function() {
-                var id = btn.getAttribute('data-id');
-                var reg = obtenerRegistros().find(function(x) { return x.id === id; });
-                if (reg) cargarFormulario(reg);
+                var reg = obtenerRegistros().find(function(x) { return x.id === btn.getAttribute('data-id'); });
+                if (reg) {
+                    cargarFormulario(reg);
+                    if (typeof window.mostrarPantalla === 'function') window.mostrarPantalla('registro-asesoria');
+                }
             };
         });
         cont.querySelectorAll('.ra-hist-pdf').forEach(function(btn) {
             btn.onclick = function() {
-                var id = btn.getAttribute('data-id');
-                var reg = obtenerRegistros().find(function(x) { return x.id === id; });
+                var reg = obtenerRegistros().find(function(x) { return x.id === btn.getAttribute('data-id'); });
                 if (!reg || typeof window.entregarHtmlEnVentanaPdf !== 'function') return;
                 obtenerLogoRegistro().then(function(logo) {
                     window.entregarHtmlEnVentanaPdf(construirHtmlRegistroAsesoria(reg, logo));
@@ -508,8 +595,7 @@
         cont.querySelectorAll('.ra-hist-del').forEach(function(btn) {
             btn.onclick = function() {
                 if (!confirm('¿Eliminar este registro?')) return;
-                var id = btn.getAttribute('data-id');
-                guardarRegistros(obtenerRegistros().filter(function(x) { return x.id !== id; }));
+                guardarRegistros(obtenerRegistros().filter(function(x) { return x.id !== btn.getAttribute('data-id'); }));
                 renderHistorialRegistro();
             };
         });
@@ -536,9 +622,8 @@
         cont.querySelectorAll('.ra-firma-del').forEach(function(btn) {
             btn.onclick = function() {
                 if (!confirm('¿Eliminar firma guardada?')) return;
-                var id = btn.getAttribute('data-id');
                 var m = obtenerFirmasGuardadas();
-                delete m[id];
+                delete m[btn.getAttribute('data-id')];
                 guardarFirmasMap(m);
                 renderGestionFirmasRegistro();
                 if (firmaFuncionarioPad) firmaFuncionarioPad.refrescarGuardada();
@@ -555,24 +640,30 @@
         if (!mountFunc || !mountUser) return;
 
         var fecha = document.getElementById('ra-fecha');
-        if (fecha && !fecha.value && window.fechaHoyLocalYMD) {
-            fecha.value = fechaHoyLocalYMD();
-        }
+        if (fecha && !fecha.value && window.fechaHoyLocalYMD) fecha.value = fechaHoyLocalYMD();
 
-        firmaFuncionarioPad = crearFirmaTactil(mountFunc, {
-            signerLabel: 'Firma del funcionario',
+        firmaFuncionarioPad = crearFirmaEnLinea(mountFunc, {
+            lineLabel: 'FIRMA FUNCIONARIO',
             signerKey: function() {
                 return (document.getElementById('ra-funcionario') || {}).value || 'funcionario';
             }
         });
-        firmaUsuarioPad = crearFirmaTactil(mountUser, {
-            signerLabel: 'Firma del usuario',
+        firmaUsuarioPad = crearFirmaEnLinea(mountUser, {
+            lineLabel: 'FIRMA DE USUARIO',
             signerKey: function() {
                 var u = (document.getElementById('ra-usuario') || {}).value || '';
                 var p = leerPersonasDesdeDom()[0];
                 return u || (p && p.nombre) || 'usuario';
             }
         });
+
+        var desc = document.getElementById('ra-descripcion');
+        if (desc) {
+            desc.addEventListener('input', function() {
+                desc.style.height = 'auto';
+                desc.style.height = Math.max(120, desc.scrollHeight) + 'px';
+            });
+        }
 
         var btnAdd = document.getElementById('ra-add-persona');
         if (btnAdd) btnAdd.onclick = function() { agregarFilaPersona(); };
@@ -597,9 +688,7 @@
             if (firmaUsuarioPad) firmaUsuarioPad.refrescarGuardada();
         });
 
-        if (!document.querySelector('#ra-personas-lista .ra-persona-row')) {
-            agregarFilaPersona();
-        }
+        if (!document.querySelector('#ra-personas-lista .ra-persona-row')) agregarFilaPersona();
         renderHistorialRegistro();
         renderGestionFirmasRegistro();
     }

@@ -1555,7 +1555,7 @@
         }
         .ra-personas-head {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr 36px;
+            grid-template-columns: 1fr 1fr 1fr 1fr 36px;
             gap: 8px;
             font-size: 0.72rem;
             font-weight: 700;
@@ -1565,7 +1565,7 @@
         }
         .ra-persona-row {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr 36px;
+            grid-template-columns: 1fr 1fr 1fr 1fr 36px;
             gap: 8px;
             margin-bottom: 8px;
         }
@@ -1599,36 +1599,96 @@
         .ra-firmas-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 14px;
+            gap: 18px;
+        }
+        .ra-bloque-firmas {
+            border: 1px solid #d1d5db;
+            border-radius: 12px;
+            padding: 14px 12px 12px;
+            background: #fafafa;
+        }
+        .ra-bloque-firmas-titulo {
+            font-weight: 700;
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            color: #111827;
+            margin-bottom: 14px;
+            line-height: 1.35;
         }
         @media (max-width: 640px) {
             .ra-firmas-grid { grid-template-columns: 1fr; }
             .ra-personas-head { display: none; }
         }
-        .firma-panel {
-            border: 1px solid #d1d5db;
-            border-radius: 12px;
-            padding: 10px;
-            background: #fafafa;
-        }
-        .firma-panel-head {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
-            margin-bottom: 8px;
-            font-size: 0.78rem;
-            font-weight: 700;
-            color: #374151;
-        }
-        .firma-canvas {
-            width: 100%;
-            height: 150px;
-            display: block;
-            border: 1px solid #9ca3af;
-            border-radius: 8px;
-            background: #fff;
+        .firma-linea-slot { width: 100%; }
+        .firma-linea-zona {
+            position: relative;
+            height: 72px;
+            border-bottom: 2px solid #111827;
+            cursor: pointer;
             touch-action: none;
+            background: #fff;
+        }
+        .firma-linea-zona:focus {
+            outline: 2px solid #86efac;
+            outline-offset: 2px;
+        }
+        .firma-linea-hint {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 8px;
+            text-align: center;
+            font-size: 0.72rem;
+            color: #9ca3af;
+            pointer-events: none;
+        }
+        .firma-canvas-linea {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            background: transparent;
+            touch-action: none;
+        }
+        .firma-linea-img {
+            position: absolute;
+            left: 50%;
+            bottom: 2px;
+            transform: translateX(-50%);
+            max-width: 96%;
+            max-height: 66px;
+            object-fit: contain;
+            pointer-events: none;
+        }
+        .firma-linea-etiq {
+            text-align: center;
+            font-weight: 700;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #374151;
+            margin-top: 8px;
+        }
+        .firma-linea-tools {
+            display: none;
+            margin-top: 10px;
+        }
+        .firma-linea-slot.firma-activa .firma-linea-zona {
+            background: #f0fdf4;
+        }
+        .firma-linea-rehacer {
+            display: block;
+            margin: 8px auto 0;
+            padding: 4px 10px;
+            border: none;
+            background: transparent;
+            color: #b91c1c;
+            font-size: 0.72rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: underline;
         }
         .firma-panel-actions {
             display: flex;
@@ -1648,7 +1708,13 @@
         }
         .firma-btn-borrar { background: #f3f4f6; color: #374151; }
         .firma-btn-aceptar { background: #1a5c35; color: #fff; }
-        .firma-btn-usar { background: #eff6ff; color: #1d4ed8; flex: 0 0 auto; padding: 6px 10px; font-size: 0.75rem; }
+        .firma-btn-usar {
+            background: #eff6ff;
+            color: #1d4ed8;
+            width: 100%;
+            margin-bottom: 6px;
+            font-size: 0.75rem;
+        }
         .firma-guardar-lbl {
             display: flex;
             align-items: center;
@@ -1657,17 +1723,6 @@
             font-size: 0.75rem;
             color: #6b7280;
         }
-        .firma-preview-wrap {
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            background: #fff;
-            padding: 6px;
-            min-height: 150px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .firma-preview { max-width: 100%; max-height: 140px; }
         .ra-actions {
             display: flex;
             flex-wrap: wrap;
@@ -1729,7 +1784,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.148";
+const APP_VERSION = "1.5.149";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -2134,17 +2189,20 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
             <div class="ra-field">
                 <label>Persona(s) / Entidad(es)</label>
-                <div class="ra-personas-head"><span>Nombre</span><span>Cédula</span><span>Teléfono</span><span></span></div>
+                <div class="ra-personas-head"><span>Nombre</span><span>Cédula</span><span>Celular</span><span>Entidad</span><span></span></div>
                 <div id="ra-personas-lista"></div>
-                <button type="button" id="ra-add-persona" class="ra-btn-add-persona">+ Agregar persona / entidad</button>
+                <button type="button" id="ra-add-persona" class="ra-btn-add-persona">+ Agregar otra persona</button>
             </div>
             <div class="ra-field">
                 <label for="ra-funcionario">Funcionario encargado de la asesoría</label>
-                <input type="text" id="ra-funcionario" placeholder="Nombre del funcionario" autocomplete="name">
+                <input type="text" id="ra-funcionario" placeholder="Nombre de quien realiza la asesoría" autocomplete="name">
             </div>
-            <div class="ra-firmas-grid">
-                <div id="ra-firma-funcionario"></div>
-                <div id="ra-firma-usuario"></div>
+            <div class="ra-bloque-firmas">
+                <div class="ra-bloque-firmas-titulo">FUNCIONARIO ENCARGADO DE LA ASESORÍA.</div>
+                <div class="ra-firmas-grid">
+                    <div id="ra-firma-funcionario"></div>
+                    <div id="ra-firma-usuario"></div>
+                </div>
             </div>
         </div>
         <div class="ra-actions">
@@ -6123,6 +6181,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (nombre === 'frentes' && typeof csRefrescarSiAbierto === 'function') csRefrescarSiAbierto();
         window.scrollTo(0, 0);
     }
+    window.mostrarPantalla = mostrarPantalla;
 
     function construirTextoCompartirFrente() {
         const uiSt = loadUiState();
