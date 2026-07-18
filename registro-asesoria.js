@@ -336,14 +336,14 @@
         var personas = (datos.personas || []).map(normalizarPersona);
         var personasHtml = '';
         if (!personas.length) {
-            personasHtml = '<tr><td colspan="4" style="padding:6px 8px;border:1px solid #000;color:#6b7280;font-style:italic;">Sin registros</td></tr>';
+            personasHtml = '<tr><td colspan="4" style="padding:6px 8px;color:#6b7280;font-style:italic;">Sin registros</td></tr>';
         } else {
             personasHtml = personas.map(function(p) {
                 return '<tr>'
-                    + '<td style="padding:6px 8px;border:1px solid #000;">' + escHtml(p.nombre) + '</td>'
-                    + '<td style="padding:6px 8px;border:1px solid #000;">' + escHtml(p.cedula) + '</td>'
-                    + '<td style="padding:6px 8px;border:1px solid #000;">' + escHtml(p.celular) + '</td>'
-                    + '<td style="padding:6px 8px;border:1px solid #000;">' + escHtml(p.entidad) + '</td>'
+                    + '<td style="padding:6px 8px;">' + escHtml(p.nombre) + '</td>'
+                    + '<td style="padding:6px 8px;">' + escHtml(p.cedula) + '</td>'
+                    + '<td style="padding:6px 8px;">' + escHtml(p.celular) + '</td>'
+                    + '<td style="padding:6px 8px;">' + escHtml(p.entidad) + '</td>'
                     + '</tr>';
             }).join('');
         }
@@ -356,19 +356,19 @@
             + '*{box-sizing:border-box}'
             + 'body{font-family:Arial,Helvetica,sans-serif;font-size:11pt;color:#000;margin:0;padding:0;background:#fff}'
             + '.ra-doc{max-width:100%;margin:0 auto}'
-            + '.ra-hdr-tbl{width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:0}'
-            + '.ra-hdr-tbl td{border:2px double #000;padding:6px 8px;vertical-align:middle;text-align:center}'
-            + '.ra-hdr-logo{width:22%}'
-            + '.ra-hdr-mid{width:56%;font-weight:700;font-size:11pt;line-height:1.35}'
-            + '.ra-hdr-page{width:22%;font-size:10pt;font-weight:700}'
-            + '.ra-sub{font-weight:700;text-align:center;font-size:11pt;margin:8px 0 12px;letter-spacing:.02em}'
+            + '.ra-hdr-tbl{width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:12px}'
+            + '.ra-hdr-tbl td{border:1px solid #000;padding:6px 8px;vertical-align:middle}'
+            + '.ra-hdr-logo{width:20%;text-align:center}'
+            + '.ra-hdr-mid{width:52%;text-align:center;font-weight:700;font-size:11pt;line-height:1.35;text-transform:uppercase}'
+            + '.ra-hdr-meta{width:28%;text-align:center;font-weight:700;font-size:10pt;line-height:1.45}'
             + '.ra-main{width:100%;border-collapse:collapse;table-layout:fixed}'
             + '.ra-main td{border:1px solid #000;padding:8px 10px;vertical-align:top}'
             + '.ra-lbl{font-weight:700;font-size:10.5pt;text-transform:uppercase}'
             + '.ra-val{min-height:22px;font-size:11pt}'
             + '.ra-desc{min-height:140px;white-space:pre-wrap;line-height:1.45}'
             + '.ra-personas{width:100%;border-collapse:collapse;margin-top:6px}'
-            + '.ra-personas th,.ra-personas td{border:1px solid #000;padding:5px 6px;font-size:10pt;text-align:left}'
+            + '.ra-personas th,.ra-personas td{border:none;background:transparent;padding:5px 8px;font-size:10pt;text-align:left}'
+            + '.ra-personas thead th{font-weight:700}'
             + '.ra-bloque-firmas-celda{padding:8px 10px;vertical-align:top}'
             + '.ra-bloque-firmas-titulo{font-weight:700;font-size:10.5pt;text-transform:uppercase;margin:0 0 10px;line-height:1.35}'
             + '.ra-firmas-flex{display:flex;gap:18px;align-items:flex-start}'
@@ -387,13 +387,13 @@
 
         h += '<table class="ra-hdr-tbl"><tr>'
             + '<td class="ra-hdr-logo" rowspan="2">' + logoCell + '</td>'
-            + '<td class="ra-hdr-mid">REGISTRO DE ASESORÍA</td>'
-            + '<td class="ra-hdr-page" rowspan="2">Página<br>1 de 1</td>'
+            + '<td class="ra-hdr-mid">REGISTRO DE ASESORIA</td>'
+            + '<td class="ra-hdr-meta" rowspan="2">VERSI&Oacute;N: ' + VERSION_FORMATO
+            + '<br>FECHA: ' + escHtml(fechaReg)
+            + '<br>P&aacute;gina 1 de 1</td>'
             + '</tr><tr>'
-            + '<td class="ra-hdr-mid" style="font-size:10pt;">VERSIÓN: ' + VERSION_FORMATO
-            + ' &nbsp;&nbsp; FECHA: ' + escHtml(fechaReg) + '</td>'
+            + '<td class="ra-hdr-mid">PROCESO DE PLANEACION ESTRATEGICA</td>'
             + '</tr></table>'
-            + '<div class="ra-sub">PROCESO DE PLANEACIÓN ESTRATÉGICA</div>'
             + '<table class="ra-main">'
             + '<tr><td colspan="2"><span class="ra-lbl">Usuario atendido:</span><div class="ra-val">' + escHtml(datos.usuarioAtendido) + '</div></td>'
             + '<td style="width:28%"><span class="ra-lbl">Fecha:</span><div class="ra-val">' + escHtml(fechaReg) + '</div></td></tr>'
@@ -403,8 +403,6 @@
             + '<tr><td colspan="3"><span class="ra-lbl">Persona(s)/Entidad(es):</span>'
             + '<table class="ra-personas"><thead><tr><th>Nombre</th><th>Cédula</th><th>Celular</th><th>Entidad</th></tr></thead><tbody>'
             + personasHtml + '</tbody></table></td></tr>'
-            + '<tr><td colspan="3"><span class="ra-lbl">Funcionario encargado de la asesoría:</span>'
-            + '<div class="ra-val">' + escHtml(datos.funcionario) + '</div></td></tr>'
             + '<tr><td colspan="3" class="ra-bloque-firmas-celda">'
             + '<div class="ra-bloque-firmas-titulo">FUNCIONARIO ENCARGADO DE LA ASESORÍA.</div>'
             + '<div class="ra-firmas-flex">'
@@ -421,13 +419,16 @@
     var firmaUsuarioPad = null;
     var editandoId = null;
 
+    function claveFirmanteFuncionario() {
+        return (document.getElementById('inspector') || {}).value || 'funcionario';
+    }
+
     function obtenerDatosFormulario() {
         return {
             usuarioAtendido: (document.getElementById('ra-usuario') || {}).value || '',
             fecha: (document.getElementById('ra-fecha') || {}).value || (window.fechaHoyLocalYMD ? fechaHoyLocalYMD() : ''),
             asunto: (document.getElementById('ra-asunto') || {}).value || '',
             descripcion: (document.getElementById('ra-descripcion') || {}).value || '',
-            funcionario: (document.getElementById('ra-funcionario') || {}).value || '',
             personas: leerPersonasDesdeDom(),
             firmaFuncionario: firmaFuncionarioPad ? firmaFuncionarioPad.getDataUrl() : '',
             firmaUsuario: firmaUsuarioPad ? firmaUsuarioPad.getDataUrl() : ''
@@ -470,7 +471,7 @@
 
     function limpiarFormulario() {
         editandoId = null;
-        ['ra-usuario', 'ra-asunto', 'ra-descripcion', 'ra-funcionario'].forEach(function(id) {
+        ['ra-usuario', 'ra-asunto', 'ra-descripcion'].forEach(function(id) {
             var el = document.getElementById(id);
             if (el) el.value = '';
         });
@@ -492,7 +493,6 @@
         document.getElementById('ra-fecha').value = reg.fecha || (window.fechaHoyLocalYMD ? fechaHoyLocalYMD() : '');
         document.getElementById('ra-asunto').value = reg.asunto || '';
         document.getElementById('ra-descripcion').value = reg.descripcion || '';
-        document.getElementById('ra-funcionario').value = reg.funcionario || '';
         var desc = document.getElementById('ra-descripcion');
         if (desc) {
             desc.style.height = 'auto';
@@ -516,7 +516,6 @@
         if (!d.usuarioAtendido.trim()) { alert('Indica el usuario atendido.'); return false; }
         if (!d.asunto.trim()) { alert('Indica el asunto de la asesoría.'); return false; }
         if (!d.descripcion.trim()) { alert('Describe las actividades realizadas.'); return false; }
-        if (!d.funcionario.trim()) { alert('Indica el funcionario encargado.'); return false; }
         if (firmaFuncionarioPad && firmaFuncionarioPad.isEmpty()) firmaFuncionarioPad.aceptar();
         if (firmaUsuarioPad && firmaUsuarioPad.isEmpty()) firmaUsuarioPad.aceptar();
         d.firmaFuncionario = firmaFuncionarioPad ? firmaFuncionarioPad.getDataUrl() : '';
@@ -648,9 +647,7 @@
 
         firmaFuncionarioPad = crearFirmaEnLinea(mountFunc, {
             lineLabel: 'FIRMA FUNCIONARIO',
-            signerKey: function() {
-                return (document.getElementById('ra-funcionario') || {}).value || 'funcionario';
-            }
+            signerKey: claveFirmanteFuncionario
         });
         firmaUsuarioPad = crearFirmaEnLinea(mountUser, {
             lineLabel: 'FIRMA DE USUARIO',
@@ -683,9 +680,9 @@
             if (confirm('¿Limpiar el formulario?')) limpiarFormulario();
         };
 
-        var funcInput = document.getElementById('ra-funcionario');
         var userInput = document.getElementById('ra-usuario');
-        if (funcInput) funcInput.addEventListener('input', function() {
+        var inspectorInput = document.getElementById('inspector');
+        if (inspectorInput) inspectorInput.addEventListener('input', function() {
             if (firmaFuncionarioPad) firmaFuncionarioPad.refrescarGuardada();
         });
         if (userInput) userInput.addEventListener('input', function() {

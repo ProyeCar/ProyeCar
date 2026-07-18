@@ -1571,9 +1571,13 @@
         }
         .ra-persona-row input {
             padding: 8px 10px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
+            border: none;
+            border-radius: 0;
+            background: transparent;
             font-size: 15px;
+        }
+        .ra-personas-head span {
+            padding: 0 10px 4px;
         }
         .ra-btn-quitar {
             width: 36px;
@@ -1797,7 +1801,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.150";
+const APP_VERSION = "1.5.151";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -2205,10 +2209,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="ra-personas-head"><span>Nombre</span><span>Cédula</span><span>Celular</span><span>Entidad</span><span></span></div>
                 <div id="ra-personas-lista"></div>
                 <button type="button" id="ra-add-persona" class="ra-btn-add-persona">+ Agregar otra persona</button>
-            </div>
-            <div class="ra-field">
-                <label for="ra-funcionario">Funcionario encargado de la asesoría</label>
-                <input type="text" id="ra-funcionario" placeholder="Nombre de quien realiza la asesoría" autocomplete="name">
             </div>
             <div class="ra-field ra-field-bloque-firmas">
                 <div class="ra-bloque-firmas-celda">
