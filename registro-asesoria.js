@@ -369,7 +369,10 @@
             + '.ra-desc{min-height:140px;white-space:pre-wrap;line-height:1.45}'
             + '.ra-personas{width:100%;border-collapse:collapse;margin-top:6px}'
             + '.ra-personas th,.ra-personas td{border:1px solid #000;padding:5px 6px;font-size:10pt;text-align:left}'
-            + '.ra-bloque-firmas-titulo{font-weight:700;font-size:10.5pt;text-transform:uppercase;padding:10px 10px 6px!important}'
+            + '.ra-bloque-firmas-celda{padding:8px 10px;vertical-align:top}'
+            + '.ra-bloque-firmas-titulo{font-weight:700;font-size:10.5pt;text-transform:uppercase;margin:0 0 10px;line-height:1.35}'
+            + '.ra-firmas-flex{display:flex;gap:18px;align-items:flex-start}'
+            + '.ra-firma-col{flex:1;min-width:0;border:none;box-shadow:none;padding:0;background:transparent}'
             + '.ra-firma-zona-pdf{position:relative;min-height:68px;padding:4px 6px 2px;border-bottom:1px solid #000;text-align:center;display:flex;align-items:flex-end;justify-content:center}'
             + '.ra-firma-etiq{text-align:center;font-weight:700;font-size:10pt;text-transform:uppercase;padding-top:6px}'
             + '@media print{.no-print-bar,.spacer,.spacer-dash{display:none!important}}';
@@ -402,13 +405,14 @@
             + personasHtml + '</tbody></table></td></tr>'
             + '<tr><td colspan="3"><span class="ra-lbl">Funcionario encargado de la asesoría:</span>'
             + '<div class="ra-val">' + escHtml(datos.funcionario) + '</div></td></tr>'
-            + '<tr><td colspan="3" class="ra-bloque-firmas-titulo">FUNCIONARIO ENCARGADO DE LA ASESORÍA.</td></tr>'
-            + '<tr><td style="width:50%;vertical-align:bottom;border-top:none;padding-top:4px;">'
-            + htmlFirmaPdfLinea(datos.firmaFuncionario)
-            + '<div class="ra-firma-etiq">FIRMA FUNCIONARIO</div></td>'
-            + '<td style="width:50%;vertical-align:bottom;border-top:none;padding-top:4px;">'
-            + htmlFirmaPdfLinea(datos.firmaUsuario)
-            + '<div class="ra-firma-etiq">FIRMA DE USUARIO</div></td></tr>'
+            + '<tr><td colspan="3" class="ra-bloque-firmas-celda">'
+            + '<div class="ra-bloque-firmas-titulo">FUNCIONARIO ENCARGADO DE LA ASESORÍA.</div>'
+            + '<div class="ra-firmas-flex">'
+            + '<div class="ra-firma-col">' + htmlFirmaPdfLinea(datos.firmaFuncionario)
+            + '<div class="ra-firma-etiq">FIRMA FUNCIONARIO</div></div>'
+            + '<div class="ra-firma-col">' + htmlFirmaPdfLinea(datos.firmaUsuario)
+            + '<div class="ra-firma-etiq">FIRMA DE USUARIO</div></div>'
+            + '</div></td></tr>'
             + '</table></div></body></html>';
         return h;
     }
