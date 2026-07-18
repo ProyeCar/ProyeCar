@@ -1516,14 +1516,39 @@
             overflow: visible;
         }
 
-        /* ── Registro de Asesoría ── */
+        /* ── Registro de Asesoría — tipografía Calibri 11pt (solo esta pantalla) ── */
+        #pantalla-registro-asesoria {
+            font-family: Calibri, "Calibri Light", "Segoe UI", sans-serif;
+            font-size: 11pt;
+        }
+        #pantalla-registro-asesoria input,
+        #pantalla-registro-asesoria textarea,
+        #pantalla-registro-asesoria button,
+        #pantalla-registro-asesoria label,
+        #pantalla-registro-asesoria .ra-hist-item,
+        #pantalla-registro-asesoria .ra-hist-meta,
+        #pantalla-registro-asesoria .card-header h2,
+        #pantalla-registro-asesoria p,
+        #pantalla-registro-asesoria .ra-personas-head,
+        #pantalla-registro-asesoria .ra-bloque-firmas-titulo,
+        #pantalla-registro-asesoria .firma-linea-etiq,
+        #pantalla-registro-asesoria .firma-linea-hint,
+        #pantalla-registro-asesoria .firma-guardar-lbl,
+        #pantalla-registro-asesoria .firma-btn-borrar,
+        #pantalla-registro-asesoria .firma-btn-aceptar,
+        #pantalla-registro-asesoria .firma-btn-usar,
+        #pantalla-registro-asesoria .firma-linea-rehacer,
+        #pantalla-registro-asesoria .ra-btn-add-persona,
+        #pantalla-registro-asesoria .ra-actions button {
+            font-family: Calibri, "Calibri Light", "Segoe UI", sans-serif;
+            font-size: 11pt;
+        }
         .ra-form-grid {
             display: grid;
             gap: 14px;
         }
         .ra-field label {
             display: block;
-            font-size: 0.78rem;
             font-weight: 700;
             color: #374151;
             text-transform: uppercase;
@@ -1536,7 +1561,6 @@
             padding: 10px 12px;
             border: 1px solid #d1d5db;
             border-radius: 10px;
-            font-size: 16px;
             background: #fff;
             color: #111827;
         }
@@ -1557,7 +1581,6 @@
             display: grid;
             grid-template-columns: 1fr 1fr 1fr 1fr 36px;
             gap: 8px;
-            font-size: 0.72rem;
             font-weight: 700;
             color: #6b7280;
             text-transform: uppercase;
@@ -1574,7 +1597,6 @@
             border: none;
             border-radius: 0;
             background: transparent;
-            font-size: 15px;
         }
         .ra-personas-head span {
             padding: 0 10px 4px;
@@ -1621,7 +1643,6 @@
         }
         .ra-bloque-firmas-titulo {
             font-weight: 700;
-            font-size: 0.82rem;
             text-transform: uppercase;
             letter-spacing: 0.02em;
             color: #111827;
@@ -1682,7 +1703,6 @@
         .firma-linea-etiq {
             text-align: center;
             font-weight: 700;
-            font-size: 0.72rem;
             text-transform: uppercase;
             letter-spacing: 0.04em;
             color: #374151;
@@ -1801,7 +1821,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.151";
+const APP_VERSION = "1.5.152";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';

@@ -9,6 +9,7 @@
     var LS_FIRMAS = 'cardique_firmas_guardadas';
     var LOGO_URL = 'assets/cardique-logo-registro.jpg';
     var VERSION_FORMATO = '03';
+    var FECHA_VERSION_PLANTILLA = '27/01/2026';
     var LINEA_ALTURA = 72;
     var _logoDataUrl = null;
 
@@ -354,27 +355,28 @@
 
         var CSS = '@page{size:A4;margin:1.2cm 1.4cm}'
             + '*{box-sizing:border-box}'
-            + 'body{font-family:Arial,Helvetica,sans-serif;font-size:11pt;color:#000;margin:0;padding:0;background:#fff}'
+            + 'body,.ra-doc{font-family:Calibri,"Calibri Light","Segoe UI",sans-serif;font-size:11pt;color:#000;margin:0;padding:0;background:#fff}'
             + '.ra-doc{max-width:100%;margin:0 auto}'
             + '.ra-hdr-tbl{width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:12px}'
-            + '.ra-hdr-tbl td{border:1px solid #000;padding:6px 8px;vertical-align:middle}'
+            + '.ra-hdr-tbl td{border:1px solid #000;padding:6px 8px;vertical-align:middle;font-size:11pt}'
             + '.ra-hdr-logo{width:20%;text-align:center}'
-            + '.ra-hdr-mid{width:52%;text-align:center;font-weight:700;font-size:11pt;line-height:1.35;text-transform:uppercase}'
-            + '.ra-hdr-meta{width:28%;text-align:center;font-weight:700;font-size:10pt;line-height:1.45}'
-            + '.ra-main{width:100%;border-collapse:collapse;table-layout:fixed}'
-            + '.ra-main td{border:1px solid #000;padding:8px 10px;vertical-align:top}'
-            + '.ra-lbl{font-weight:700;font-size:10.5pt;text-transform:uppercase}'
-            + '.ra-val{min-height:22px;font-size:11pt}'
+            + '.ra-hdr-mid{width:52%;text-align:center;font-weight:700;line-height:1.35;text-transform:uppercase}'
+            + '.ra-hdr-mid-empty{height:100%}'
+            + '.ra-hdr-meta{width:28%;text-align:left;font-weight:700;line-height:1.35}'
+            + '.ra-main{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11pt}'
+            + '.ra-main td{border:1px solid #000;padding:8px 10px;vertical-align:top;font-size:11pt}'
+            + '.ra-lbl{font-weight:700;text-transform:uppercase}'
+            + '.ra-val{min-height:22px}'
             + '.ra-desc{min-height:140px;white-space:pre-wrap;line-height:1.45}'
-            + '.ra-personas{width:100%;border-collapse:collapse;margin-top:6px}'
-            + '.ra-personas th,.ra-personas td{border:none;background:transparent;padding:5px 8px;font-size:10pt;text-align:left}'
+            + '.ra-personas{width:100%;border-collapse:collapse;margin-top:6px;font-size:11pt}'
+            + '.ra-personas th,.ra-personas td{border:none;background:transparent;padding:5px 8px;text-align:left;font-size:11pt}'
             + '.ra-personas thead th{font-weight:700}'
             + '.ra-bloque-firmas-celda{padding:8px 10px;vertical-align:top}'
-            + '.ra-bloque-firmas-titulo{font-weight:700;font-size:10.5pt;text-transform:uppercase;margin:0 0 10px;line-height:1.35}'
+            + '.ra-bloque-firmas-titulo{font-weight:700;text-transform:uppercase;margin:0 0 10px;line-height:1.35}'
             + '.ra-firmas-flex{display:flex;gap:18px;align-items:flex-start}'
             + '.ra-firma-col{flex:1;min-width:0;border:none;box-shadow:none;padding:0;background:transparent}'
             + '.ra-firma-zona-pdf{position:relative;min-height:68px;padding:4px 6px 2px;border-bottom:1px solid #000;text-align:center;display:flex;align-items:flex-end;justify-content:center}'
-            + '.ra-firma-etiq{text-align:center;font-weight:700;font-size:10pt;text-transform:uppercase;padding-top:6px}'
+            + '.ra-firma-etiq{text-align:center;font-weight:700;text-transform:uppercase;padding-top:6px}'
             + '@media print{.no-print-bar,.spacer,.spacer-dash{display:none!important}}';
 
         var h = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
@@ -386,13 +388,15 @@
         }
 
         h += '<table class="ra-hdr-tbl"><tr>'
-            + '<td class="ra-hdr-logo" rowspan="2">' + logoCell + '</td>'
+            + '<td class="ra-hdr-logo" rowspan="3">' + logoCell + '</td>'
             + '<td class="ra-hdr-mid">REGISTRO DE ASESORIA</td>'
-            + '<td class="ra-hdr-meta" rowspan="2">VERSI&Oacute;N: ' + VERSION_FORMATO
-            + '<br>FECHA: ' + escHtml(fechaReg)
-            + '<br>P&aacute;gina 1 de 1</td>'
+            + '<td class="ra-hdr-meta">VERSI&Oacute;N: ' + VERSION_FORMATO + '</td>'
             + '</tr><tr>'
             + '<td class="ra-hdr-mid">PROCESO DE PLANEACION ESTRATEGICA</td>'
+            + '<td class="ra-hdr-meta">FECHA: ' + FECHA_VERSION_PLANTILLA + '</td>'
+            + '</tr><tr>'
+            + '<td class="ra-hdr-mid ra-hdr-mid-empty">&nbsp;</td>'
+            + '<td class="ra-hdr-meta">P&aacute;gina 1 de 1</td>'
             + '</tr></table>'
             + '<table class="ra-main">'
             + '<tr><td colspan="2"><span class="ra-lbl">Usuario atendido:</span><div class="ra-val">' + escHtml(datos.usuarioAtendido) + '</div></td>'
