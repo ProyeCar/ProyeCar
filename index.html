@@ -1516,13 +1516,220 @@
             overflow: visible;
         }
 
+        /* ── Registro de Asesoría ── */
+        .ra-form-grid {
+            display: grid;
+            gap: 14px;
+        }
+        .ra-field label {
+            display: block;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #374151;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            margin-bottom: 6px;
+        }
+        .ra-field input,
+        .ra-field textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            font-size: 16px;
+            background: #fff;
+            color: #111827;
+        }
+        .ra-field textarea {
+            min-height: 120px;
+            resize: vertical;
+            line-height: 1.45;
+        }
+        .ra-field-row {
+            display: grid;
+            grid-template-columns: 1fr 140px;
+            gap: 12px;
+        }
+        @media (max-width: 520px) {
+            .ra-field-row { grid-template-columns: 1fr; }
+        }
+        .ra-personas-head {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 36px;
+            gap: 8px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #6b7280;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+        .ra-persona-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 36px;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .ra-persona-row input {
+            padding: 8px 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 15px;
+        }
+        .ra-btn-quitar {
+            width: 36px;
+            height: 36px;
+            border: 1px solid #fecaca;
+            background: #fef2f2;
+            color: #dc2626;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .ra-btn-add-persona {
+            background: #f0fdf4;
+            border: 1px dashed #86efac;
+            color: #166534;
+            border-radius: 10px;
+            padding: 8px 12px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+        }
+        .ra-firmas-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+        @media (max-width: 640px) {
+            .ra-firmas-grid { grid-template-columns: 1fr; }
+            .ra-personas-head { display: none; }
+        }
+        .firma-panel {
+            border: 1px solid #d1d5db;
+            border-radius: 12px;
+            padding: 10px;
+            background: #fafafa;
+        }
+        .firma-panel-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #374151;
+        }
+        .firma-canvas {
+            width: 100%;
+            height: 150px;
+            display: block;
+            border: 1px solid #9ca3af;
+            border-radius: 8px;
+            background: #fff;
+            touch-action: none;
+        }
+        .firma-panel-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .firma-btn-borrar,
+        .firma-btn-aceptar,
+        .firma-btn-usar {
+            flex: 1;
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+        }
+        .firma-btn-borrar { background: #f3f4f6; color: #374151; }
+        .firma-btn-aceptar { background: #1a5c35; color: #fff; }
+        .firma-btn-usar { background: #eff6ff; color: #1d4ed8; flex: 0 0 auto; padding: 6px 10px; font-size: 0.75rem; }
+        .firma-guardar-lbl {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 8px;
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+        .firma-preview-wrap {
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            background: #fff;
+            padding: 6px;
+            min-height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .firma-preview { max-width: 100%; max-height: 140px; }
+        .ra-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 16px;
+        }
+        .ra-actions button {
+            flex: 1;
+            min-width: 140px;
+            padding: 12px 14px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.88rem;
+            cursor: pointer;
+        }
+        #ra-guardar { background: #2c5e3f; color: #fff; }
+        #ra-generar-pdf { background: #1e40af; color: #fff; }
+        #ra-limpiar { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca !important; }
+        .ra-hist-item,
+        .ra-firma-guard-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 10px 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            background: #fff;
+        }
+        .ra-hist-meta { font-size: 0.75rem; color: #6b7280; margin-top: 2px; }
+        .ra-hist-actions { display: flex; gap: 6px; flex-shrink: 0; }
+        .ra-hist-actions button,
+        .ra-firma-del {
+            padding: 6px 10px;
+            border-radius: 8px;
+            border: none;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .ra-hist-edit { background: #eff6ff; color: #1d4ed8; }
+        .ra-hist-pdf { background: #f0fdf4; color: #166534; }
+        .ra-hist-del, .ra-firma-del { background: #fef2f2; color: #dc2626; }
+        .ra-firma-guard-item img {
+            width: 72px;
+            height: 48px;
+            object-fit: contain;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            background: #fff;
+            flex-shrink: 0;
+        }
+
     </style>
     <link rel="manifest" href="./manifest.json">
     <script src="icons.js"></script>
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.147";
+const APP_VERSION = "1.5.148";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -1861,6 +2068,11 @@ document.addEventListener('DOMContentLoaded', function() {
         <button id="guardar-manual" style="background:#2c5e3f;display:inline-flex;align-items:center;gap:6px;"><span class="pc-icon-hydrate" data-i="save" data-s="16" data-c="#fff"></span> Guardar manualmente</button>
         <span id="save-indicator" class="save-indicator"></span>
         </div>
+        <div class="card" style="width:100%;margin-top:8px;">
+            <div class="card-header"><h2><span class="icon-box icon-box-verde"><span class="pc-icon-hydrate" data-i="pencil" data-s="20" data-c="#1a5c35"></span></span>Firmas guardadas (Registro de Asesoría)</h2></div>
+            <p style="font-size:0.78rem;color:#6b7280;margin:0 0 12px;line-height:1.45;">Firmas guardadas desde el formulario de asesoría. Puedes eliminarlas aquí si ya no las necesitas en este dispositivo.</p>
+            <div id="ra-firmas-gestion"></div>
+        </div>
     </div>
 </div></div>
 
@@ -1896,6 +2108,57 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 
 
+<!-- PANTALLA REGISTRO DE ASESORÍA -->
+<div id="pantalla-registro-asesoria" class="pantalla"><div class="container">
+    <div class="card">
+        <div class="card-header"><h2><span class="icon-box icon-box-verde"><span class="pc-icon-hydrate" data-i="clipboard-list" data-s="20" data-c="#1a5c35"></span></span>Registro de Asesoría</h2></div>
+        <p style="font-size:0.78rem;color:#6b7280;margin:0 0 14px;line-height:1.45;">Proceso de Planeación Estratégica · Versión 03 · Formato CARDIQUE</p>
+        <div class="ra-form-grid">
+            <div class="ra-field-row">
+                <div class="ra-field">
+                    <label for="ra-usuario">Usuario atendido</label>
+                    <input type="text" id="ra-usuario" placeholder="Nombre del usuario atendido" autocomplete="name">
+                </div>
+                <div class="ra-field">
+                    <label for="ra-fecha">Fecha</label>
+                    <input type="date" id="ra-fecha">
+                </div>
+            </div>
+            <div class="ra-field">
+                <label for="ra-asunto">Asunto de la asesoría</label>
+                <input type="text" id="ra-asunto" placeholder="Asunto breve">
+            </div>
+            <div class="ra-field">
+                <label for="ra-descripcion">Descripción de las actividades realizadas durante la asesoría</label>
+                <textarea id="ra-descripcion" rows="5" placeholder="Describe las actividades realizadas…"></textarea>
+            </div>
+            <div class="ra-field">
+                <label>Persona(s) / Entidad(es)</label>
+                <div class="ra-personas-head"><span>Nombre</span><span>Cédula</span><span>Teléfono</span><span></span></div>
+                <div id="ra-personas-lista"></div>
+                <button type="button" id="ra-add-persona" class="ra-btn-add-persona">+ Agregar persona / entidad</button>
+            </div>
+            <div class="ra-field">
+                <label for="ra-funcionario">Funcionario encargado de la asesoría</label>
+                <input type="text" id="ra-funcionario" placeholder="Nombre del funcionario" autocomplete="name">
+            </div>
+            <div class="ra-firmas-grid">
+                <div id="ra-firma-funcionario"></div>
+                <div id="ra-firma-usuario"></div>
+            </div>
+        </div>
+        <div class="ra-actions">
+            <button type="button" id="ra-guardar">Guardar registro</button>
+            <button type="button" id="ra-generar-pdf">Generar PDF</button>
+            <button type="button" id="ra-limpiar">Limpiar formulario</button>
+        </div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+        <div class="card-header"><h2><span class="icon-box icon-box-verde"><span class="pc-icon-hydrate" data-i="clock" data-s="20" data-c="#1a5c35"></span></span>Historial de registros</h2></div>
+        <div id="ra-historial-lista"></div>
+    </div>
+</div></div>
+
 <!-- PANTALLA SYNC -->
 <div id="pantalla-sync" class="pantalla"><div class="container">
     <div class="card">
@@ -1920,6 +2183,10 @@ document.addEventListener('DOMContentLoaded', function() {
             <button class="menu-item" onclick="mostrarPantalla('comparar')">
                 <span class="pc-icon-hydrate" data-i="bar-chart-2" data-s="22" data-c="#1a5c35"></span>
                 Comparar inspecciones
+            </button>
+            <button class="menu-item" onclick="mostrarPantalla('registro-asesoria')">
+                <span class="pc-icon-hydrate" data-i="clipboard-list" data-s="22" data-c="#1a5c35"></span>
+                Registro de asesoría
             </button>
         </div>
     </div>
@@ -5076,6 +5343,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return overlay;
     }
     window.entregarHtmlEnVentanaPdf = entregarHtmlEnVentanaPdf;
+    window.htmlBarraAccionesPdf = htmlBarraAccionesPdf;
 
     function construirHtmlDashboardEjecutivo(compD, graficas) {
         compD = compD || {};
@@ -5829,7 +6097,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // ── FASE 2: HISTORIAL Y COMPARAR ──
 
-    const SIN_BOTON_PROPIO = ['herramientas', 'historial', 'comparar'];
+    const SIN_BOTON_PROPIO = ['herramientas', 'historial', 'comparar', 'registro-asesoria'];
     function mostrarPantalla(nombre) {
         document.getElementById('cs-picker')?.remove();
         document.querySelectorAll('.pantalla').forEach(p => p.classList.remove('activa'));
@@ -5840,6 +6108,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (nombre === 'historial') renderHistorial();
         if (nombre === 'comparar') renderComparar();
         if (nombre === 'sync') renderSync();
+        if (nombre === 'registro-asesoria' && typeof window.renderHistorialRegistro === 'function') {
+            window.renderHistorialRegistro();
+        }
+        if (nombre === 'herramientas' && typeof window.renderGestionFirmasRegistro === 'function') {
+            window.renderGestionFirmasRegistro();
+        }
         const waWrap = document.getElementById('wa-fab-wrap');
         if (waWrap) {
             var showWa = (nombre === 'frentes');
@@ -8293,5 +8567,6 @@ function csToggle() {
     }
 }
 </script>
+<script src="registro-asesoria.js"></script>
 </body>
 </html>
