@@ -7,17 +7,178 @@
 
     var LS_REGISTROS = 'cardique_registro_asesoria';
     var LS_FIRMAS = 'cardique_firmas_guardadas';
+    var CONSENT_KEY = 'cardique_registro_consentimiento';
     var LOGO_URL = 'assets/cardique-logo-registro.jpg';
     var VERSION_FORMATO = '03';
     var FECHA_VERSION_PLANTILLA = '27/01/2026';
     var LINEA_ALTURA = 72;
     var _logoDataUrl = null;
+    var _consentModalAbierto = false;
+
+    /** Migra datos legacy de localStorage → sessionStorage y elimina copias persistentes. */
+    function migrarDesdeLocalStorage() {
+        [LS_REGISTROS, LS_FIRMAS].forEach(function(key) {
+            try {
+                if (sessionStorage.getItem(key) != null) {
+                    localStorage.removeItem(key);
+                    return;
+                }
+                var legacy = localStorage.getItem(key);
+                if (legacy != null) {
+                    sessionStorage.setItem(key, legacy);
+                    localStorage.removeItem(key);
+                }
+            } catch (e) {}
+        });
+    }
 
     function leerJSON(key, def) {
-        try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(def)); } catch (e) { return def; }
+        try { return JSON.parse(sessionStorage.getItem(key) || JSON.stringify(def)); } catch (e) { return def; }
     }
     function guardarJSON(key, obj) {
-        try { localStorage.setItem(key, JSON.stringify(obj)); return true; } catch (e) { return false; }
+        try { sessionStorage.setItem(key, JSON.stringify(obj)); return true; } catch (e) { return false; }
+    }
+
+    function tieneConsentimiento() {
+        try { return sessionStorage.getItem(CONSENT_KEY) === '1'; } catch (e) { return false; }
+    }
+
+    function modalConsentimiento() {
+        if (tieneConsentimiento()) return Promise.resolve(true);
+        if (_consentModalAbierto) return Promise.resolve(false);
+
+        return new Promise(function(resolve) {
+            _consentModalAbierto = true;
+            var overlay = document.createElement('div');
+            overlay.id = 'ra-consent-overlay';
+            overlay.setAttribute('role', 'dialog');
+            overlay.setAttribute('aria-modal', 'true');
+            overlay.setAttribute('aria-labelledby', 'ra-consent-title');
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(13,51,33,0.88);z-index:10050;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+            overlay.innerHTML = ''
+                + '<div style="background:#fff;border-radius:14px;max-width:420px;width:100%;padding:22px 20px;box-shadow:0 12px 40px rgba(0,0,0,.25);font-family:system-ui,-apple-system,sans-serif;">'
+                + '<h2 id="ra-consent-title" style="margin:0 0 12px;font-size:1.05rem;color:#0d3321;">Tratamiento de datos personales</h2>'
+                + '<p style="margin:0 0 10px;font-size:0.88rem;line-height:1.5;color:#374151;">Esta aplicación captura y almacena de forma temporal en tu dispositivo: nombre completo, cédula y número celular de terceros.</p>'
+                + '<p style="margin:0 0 6px;font-size:0.84rem;line-height:1.45;color:#374151;"><strong>Finalidad:</strong> Documentación de asesorías CARDIQUE</p>'
+                + '<p style="margin:0 0 6px;font-size:0.84rem;line-height:1.45;color:#374151;"><strong>Responsable:</strong> ECODESA / CARDIQUE</p>'
+                + '<p style="margin:0 0 16px;font-size:0.84rem;line-height:1.45;color:#374151;"><strong>Derechos:</strong> Puedes acceder, rectificar o solicitar supresión de tus datos</p>'
+                + '<div style="display:flex;gap:10px;flex-wrap:wrap;">'
+                + '<button type="button" id="ra-consent-aceptar" style="flex:1;min-width:140px;padding:11px 14px;background:#1a5c35;color:#fff;border:none;border-radius:10px;font-size:0.88rem;font-weight:700;cursor:pointer;">✓ Entiendo y acepto</button>'
+                + '<button type="button" id="ra-consent-rechazar" style="flex:1;min-width:140px;padding:11px 14px;background:#e5e7eb;color:#374151;border:none;border-radius:10px;font-size:0.88rem;font-weight:600;cursor:pointer;">✗ Rechazar</button>'
+                + '</div></div>';
+
+            function cerrar(ok) {
+                _consentModalAbierto = false;
+                if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+                if (ok) {
+                    try { sessionStorage.setItem(CONSENT_KEY, '1'); } catch (e) {}
+                    aplicarEstadoConsentimientoEnPersonas();
+                }
+                resolve(!!ok);
+            }
+
+            document.body.appendChild(overlay);
+            overlay.querySelector('#ra-consent-aceptar').onclick = function() { cerrar(true); };
+            overlay.querySelector('#ra-consent-rechazar').onclick = function() {
+                cerrar(false);
+                alert('Debes aceptar el tratamiento de datos para capturar cédula y datos de terceros.');
+            };
+        });
+    }
+
+    function aplicarEstadoConsentimientoEnPersonas() {
+        var ok = tieneConsentimiento();
+        document.querySelectorAll('#ra-personas-lista .ra-p-cedula, #ra-personas-lista .ra-p-celular, #ra-personas-lista .ra-p-nombre').forEach(function(el) {
+            el.readOnly = !ok;
+            el.setAttribute('autocomplete', 'off');
+        });
+    }
+
+    function solicitarConsentimientoSiFalta() {
+        if (tieneConsentimiento()) return Promise.resolve(true);
+        return modalConsentimiento();
+    }
+
+    function wireConsentimientoPersonas() {
+        var lista = document.getElementById('ra-personas-lista');
+        if (!lista || lista.dataset.raConsentWired === '1') return;
+        lista.dataset.raConsentWired = '1';
+        aplicarEstadoConsentimientoEnPersonas();
+
+        function gateCedula(ev) {
+            var t = ev.target;
+            if (!t || !t.classList || !t.classList.contains('ra-p-cedula')) return;
+            if (tieneConsentimiento()) return;
+            ev.preventDefault();
+            modalConsentimiento().then(function(ok) {
+                if (ok) t.focus();
+            });
+        }
+        lista.addEventListener('mousedown', gateCedula);
+        lista.addEventListener('touchstart', gateCedula, { passive: false });
+    }
+
+    function limpiarTodosRegistrosAsesoria(mostrarMensaje) {
+        try {
+            sessionStorage.removeItem(LS_REGISTROS);
+            sessionStorage.removeItem(LS_FIRMAS);
+            sessionStorage.removeItem(CONSENT_KEY);
+            localStorage.removeItem(LS_REGISTROS);
+            localStorage.removeItem(LS_FIRMAS);
+        } catch (e) {}
+        limpiarFormulario();
+        renderHistorialRegistro();
+        renderGestionFirmasRegistro();
+        aplicarEstadoConsentimientoEnPersonas();
+        if (mostrarMensaje) alert('Todos los registros de asesoría fueron eliminados.');
+    }
+
+    function confirmarLimpiarTodoRegistros() {
+        if (!confirm('¿Borrar TODOS los registros guardados? Esta acción es irreversible.')) return;
+        limpiarTodosRegistrosAsesoria(true);
+    }
+
+    function injectBotonLimpiarTodo() {
+        var estiloBtn = 'width:100%;margin-top:12px;padding:10px 14px;background:#b91c1c;color:#fff;border:none;border-radius:10px;font-size:0.84rem;font-weight:700;cursor:pointer;';
+
+        if (!document.getElementById('ra-limpiar-todo-hist')) {
+            var histLista = document.getElementById('ra-historial-lista');
+            if (histLista && histLista.parentNode) {
+                var btnHist = document.createElement('button');
+                btnHist.type = 'button';
+                btnHist.id = 'ra-limpiar-todo-hist';
+                btnHist.textContent = 'Limpiar todos los registros de asesoría';
+                btnHist.style.cssText = estiloBtn;
+                btnHist.onclick = confirmarLimpiarTodoRegistros;
+                histLista.parentNode.appendChild(btnHist);
+            }
+        }
+
+        if (!document.getElementById('ra-limpiar-todo-tools')) {
+            var firmasCont = document.getElementById('ra-firmas-gestion');
+            if (firmasCont && firmasCont.parentNode) {
+                var btnTools = document.createElement('button');
+                btnTools.type = 'button';
+                btnTools.id = 'ra-limpiar-todo-tools';
+                btnTools.textContent = 'Limpiar todos los registros de asesoría';
+                btnTools.style.cssText = estiloBtn;
+                btnTools.onclick = confirmarLimpiarTodoRegistros;
+                firmasCont.parentNode.appendChild(btnTools);
+            }
+        }
+    }
+
+    function wireReinicioGlobalHook() {
+        if (document.documentElement.dataset.raResetHook === '1') return;
+        document.documentElement.dataset.raResetHook = '1';
+        document.addEventListener('click', function(ev) {
+            var btn = ev.target && ev.target.closest ? ev.target.closest('#modal-reset3-confirm') : null;
+            if (!btn || btn.disabled) return;
+            limpiarTodosRegistrosAsesoria(false);
+            setTimeout(function() {
+                alert('Registros de asesoría eliminados.');
+            }, 80);
+        }, true);
     }
 
     function slugId(texto) {
@@ -474,6 +635,7 @@
             if (!lista.querySelector('.ra-persona-row')) agregarFilaPersona();
         };
         lista.appendChild(row);
+        aplicarEstadoConsentimientoEnPersonas();
     }
 
     function limpiarFormulario() {
@@ -534,6 +696,15 @@
 
     function guardarRegistroActual() {
         var d = obtenerDatosFormulario();
+        var tienePii = (d.personas || []).some(function(p) {
+            return (p.nombre || p.cedula || p.celular || p.entidad);
+        });
+        if (tienePii && !tieneConsentimiento()) {
+            solicitarConsentimientoSiFalta().then(function(ok) {
+                if (ok) guardarRegistroActual();
+            });
+            return;
+        }
         if (!validarFormulario(d)) return;
         var lista = obtenerRegistros();
         var now = Date.now();
@@ -555,6 +726,15 @@
 
     function generarPdfRegistro() {
         var d = obtenerDatosFormulario();
+        var tienePii = (d.personas || []).some(function(p) {
+            return (p.nombre || p.cedula || p.celular || p.entidad);
+        });
+        if (tienePii && !tieneConsentimiento()) {
+            solicitarConsentimientoSiFalta().then(function(ok) {
+                if (ok) generarPdfRegistro();
+            });
+            return;
+        }
         if (!validarFormulario(d)) return;
         if (typeof window.entregarHtmlEnVentanaPdf !== 'function') {
             alert('Visor PDF no disponible.');
@@ -565,7 +745,7 @@
         });
     }
 
-    function renderHistorialRegistro() {
+    function renderHistorialRegistroCore() {
         var cont = document.getElementById('ra-historial-lista');
         if (!cont) return;
         var lista = obtenerRegistros();
@@ -611,6 +791,11 @@
         });
     }
 
+    function renderHistorialRegistro() {
+        renderHistorialRegistroCore();
+        injectBotonLimpiarTodo();
+    }
+
     function renderGestionFirmasRegistro() {
         var cont = document.getElementById('ra-firmas-gestion');
         if (!cont) return;
@@ -644,7 +829,17 @@
     window.renderGestionFirmasRegistro = renderGestionFirmasRegistro;
     window.renderHistorialRegistro = renderHistorialRegistro;
 
+    function cargarPantallaRegistroAsesoria() {
+        renderHistorialRegistro();
+        aplicarEstadoConsentimientoEnPersonas();
+    }
+
     function initRegistroAsesoria() {
+        migrarDesdeLocalStorage();
+        wireReinicioGlobalHook();
+        wireConsentimientoPersonas();
+        injectBotonLimpiarTodo();
+
         var mountFunc = document.getElementById('ra-firma-funcionario');
         var mountUser = document.getElementById('ra-firma-usuario');
         if (!mountFunc || !mountUser) return;
@@ -697,11 +892,13 @@
         });
 
         if (!document.querySelector('#ra-personas-lista .ra-persona-row')) agregarFilaPersona();
-        renderHistorialRegistro();
+        cargarPantallaRegistroAsesoria();
         renderGestionFirmasRegistro();
     }
 
     window.initRegistroAsesoria = initRegistroAsesoria;
+    window.cargarPantallaRegistroAsesoria = cargarPantallaRegistroAsesoria;
+    window.limpiarTodosRegistrosAsesoria = limpiarTodosRegistrosAsesoria;
     window.generarPdfRegistroAsesoriaDesdeDatos = function(datos) {
         return obtenerLogoRegistro().then(function(logo) {
             return construirHtmlRegistroAsesoria(datos, logo);
