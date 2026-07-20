@@ -60,7 +60,7 @@
                 + '<h2 id="ra-consent-title" style="margin:0 0 12px;font-size:1.05rem;color:#0d3321;">Tratamiento de datos personales</h2>'
                 + '<p style="margin:0 0 10px;font-size:0.88rem;line-height:1.5;color:#374151;">Esta aplicación captura y almacena de forma temporal en tu dispositivo: nombre completo, cédula y número celular de terceros.</p>'
                 + '<p style="margin:0 0 6px;font-size:0.84rem;line-height:1.45;color:#374151;"><strong>Finalidad:</strong> Documentación de asesorías CARDIQUE</p>'
-                + '<p style="margin:0 0 6px;font-size:0.84rem;line-height:1.45;color:#374151;"><strong>Responsable:</strong> ECODESA / CARDIQUE</p>'
+                + '<p style="margin:0 0 6px;font-size:0.84rem;line-height:1.45;color:#374151;"><strong>Responsable:</strong> CARDIQUE</p>'
                 + '<p style="margin:0 0 16px;font-size:0.84rem;line-height:1.45;color:#374151;"><strong>Derechos:</strong> Puedes acceder, rectificar o solicitar supresión de tus datos</p>'
                 + '<div style="display:flex;gap:10px;flex-wrap:wrap;">'
                 + '<button type="button" id="ra-consent-aceptar" style="flex:1;min-width:140px;padding:11px 14px;background:#1a5c35;color:#fff;border:none;border-radius:10px;font-size:0.88rem;font-weight:700;cursor:pointer;">✓ Entiendo y acepto</button>'
