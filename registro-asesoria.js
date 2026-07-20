@@ -181,6 +181,47 @@
         }, true);
     }
 
+    function wireAutoUpdateDesdeSW() {
+        if (!('serviceWorker' in navigator)) return;
+        if (window.__proyecarAutoUpdateWired) return;
+        window.__proyecarAutoUpdateWired = true;
+
+        var recargando = false;
+
+        function mostrarToastRecarga(version) {
+            if (document.getElementById('ra-auto-update-toast')) return;
+            var toast = document.createElement('div');
+            toast.id = 'ra-auto-update-toast';
+            toast.setAttribute('role', 'status');
+            toast.style.cssText = 'position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:100060;background:#1a5c35;color:#fff;padding:12px 16px;border-radius:12px;font-size:0.88rem;font-weight:600;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.25);font-family:system-ui,-apple-system,sans-serif;';
+            toast.textContent = 'Hay actualizaciones disponibles — recargando… (v' + (version || '') + ')';
+            (document.body || document.documentElement).appendChild(toast);
+        }
+
+        function recargarPorNuevaVersion(version) {
+            if (recargando) return;
+            recargando = true;
+            mostrarToastRecarga(version);
+            setTimeout(function() {
+                if (typeof forzarActualizacionPWA === 'function') {
+                    forzarActualizacionPWA(version);
+                    return;
+                }
+                window.location.reload();
+            }, 700);
+        }
+
+        navigator.serviceWorker.addEventListener('message', function(ev) {
+            var d = ev.data;
+            if (!d || d.type !== 'PROYECAR_VERSION_UPDATE' || !d.autoReload) return;
+            recargarPorNuevaVersion(d.version);
+        });
+
+        navigator.serviceWorker.ready.then(function(reg) {
+            if (reg.active) reg.active.postMessage({ type: 'CHECK_VERSION' });
+        }).catch(function() {});
+    }
+
     function slugId(texto) {
         return (texto || '').toString().trim().toLowerCase()
             .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'sin-nombre';
@@ -910,4 +951,5 @@
     } else {
         initRegistroAsesoria();
     }
+    wireAutoUpdateDesdeSW();
 })();
