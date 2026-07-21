@@ -14,7 +14,9 @@
     var LINEA_ALTURA = 72;
     var _logoDataUrl = null;
     var _consentModalAbierto = false;
-    var SS_SESION = 'cardique_ra_sesion';
+    var LS_SESSION = 'proyecar_session';
+    var SS_SESION_LEGACY = 'cardique_ra_sesion';
+    var _sesionLegacyMigrada = false;
     var IDB_NAME = 'cardique_ra_sync';
     var IDB_STORE = 'registros';
     var IDB_VERSION = 1;
@@ -240,22 +242,111 @@
         } catch (e) { return null; }
     }
 
+    function migrarSesionLegacy() {
+        if (_sesionLegacyMigrada) return;
+        _sesionLegacyMigrada = true;
+        try {
+            if (localStorage.getItem(LS_SESSION)) return;
+            var legacy = sessionStorage.getItem(SS_SESION_LEGACY);
+            if (!legacy) return;
+            var obj = JSON.parse(legacy);
+            if (obj && obj.id) setRaSession(obj);
+            sessionStorage.removeItem(SS_SESION_LEGACY);
+        } catch (e) {}
+    }
+
     function getRaSession() {
         try {
-            var raw = sessionStorage.getItem(SS_SESION);
-            return raw ? JSON.parse(raw) : null;
+            migrarSesionLegacy();
+            var raw = localStorage.getItem(LS_SESSION);
+            if (!raw) return null;
+            var s = JSON.parse(raw);
+            if (!s || !s.id || !s.nombre || !s.rol) return null;
+            var codigo = s.codigo || s.codigo_acceso;
+            if (!codigo) return null;
+            s.codigo = codigo;
+            s.codigo_acceso = codigo;
+            return s;
         } catch (e) { return null; }
     }
 
     function setRaSession(obj) {
         try {
-            sessionStorage.setItem(SS_SESION, JSON.stringify(obj));
+            var codigo = (obj.codigo || obj.codigo_acceso || '').trim();
+            var payload = {
+                id: obj.id,
+                nombre: obj.nombre,
+                rol: obj.rol,
+                jefe_id: obj.jefe_id || null,
+                codigo: codigo,
+                codigo_acceso: codigo,
+                timestamp: obj.timestamp || Date.now()
+            };
+            localStorage.setItem(LS_SESSION, JSON.stringify(payload));
+            ensureRaSessionBar();
             return true;
         } catch (e) { return false; }
     }
 
     function clearRaSession() {
-        try { sessionStorage.removeItem(SS_SESION); } catch (e) {}
+        try { localStorage.removeItem(LS_SESSION); } catch (e) {}
+        try { sessionStorage.removeItem(SS_SESION_LEGACY); } catch (e) {}
+        var bar = document.getElementById('ra-session-bar');
+        if (bar && bar.parentNode) bar.parentNode.removeChild(bar);
+    }
+
+    function generarCodigo() {
+        var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        var out = '';
+        for (var i = 0; i < 6; i++) {
+            out += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return out;
+    }
+
+    function copiarTexto(texto) {
+        if (!texto) return Promise.reject(new Error('Sin texto'));
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            return navigator.clipboard.writeText(texto);
+        }
+        return new Promise(function(resolve, reject) {
+            try {
+                var ta = document.createElement('textarea');
+                ta.value = texto;
+                ta.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;';
+                document.body.appendChild(ta);
+                ta.focus();
+                ta.select();
+                var ok = document.execCommand('copy');
+                document.body.removeChild(ta);
+                if (ok) resolve();
+                else reject(new Error('No se pudo copiar'));
+            } catch (e) { reject(e); }
+        });
+    }
+
+    function ensureRaSessionBar() {
+        var ses = getRaSession();
+        var pantalla = document.getElementById('pantalla-registro-asesoria');
+        if (!pantalla) return;
+        var bar = document.getElementById('ra-session-bar');
+        if (!ses) {
+            if (bar && bar.parentNode) bar.parentNode.removeChild(bar);
+            return;
+        }
+        if (!bar) {
+            bar = document.createElement('div');
+            bar.id = 'ra-session-bar';
+            bar.style.cssText = 'position:sticky;top:0;z-index:10040;background:#0d3321;color:#fff;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;font-family:system-ui,-apple-system,sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.15);';
+            pantalla.insertBefore(bar, pantalla.firstChild);
+        }
+        bar.innerHTML = ''
+            + '<div style="font-size:0.78rem;line-height:1.35;min-width:0;">'
+            + '<span style="opacity:.75;">Sesión:</span> '
+            + escHtml(ses.nombre) + ' · ' + escHtml(ses.rol || '')
+            + '</div>'
+            + '<button type="button" id="ra-btn-cerrar-sesion" style="padding:7px 12px;background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;white-space:nowrap;">Cerrar sesión</button>';
+        wireCerrarSesion();
     }
 
     function openRaDb() {
@@ -459,6 +550,8 @@
         if (!pantalla) return;
         pantalla.querySelectorAll('input, textarea, select, button').forEach(function(el) {
             if (el.id === 'ra-volver-dashboard') return;
+            if (el.id === 'ra-btn-cerrar-sesion') return;
+            if (el.closest && el.closest('#ra-session-bar')) return;
             if (el.closest && el.closest('#ra-roles-root')) return;
             if (activo) {
                 if (el.tagName === 'BUTTON') el.disabled = true;
@@ -509,6 +602,7 @@
         }
         injectBotonVolverDashboard();
         setUiModoFormulario(true);
+        ensureRaSessionBar();
         if (reg) cargarFormulario(reg);
         else limpiarFormulario();
         aplicarModoSoloLectura(!!soloLectura);
@@ -582,7 +676,6 @@
             + '<h2 style="margin:4px 0 0;font-size:1.05rem;color:#0d3321;">' + escHtml(titulo) + '</h2>'
             + (ses ? '<p style="margin:6px 0 0;font-size:0.82rem;color:#374151;">' + escHtml(ses.nombre) + ' · ' + escHtml(ses.rol || '') + '</p>' : '')
             + '</div>'
-            + '<button type="button" id="ra-btn-cerrar-sesion" style="padding:8px 12px;background:#e5e7eb;color:#374151;border:none;border-radius:10px;font-size:0.78rem;font-weight:700;cursor:pointer;">Cerrar sesión</button>'
             + '</div>'
             + (extra || '')
             + '</div>';
@@ -590,8 +683,7 @@
 
     function wireCerrarSesion() {
         var btn = document.getElementById('ra-btn-cerrar-sesion');
-        if (!btn || btn.dataset.wired === '1') return;
-        btn.dataset.wired = '1';
+        if (!btn) return;
         btn.onclick = function() {
             if (!confirm('¿Cerrar sesión de registro de asesoría?')) return;
             clearRaSession();
@@ -728,7 +820,7 @@
                 '<button type="button" id="ra-btn-nuevo" style="width:100%;margin-top:14px;padding:12px 14px;background:#1a5c35;color:#fff;border:none;border-radius:12px;font-size:0.9rem;font-weight:800;cursor:pointer;">+ NUEVO REGISTRO</button>')
                 + '<div style="margin-top:12px;font-size:0.82rem;font-weight:700;color:#374151;margin-bottom:8px;">Mis registros</div>'
                 + renderListaRegistrosHtml(items, {});
-            wireCerrarSesion();
+            ensureRaSessionBar();
             var btnNuevo = document.getElementById('ra-btn-nuevo');
             if (btnNuevo) btnNuevo.onclick = abrirNuevoRegistro;
             wireAccionesListaRegistros(root, {});
@@ -742,7 +834,7 @@
         var sb = getSupabaseClient();
         root.innerHTML = dashboardHeaderHtml('Panel jefe', '<p style="margin:12px 0 0;font-size:0.82rem;color:#6b7280;">Selecciona un profesional para ver sus registros sincronizados.</p>')
             + '<div id="ra-jefe-contenido"><div style="padding:16px;color:#6b7280;font-size:0.86rem;">Cargando equipo…</div></div>';
-        wireCerrarSesion();
+        ensureRaSessionBar();
         if (!sb) {
             document.getElementById('ra-jefe-contenido').innerHTML = '<div style="padding:16px;color:#b91c1c;">Sin conexión a Supabase.</div>';
             return;
@@ -793,20 +885,258 @@
         });
     }
 
+    function rolEtiquetaCorta(rol) {
+        var r = String(rol || '').toLowerCase();
+        if (r === 'admin' || r === 'administrador') return 'Admin';
+        if (r === 'jefe') return 'Jefe';
+        return 'Prof';
+    }
+
+    function renderTablaUsuariosAdminHtml(lista, adminId) {
+        if (!lista.length) {
+            return '<div style="padding:16px;text-align:center;color:#6b7280;font-size:0.84rem;">No hay usuarios.</div>';
+        }
+        var rows = lista.map(function(u) {
+            var jefe = u.jefe_nombre ? escHtml(u.jefe_nombre) : '—';
+            var delBtn = '';
+            if (String(u.id) === String(adminId)) {
+                delBtn = '<span style="font-size:0.72rem;color:#9ca3af;">Tú</span>';
+            } else {
+                delBtn = '<button type="button" class="ra-user-del" data-id="' + escHtml(u.id) + '" data-nombre="' + escHtml(u.nombre || '') + '" style="padding:6px 10px;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;">Eliminar</button>';
+            }
+            return ''
+                + '<tr style="border-top:1px solid #f3f4f6;">'
+                + '<td style="padding:10px 8px;font-size:0.82rem;color:#111827;">' + escHtml(u.nombre || '') + '</td>'
+                + '<td style="padding:10px 8px;font-size:0.82rem;color:#6b7280;font-family:monospace;">******</td>'
+                + '<td style="padding:10px 8px;font-size:0.78rem;color:#374151;">' + escHtml(rolEtiquetaCorta(u.rol)) + '</td>'
+                + '<td style="padding:10px 8px;font-size:0.78rem;color:#6b7280;">' + jefe + '</td>'
+                + '<td style="padding:10px 4px;text-align:right;">' + delBtn + '</td>'
+                + '</tr>';
+        }).join('');
+        return ''
+            + '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">'
+            + '<table style="width:100%;min-width:320px;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;">'
+            + '<thead><tr style="background:#f9fafb;text-align:left;">'
+            + '<th style="padding:10px 8px;font-size:0.72rem;color:#6b7280;">Nombre</th>'
+            + '<th style="padding:10px 8px;font-size:0.72rem;color:#6b7280;">Código</th>'
+            + '<th style="padding:10px 8px;font-size:0.72rem;color:#6b7280;">Rol</th>'
+            + '<th style="padding:10px 8px;font-size:0.72rem;color:#6b7280;">Jefe</th>'
+            + '<th style="padding:10px 4px;"></th>'
+            + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+    }
+
+    function cargarUsuariosAdmin(sb, ses) {
+        var cont = document.getElementById('ra-admin-usuarios-body');
+        if (!cont || !sb || !ses) return;
+        cont.innerHTML = '<div style="padding:12px;color:#6b7280;font-size:0.84rem;">Cargando usuarios…</div>';
+        sb.rpc('ra_list_usuarios', {
+            p_admin_id: ses.id,
+            p_codigo: ses.codigo_acceso
+        }).then(function(res) {
+            if (res.error) throw res.error;
+            var lista = res.data || [];
+            cont.innerHTML = renderTablaUsuariosAdminHtml(lista, ses.id);
+            wireAccionesUsuariosAdmin(cont, lista, sb, ses);
+        }).catch(function(err) {
+            cont.innerHTML = '<div style="padding:12px;color:#b91c1c;font-size:0.84rem;">'
+                + escHtml((err && err.message) ? err.message : 'No se pudieron cargar usuarios. Ejecuta el SQL ra_list_usuarios en Supabase.')
+                + '</div>';
+        });
+    }
+
+    function wireAccionesUsuariosAdmin(cont, lista, sb, ses) {
+        cont.querySelectorAll('.ra-user-del').forEach(function(btn) {
+            btn.onclick = function() {
+                var uid = btn.getAttribute('data-id');
+                var uname = btn.getAttribute('data-nombre') || 'este usuario';
+                if (String(uid) === String(ses.id)) {
+                    alert('No puedes eliminar tu propio usuario Admin.');
+                    return;
+                }
+                if (!confirm('¿Eliminar a ' + uname + '?')) return;
+                btn.disabled = true;
+                sb.rpc('ra_delete_usuario', {
+                    p_admin_id: ses.id,
+                    p_codigo_admin: ses.codigo_acceso,
+                    p_usuario_id: uid
+                }).then(function(res) {
+                    if (res.error) throw res.error;
+                    cargarUsuariosAdmin(sb, ses);
+                }).catch(function(err) {
+                    btn.disabled = false;
+                    alert((err && err.message) ? err.message : 'No se pudo eliminar el usuario.');
+                });
+            };
+        });
+    }
+
+    function abrirModalNuevoUsuario(sb, ses, jefes) {
+        if (document.getElementById('ra-user-modal-overlay')) return;
+        var codigoGen = generarCodigo();
+        var overlay = document.createElement('div');
+        overlay.id = 'ra-user-modal-overlay';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(13,51,33,0.88);z-index:10080;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+        var jefeOpts = (jefes || []).map(function(j) {
+            return '<option value="' + escHtml(j.id) + '">' + escHtml(j.nombre || '') + '</option>';
+        }).join('');
+        overlay.innerHTML = ''
+            + '<div style="background:#fff;border-radius:14px;max-width:420px;width:100%;padding:20px;box-shadow:0 12px 40px rgba(0,0,0,.25);font-family:system-ui,-apple-system,sans-serif;">'
+            + '<h3 style="margin:0 0 14px;font-size:1rem;color:#0d3321;">Nuevo usuario</h3>'
+            + '<label style="display:block;font-size:0.76rem;font-weight:700;color:#374151;margin-bottom:4px;">Nombre</label>'
+            + '<input type="text" id="ra-user-nombre" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:0.88rem;margin-bottom:12px;">'
+            + '<label style="display:block;font-size:0.76rem;font-weight:700;color:#374151;margin-bottom:4px;">Rol</label>'
+            + '<select id="ra-user-rol" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:0.88rem;margin-bottom:12px;">'
+            + '<option value="profesional">Profesional</option>'
+            + '<option value="jefe">Jefe</option>'
+            + '<option value="admin">Admin</option>'
+            + '</select>'
+            + '<div id="ra-user-jefe-wrap" style="margin-bottom:12px;">'
+            + '<label style="display:block;font-size:0.76rem;font-weight:700;color:#374151;margin-bottom:4px;">Jefe</label>'
+            + '<select id="ra-user-jefe" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:0.88rem;">'
+            + '<option value="">Seleccionar…</option>' + jefeOpts
+            + '</select></div>'
+            + '<label style="display:block;font-size:0.76rem;font-weight:700;color:#374151;margin-bottom:4px;">Código generado</label>'
+            + '<div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;">'
+            + '<input type="text" id="ra-user-codigo" readonly value="' + escHtml(codigoGen) + '" style="flex:1;box-sizing:border-box;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:0.95rem;font-weight:800;letter-spacing:.08em;font-family:monospace;background:#f9fafb;">'
+            + '<button type="button" id="ra-user-copy-codigo" style="padding:10px 12px;background:#ecfdf5;color:#166534;border:1px solid #bbf7d0;border-radius:10px;font-size:0.78rem;font-weight:700;cursor:pointer;">Copiar</button>'
+            + '</div>'
+            + '<p id="ra-user-modal-error" style="display:none;margin:0 0 10px;font-size:0.78rem;color:#b91c1c;"></p>'
+            + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+            + '<button type="button" id="ra-user-guardar" style="flex:1;min-width:120px;padding:11px 14px;background:#1a5c35;color:#fff;border:none;border-radius:10px;font-size:0.88rem;font-weight:800;cursor:pointer;">Guardar</button>'
+            + '<button type="button" id="ra-user-cancelar" style="flex:1;min-width:120px;padding:11px 14px;background:#e5e7eb;color:#374151;border:none;border-radius:10px;font-size:0.88rem;font-weight:700;cursor:pointer;">Cancelar</button>'
+            + '</div></div>';
+        document.body.appendChild(overlay);
+
+        function cerrar() {
+            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+        }
+
+        function toggleJefe() {
+            var rol = overlay.querySelector('#ra-user-rol').value;
+            var wrap = overlay.querySelector('#ra-user-jefe-wrap');
+            wrap.style.display = rol === 'profesional' ? 'block' : 'none';
+        }
+
+        toggleJefe();
+        overlay.querySelector('#ra-user-rol').onchange = toggleJefe;
+        overlay.querySelector('#ra-user-cancelar').onclick = cerrar;
+        overlay.querySelector('#ra-user-copy-codigo').onclick = function() {
+            var c = overlay.querySelector('#ra-user-codigo').value;
+            copiarTexto('Tu código de acceso ProyeCar: ' + c).then(function() {
+                overlay.querySelector('#ra-user-copy-codigo').textContent = 'Copiado';
+                setTimeout(function() {
+                    var b = overlay.querySelector('#ra-user-copy-codigo');
+                    if (b) b.textContent = 'Copiar';
+                }, 1500);
+            }).catch(function() { alert('No se pudo copiar el código.'); });
+        };
+
+        overlay.querySelector('#ra-user-guardar').onclick = function() {
+            var nombre = (overlay.querySelector('#ra-user-nombre').value || '').trim();
+            var rol = overlay.querySelector('#ra-user-rol').value;
+            var codigo = (overlay.querySelector('#ra-user-codigo').value || '').trim();
+            var jefeId = overlay.querySelector('#ra-user-jefe').value || null;
+            var errEl = overlay.querySelector('#ra-user-modal-error');
+            errEl.style.display = 'none';
+            if (!nombre) {
+                errEl.style.display = 'block';
+                errEl.textContent = 'Ingresa el nombre.';
+                return;
+            }
+            if (rol === 'profesional' && !jefeId) {
+                errEl.style.display = 'block';
+                errEl.textContent = 'Selecciona un jefe para el profesional.';
+                return;
+            }
+            if (rol !== 'profesional') jefeId = null;
+            var btn = overlay.querySelector('#ra-user-guardar');
+            btn.disabled = true;
+            btn.textContent = 'Guardando…';
+            sb.rpc('ra_create_usuario', {
+                p_admin_id: ses.id,
+                p_codigo_admin: ses.codigo_acceso,
+                p_nombre: nombre,
+                p_codigo_acceso: codigo,
+                p_rol: rol,
+                p_jefe_id: jefeId
+            }).then(function(res) {
+                btn.disabled = false;
+                btn.textContent = 'Guardar';
+                if (res.error) throw res.error;
+                cerrar();
+                mostrarToastUsuarioCreado(codigo, nombre);
+                cargarUsuariosAdmin(sb, ses);
+            }).catch(function(err) {
+                btn.disabled = false;
+                btn.textContent = 'Guardar';
+                errEl.style.display = 'block';
+                errEl.textContent = (err && err.message) ? err.message : 'No se pudo crear el usuario.';
+            });
+        };
+    }
+
+    function mostrarToastUsuarioCreado(codigo, nombre) {
+        var prev = document.getElementById('ra-user-created-toast');
+        if (prev && prev.parentNode) prev.parentNode.removeChild(prev);
+        var toast = document.createElement('div');
+        toast.id = 'ra-user-created-toast';
+        toast.style.cssText = 'position:fixed;left:12px;right:12px;bottom:16px;z-index:10090;background:#ecfdf5;border:1px solid #86efac;border-radius:12px;padding:14px;box-shadow:0 8px 24px rgba(0,0,0,.12);font-family:system-ui,-apple-system,sans-serif;';
+        toast.innerHTML = ''
+            + '<div style="font-size:0.88rem;font-weight:800;color:#166534;margin-bottom:6px;">Usuario creado</div>'
+            + '<div style="font-size:0.82rem;color:#374151;margin-bottom:10px;">' + escHtml(nombre) + ' · Código: <strong style="font-family:monospace;">' + escHtml(codigo) + '</strong></div>'
+            + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+            + '<button type="button" id="ra-user-wa-copy" style="flex:1;min-width:140px;padding:10px 12px;background:#1a5c35;color:#fff;border:none;border-radius:10px;font-size:0.8rem;font-weight:700;cursor:pointer;">Copiar para WhatsApp</button>'
+            + '<button type="button" id="ra-user-toast-close" style="padding:10px 12px;background:#e5e7eb;color:#374151;border:none;border-radius:10px;font-size:0.8rem;font-weight:700;cursor:pointer;">Cerrar</button>'
+            + '</div>';
+        document.body.appendChild(toast);
+        toast.querySelector('#ra-user-toast-close').onclick = function() {
+            if (toast.parentNode) toast.parentNode.removeChild(toast);
+        };
+        toast.querySelector('#ra-user-wa-copy').onclick = function() {
+            var msg = 'Hola ' + nombre + ', tu código de acceso a ProyeCar Registro de Asesoría es: ' + codigo;
+            copiarTexto(msg).then(function() {
+                toast.querySelector('#ra-user-wa-copy').textContent = 'Copiado';
+            }).catch(function() { alert('No se pudo copiar.'); });
+        };
+    }
+
     function renderDashboardAdmin() {
         var root = ensureRolesRoot();
         if (!root) return;
         var ses = getRaSession();
         var sb = getSupabaseClient();
         root.innerHTML = dashboardHeaderHtml('Panel administrador', '<div id="ra-admin-kpis" style="margin-top:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;"></div>')
+            + '<div id="ra-admin-usuarios" style="margin-top:14px;background:#fff;border-radius:14px;padding:14px;box-shadow:0 1px 8px rgba(0,0,0,.05);">'
+            + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;">'
+            + '<div style="font-size:0.82rem;font-weight:800;color:#374151;">Usuarios del sistema</div>'
+            + '<button type="button" id="ra-admin-user-add" style="padding:8px 12px;background:#1a5c35;color:#fff;border:none;border-radius:10px;font-size:0.78rem;font-weight:700;cursor:pointer;">+ Agregar</button>'
+            + '</div><div id="ra-admin-usuarios-body"><div style="padding:12px;color:#6b7280;font-size:0.84rem;">Cargando…</div></div></div>'
             + '<div style="margin-top:14px;"><button type="button" id="ra-admin-nuevo" style="width:100%;padding:12px 14px;background:#1a5c35;color:#fff;border:none;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;">+ NUEVO REGISTRO</button></div>'
             + '<div id="ra-admin-lista" style="margin-top:14px;"><div style="padding:16px;color:#6b7280;">Cargando…</div></div>';
-        wireCerrarSesion();
+        ensureRaSessionBar();
         var btnNuevo = document.getElementById('ra-admin-nuevo');
         if (btnNuevo) btnNuevo.onclick = abrirNuevoRegistro;
         if (!sb) {
             document.getElementById('ra-admin-lista').innerHTML = '<div style="padding:16px;color:#b91c1c;">Sin conexión a Supabase.</div>';
+            var ubody = document.getElementById('ra-admin-usuarios-body');
+            if (ubody) ubody.innerHTML = '<div style="padding:12px;color:#b91c1c;font-size:0.84rem;">Sin conexión a Supabase.</div>';
             return;
+        }
+        cargarUsuariosAdmin(sb, ses);
+        var btnAddUser = document.getElementById('ra-admin-user-add');
+        if (btnAddUser) {
+            btnAddUser.onclick = function() {
+                sb.rpc('ra_list_usuarios', {
+                    p_admin_id: ses.id,
+                    p_codigo: ses.codigo_acceso
+                }).then(function(res) {
+                    var lista = res.data || [];
+                    var jefes = lista.filter(function(u) { return String(u.rol || '').toLowerCase() === 'jefe'; });
+                    abrirModalNuevoUsuario(sb, ses, jefes);
+                }).catch(function() {
+                    abrirModalNuevoUsuario(sb, ses, []);
+                });
+            };
         }
         sb.rpc('ra_admin_stats', {
             p_admin_id: ses.id,
@@ -849,6 +1179,7 @@
     function renderDashboard() {
         var ses = getRaSession();
         if (!ses) { initLogin(); return; }
+        ensureRaSessionBar();
         setUiModoDashboard(true);
         wireSyncEvents();
         syncPendientes();
@@ -915,7 +1246,7 @@
                     nombre: u.nombre || nombre,
                     rol: u.rol || 'profesional',
                     jefe_id: u.jefe_id || null,
-                    codigo_acceso: codigo
+                    codigo: codigo
                 });
                 cerrarOverlay();
                 if (!_formInitDone) {
@@ -953,6 +1284,7 @@
             _formInitDone = true;
         }
         wireSyncEvents();
+        ensureRaSessionBar();
         renderDashboard();
     }
 
