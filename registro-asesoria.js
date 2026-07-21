@@ -769,7 +769,9 @@
             var id = r.id || r.local_id;
             var actions = '';
             if (opts.readonly) {
-                actions = '<button type="button" class="ra-dash-ver" data-id="' + escHtml(id) + '" data-remote="' + escHtml(r.remote_id || '') + '" style="padding:8px 12px;background:#1a5c35;color:#fff;border:none;border-radius:8px;font-size:0.78rem;font-weight:700;cursor:pointer;">Ver</button>';
+                actions = ''
+                    + '<button type="button" class="ra-dash-ver" data-id="' + escHtml(id) + '" data-remote="' + escHtml(r.remote_id || r.id || '') + '" style="padding:8px 12px;background:#1a5c35;color:#fff;border:none;border-radius:8px;font-size:0.78rem;font-weight:700;cursor:pointer;">Ver</button>'
+                    + '<button type="button" class="ra-dash-pdf" data-id="' + escHtml(id) + '" data-remote="' + escHtml(r.remote_id || r.id || '') + '" style="padding:8px 12px;background:#374151;color:#fff;border:none;border-radius:8px;font-size:0.78rem;font-weight:700;cursor:pointer;">PDF</button>';
             } else if (opts.admin) {
                 actions = ''
                     + '<button type="button" class="ra-dash-edit" data-id="' + escHtml(id) + '" data-remote="' + escHtml(r.remote_id || r.id || '') + '" style="padding:8px 12px;background:#1a5c35;color:#fff;border:none;border-radius:8px;font-size:0.78rem;font-weight:700;cursor:pointer;">Editar</button>'
@@ -804,7 +806,7 @@
             btn.onclick = function() {
                 var localId = btn.getAttribute('data-id');
                 var remoteId = btn.getAttribute('data-remote');
-                if (opts.admin && remoteId && !String(localId).startsWith('ra_')) {
+                if (btn._regCache) {
                     abrirPdfDesdeRegistro(btn._regCache);
                     return;
                 }
@@ -929,7 +931,7 @@
                         var rows = (r2.data || []).map(remoteRegistroAFormulario);
                         dest.innerHTML = '<div style="font-size:0.82rem;font-weight:700;color:#374151;margin-bottom:8px;">Registros de ' + escHtml(btn.getAttribute('data-nombre')) + '</div>'
                             + renderListaRegistrosHtml(rows, { readonly: true });
-                        dest.querySelectorAll('.ra-dash-ver').forEach(function(vbtn, idx) {
+                        dest.querySelectorAll('.ra-dash-ver, .ra-dash-pdf').forEach(function(vbtn, idx) {
                             vbtn._regCache = rows[idx];
                         });
                         wireAccionesListaRegistros(dest, { readonly: true });
@@ -1668,14 +1670,39 @@
         };
     }
 
+    function parseTimestampFirmaPdf(timestamp) {
+        if (!timestamp) return { fecha: '', hora: '' };
+        var s = String(timestamp).trim();
+        var idx = s.search(/\d{1,2}:\d{2}/);
+        if (idx < 0) return { fecha: s, hora: '' };
+        var fechaRaw = s.slice(0, idx).trim();
+        var horaRaw = s.slice(idx).trim();
+        var fp = fechaRaw.split('/');
+        var fecha = fechaRaw;
+        if (fp.length === 3) {
+            fecha = String(fp[0]).padStart(2, '0') + '/' + String(fp[1]).padStart(2, '0') + '/' + fp[2];
+        }
+        var hora = horaRaw.replace(/(\d{1,2}:\d{2}):\d{2}/, '$1');
+        return { fecha: fecha, hora: hora };
+    }
+
     function htmlFirmaPdfLinea(dataUrl, timestamp) {
         var img = dataUrl
             ? '<img src="' + dataUrl + '" alt="" style="max-width:96%;max-height:62px;object-fit:contain;display:block;margin:0 auto;">'
             : '&nbsp;';
-        var ts = timestamp
-            ? '<div style="font-size:8pt;color:#374151;text-align:center;margin-top:2px;line-height:1.2;">' + escHtml(timestamp) + '</div>'
+        var parts = parseTimestampFirmaPdf(timestamp);
+        var ts = (parts.fecha || parts.hora)
+            ? '<div class="ra-firma-ts-pdf">'
+                + (parts.fecha ? '<div>' + escHtml(parts.fecha) + '</div>' : '')
+                + (parts.hora ? '<div>' + escHtml(parts.hora) + '</div>' : '')
+                + '</div>'
             : '';
-        return '<div class="ra-firma-zona-pdf">' + img + ts + '</div>';
+        return ''
+            + '<div class="ra-firma-zona-pdf">'
+            + '<div class="ra-firma-img-pdf">' + img + '</div>'
+            + '<div class="ra-firma-linea-pdf"></div>'
+            + ts
+            + '</div>';
     }
 
     function construirHtmlRegistroAsesoria(datos, logoDataUrl) {
@@ -1721,7 +1748,10 @@
             + '.ra-bloque-firmas-titulo{font-weight:700;text-transform:uppercase;margin:0 0 10px;line-height:1.35}'
             + '.ra-firmas-flex{display:flex;gap:18px;align-items:flex-start}'
             + '.ra-firma-col{flex:1;min-width:0;border:none;box-shadow:none;padding:0;background:transparent}'
-            + '.ra-firma-zona-pdf{position:relative;min-height:68px;padding:4px 6px 2px;border-bottom:1px solid #000;text-align:center;display:flex;align-items:flex-end;justify-content:center}'
+            + '.ra-firma-zona-pdf{text-align:center;width:100%}'
+            + '.ra-firma-img-pdf{min-height:62px;display:flex;align-items:flex-end;justify-content:center;padding:4px 6px 0}'
+            + '.ra-firma-linea-pdf{border-bottom:1px solid #000;width:100%;margin:0}'
+            + '.ra-firma-ts-pdf{font-size:8.5pt;color:#374151;text-align:center;margin-top:2px;line-height:1.25;padding:2px 0 0}'
             + '.ra-firma-etiq{text-align:center;font-weight:700;text-transform:uppercase;padding-top:6px}'
             + '@media print{.no-print-bar,.spacer,.spacer-dash{display:none!important}}';
 
