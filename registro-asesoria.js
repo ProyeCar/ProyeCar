@@ -26,6 +26,7 @@
     var _raDbPromise = null;
     var _editRemoteId = null;
     var _editProfesionalId = null;
+    var _raModoFormularioActivo = false;
 
     /** Migra datos legacy de localStorage → sessionStorage y elimina copias persistentes. */
     function migrarDesdeLocalStorage() {
@@ -535,6 +536,7 @@
     }
 
     function setUiModoFormulario(visible) {
+        _raModoFormularioActivo = !!visible;
         var pantalla = document.getElementById('pantalla-registro-asesoria');
         if (!pantalla) return;
         var cards = pantalla.querySelectorAll('.container > .card');
@@ -595,6 +597,14 @@
         if (typeof window.mostrarPantalla === 'function') window.mostrarPantalla('registro-asesoria');
     }
 
+    function activarPantallaRegistroAsesoria() {
+        if (typeof window.__raMostrarPantallaOrig === 'function') {
+            window.__raMostrarPantallaOrig('registro-asesoria');
+        } else if (typeof window.mostrarPantalla === 'function') {
+            window.mostrarPantalla('registro-asesoria');
+        }
+    }
+
     function abrirFormularioRegistro(reg, soloLectura) {
         if (!_formInitDone) {
             initRegistroAsesoriaCore();
@@ -606,15 +616,30 @@
         if (reg) cargarFormulario(reg);
         else limpiarFormulario();
         aplicarModoSoloLectura(!!soloLectura);
-        if (typeof window.mostrarPantalla === 'function') window.mostrarPantalla('registro-asesoria');
+        activarPantallaRegistroAsesoria();
         window.scrollTo(0, 0);
     }
 
     function abrirNuevoRegistro() {
         editandoId = null;
         _editRemoteId = null;
-        _editProfesionalId = null;
+        var ses = getRaSession();
+        var rol = ses ? String(ses.rol || '').toLowerCase() : '';
+        if ((rol === 'admin' || rol === 'administrador') && ses) {
+            _editProfesionalId = ses.id;
+        } else {
+            _editProfesionalId = null;
+        }
         abrirFormularioRegistro(null, false);
+        setTimeout(function() {
+            if (!_raModoFormularioActivo) return;
+            var pantalla = document.getElementById('pantalla-registro-asesoria');
+            var card = pantalla ? pantalla.querySelector('.container > .card') : null;
+            if (card && card.style.display === 'none') {
+                alert('Error al cargar formulario');
+                volverAlDashboard();
+            }
+        }, 3000);
     }
 
     function syncPendientes() {
@@ -697,6 +722,7 @@
     }
 
     function abrirModuloRegistroAsesoria() {
+        if (_raModoFormularioActivo) return;
         ensureRolesRoot();
         if (!_formInitDone) {
             initRegistroAsesoriaCore();
@@ -719,6 +745,7 @@
         window.__raEntradaWired = true;
         var orig = window.mostrarPantalla;
         if (typeof orig !== 'function') return;
+        window.__raMostrarPantallaOrig = orig;
         window.mostrarPantalla = function(nombre) {
             orig(nombre);
             if (nombre === 'registro-asesoria') {
@@ -929,7 +956,6 @@
             return '<div style="padding:16px;text-align:center;color:#6b7280;font-size:0.84rem;">No hay usuarios.</div>';
         }
         var rows = lista.map(function(u) {
-            var jefe = u.jefe_nombre ? escHtml(u.jefe_nombre) : '—';
             var delBtn = '';
             if (String(u.id) === String(adminId)) {
                 delBtn = '<span style="font-size:0.72rem;color:#9ca3af;">Tú</span>';
@@ -941,18 +967,16 @@
                 + '<td style="padding:10px 8px;font-size:0.82rem;color:#111827;">' + escHtml(u.nombre || '') + '</td>'
                 + '<td style="padding:10px 8px;font-size:0.82rem;color:#6b7280;font-family:monospace;">******</td>'
                 + '<td style="padding:10px 8px;font-size:0.78rem;color:#374151;">' + escHtml(rolEtiquetaCorta(u.rol)) + '</td>'
-                + '<td style="padding:10px 8px;font-size:0.78rem;color:#6b7280;">' + jefe + '</td>'
                 + '<td style="padding:10px 4px;text-align:right;">' + delBtn + '</td>'
                 + '</tr>';
         }).join('');
         return ''
             + '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">'
-            + '<table style="width:100%;min-width:320px;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;">'
+            + '<table style="width:100%;min-width:280px;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;">'
             + '<thead><tr style="background:#f9fafb;text-align:left;">'
             + '<th style="padding:10px 8px;font-size:0.72rem;color:#6b7280;">Nombre</th>'
             + '<th style="padding:10px 8px;font-size:0.72rem;color:#6b7280;">Código</th>'
             + '<th style="padding:10px 8px;font-size:0.72rem;color:#6b7280;">Rol</th>'
-            + '<th style="padding:10px 8px;font-size:0.72rem;color:#6b7280;">Jefe</th>'
             + '<th style="padding:10px 4px;"></th>'
             + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
     }
@@ -1889,8 +1913,10 @@
             return;
         }
         var ses = getRaSession();
-        var esProfesional = ses && String(ses.rol || '').toLowerCase() === 'profesional';
-        if (!validarFormulario(d, { permitirVacio: esProfesional })) return;
+        var rol = ses ? String(ses.rol || '').toLowerCase() : '';
+        var esProfesional = rol === 'profesional';
+        var esAdmin = rol === 'admin' || rol === 'administrador';
+        if (!validarFormulario(d, { permitirVacio: esProfesional || esAdmin })) return;
         var now = Date.now();
         var localId = editandoId || ('ra_' + now);
         var record = {
@@ -1958,8 +1984,10 @@
             return;
         }
         var ses = getRaSession();
-        var esProfesional = ses && String(ses.rol || '').toLowerCase() === 'profesional';
-        if (!validarFormulario(d, { permitirVacio: esProfesional })) return;
+        var rol = ses ? String(ses.rol || '').toLowerCase() : '';
+        var esProfesional = rol === 'profesional';
+        var esAdmin = rol === 'admin' || rol === 'administrador';
+        if (!validarFormulario(d, { permitirVacio: esProfesional || esAdmin })) return;
         if (typeof window.entregarHtmlEnVentanaPdf !== 'function') {
             alert('Visor PDF no disponible.');
             return;
