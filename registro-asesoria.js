@@ -691,7 +691,39 @@
             setUiModoFormulario(false);
             var root = document.getElementById('ra-roles-root');
             if (root) root.innerHTML = '';
-            initLogin();
+            renderHistorialRegistro();
+            aplicarEstadoConsentimientoEnPersonas();
+        };
+    }
+
+    function abrirModuloRegistroAsesoria() {
+        ensureRolesRoot();
+        if (!_formInitDone) {
+            initRegistroAsesoriaCore();
+            _formInitDone = true;
+        }
+        if (getRaSession()) {
+            wireSyncEvents();
+            renderDashboard();
+            return;
+        }
+        setUiModoDashboard(false);
+        setUiModoFormulario(false);
+        renderHistorialRegistro();
+        aplicarEstadoConsentimientoEnPersonas();
+        initLogin();
+    }
+
+    function wireEntradaRegistroAsesoria() {
+        if (window.__raEntradaWired) return;
+        window.__raEntradaWired = true;
+        var orig = window.mostrarPantalla;
+        if (typeof orig !== 'function') return;
+        window.mostrarPantalla = function(nombre) {
+            orig(nombre);
+            if (nombre === 'registro-asesoria') {
+                abrirModuloRegistroAsesoria();
+            }
         };
     }
 
@@ -1178,7 +1210,7 @@
 
     function renderDashboard() {
         var ses = getRaSession();
-        if (!ses) { initLogin(); return; }
+        if (!ses) return;
         ensureRaSessionBar();
         setUiModoDashboard(true);
         wireSyncEvents();
@@ -1200,13 +1232,13 @@
         overlay.style.cssText = 'position:fixed;inset:0;background:rgba(13,51,33,0.92);z-index:10070;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
         overlay.innerHTML = ''
             + '<div style="background:#fff;border-radius:14px;max-width:400px;width:100%;padding:22px 20px;box-shadow:0 12px 40px rgba(0,0,0,.25);font-family:system-ui,-apple-system,sans-serif;">'
-            + '<h2 style="margin:0 0 6px;font-size:1.05rem;color:#0d3321;">Acceso — Registro de asesoría</h2>'
+            + '<h2 style="margin:0 0 6px;font-size:1.05rem;color:#0d3321;">Acceso Registro de Asesoría</h2>'
             + '<p style="margin:0 0 16px;font-size:0.82rem;color:#6b7280;line-height:1.45;">Ingresa tu nombre y código de acceso.</p>'
             + '<label style="display:block;font-size:0.78rem;font-weight:700;color:#374151;margin-bottom:4px;">Nombre</label>'
             + '<input type="text" id="ra-login-nombre" autocomplete="name" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:0.9rem;margin-bottom:12px;">'
-            + '<label style="display:block;font-size:0.78rem;font-weight:700;color:#374151;margin-bottom:4px;">Código de acceso</label>'
+            + '<label style="display:block;font-size:0.78rem;font-weight:700;color:#374151;margin-bottom:4px;">Código</label>'
             + '<input type="password" id="ra-login-codigo" autocomplete="off" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:0.9rem;margin-bottom:16px;">'
-            + '<button type="button" id="ra-login-submit" style="width:100%;padding:12px 14px;background:#1a5c35;color:#fff;border:none;border-radius:10px;font-size:0.9rem;font-weight:800;cursor:pointer;">Ingresar</button>'
+            + '<button type="button" id="ra-login-submit" style="width:100%;padding:12px 14px;background:#1a5c35;color:#fff;border:none;border-radius:10px;font-size:0.9rem;font-weight:800;cursor:pointer;">Entrar</button>'
             + '<p id="ra-login-error" style="display:none;margin:12px 0 0;font-size:0.78rem;color:#b91c1c;"></p>'
             + '</div>';
         document.body.appendChild(overlay);
@@ -1234,7 +1266,7 @@
             btn.textContent = 'Verificando…';
             sb.rpc('ra_login', { p_nombre: nombre, p_codigo: codigo }).then(function(res) {
                 btn.disabled = false;
-                btn.textContent = 'Ingresar';
+                btn.textContent = 'Entrar';
                 if (res.error || !res.data) {
                     errEl.style.display = 'block';
                     errEl.textContent = (res.error && res.error.message) ? res.error.message : 'Credenciales inválidas.';
@@ -1258,7 +1290,7 @@
                 if (typeof window.mostrarPantalla === 'function') window.mostrarPantalla('registro-asesoria');
             }).catch(function() {
                 btn.disabled = false;
-                btn.textContent = 'Ingresar';
+                btn.textContent = 'Entrar';
                 alert('No se pudo validar el acceso. Verifica tu conexión.');
             });
         }
@@ -1274,18 +1306,7 @@
         wireReinicioGlobalHook();
         wireAutoUpdateDesdeSW();
         ensureRolesRoot();
-        var ses = getRaSession();
-        if (!ses) {
-            initLogin();
-            return;
-        }
-        if (!_formInitDone) {
-            initRegistroAsesoriaCore();
-            _formInitDone = true;
-        }
-        wireSyncEvents();
-        ensureRaSessionBar();
-        renderDashboard();
+        wireEntradaRegistroAsesoria();
     }
 
     function slugId(texto) {
@@ -2033,12 +2054,7 @@
     window.renderHistorialRegistro = renderHistorialRegistro;
 
     function cargarPantallaRegistroAsesoria() {
-        if (getRaSession()) {
-            renderDashboard();
-            return;
-        }
-        renderHistorialRegistro();
-        aplicarEstadoConsentimientoEnPersonas();
+        abrirModuloRegistroAsesoria();
     }
 
     function initRegistroAsesoriaCore() {
@@ -2123,18 +2139,14 @@
     function initRegistroAsesoria() {
         migrarDesdeLocalStorage();
         wireReinicioGlobalHook();
-        initRegistroAsesoriaCore();
-        _formInitDone = true;
-        if (getRaSession()) {
-            renderDashboard();
-        } else {
-            cargarPantallaRegistroAsesoria();
-        }
+        wireEntradaRegistroAsesoria();
+        abrirModuloRegistroAsesoria();
     }
 
     window.initRegistroAsesoria = initRegistroAsesoria;
     window.bootstrapRaApp = bootstrapRaApp;
     window.initLogin = initLogin;
+    window.abrirModuloRegistroAsesoria = abrirModuloRegistroAsesoria;
     window.renderDashboard = renderDashboard;
     window.syncPendientesRa = syncPendientes;
     window.cargarPantallaRegistroAsesoria = cargarPantallaRegistroAsesoria;
