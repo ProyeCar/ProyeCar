@@ -818,6 +818,9 @@
             if (root) root.innerHTML = '';
             renderHistorialRegistro();
             aplicarEstadoConsentimientoEnPersonas();
+            var overlay = document.getElementById('ra-login-overlay');
+            if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            if (typeof window.mostrarPantalla === 'function') window.mostrarPantalla('datos');
         };
     }
 
