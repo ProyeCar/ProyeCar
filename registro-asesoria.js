@@ -1166,7 +1166,7 @@
             + '</div>'
             + '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">'
             + '<button type="button" id="ra-user-copy-codigo" style="flex:1;min-width:120px;padding:10px 12px;background:#ecfdf5;color:#166534;border:1px solid #bbf7d0;border-radius:10px;font-size:0.78rem;font-weight:700;cursor:pointer;">📋 Copiar código</button>'
-            + '<button type="button" id="ra-user-wa-share" style="flex:1;min-width:120px;padding:10px 12px;background:#1a5c35;color:#fff;border:none;border-radius:10px;font-size:0.78rem;font-weight:700;cursor:pointer;">WhatsApp</button>'
+            + '<button type="button" id="ra-user-wa-share" style="flex:1;min-width:120px;padding:10px 12px;background:#1a5c35;color:#fff;border:none;border-radius:10px;font-size:0.78rem;font-weight:700;cursor:pointer;">📱 WhatsApp</button>'
             + '</div>'
             + '<label style="display:block;font-size:0.76rem;font-weight:700;color:#374151;margin-bottom:4px;">Rol</label>'
             + '<select id="ra-user-rol" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:0.88rem;margin-bottom:12px;">'
@@ -1244,7 +1244,7 @@
                 overlay.querySelector('#ra-user-wa-share').textContent = 'Copiado';
                 setTimeout(function() {
                     var b = overlay.querySelector('#ra-user-wa-share');
-                    if (b) b.textContent = 'WhatsApp';
+                    if (b) b.textContent = '📱 WhatsApp';
                 }, 1500);
             }).catch(function() { alert('No se pudo copiar el mensaje.'); });
         };
