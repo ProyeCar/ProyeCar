@@ -817,8 +817,20 @@
         };
     }
 
+    function esPantallaRegistroAsesoriaActiva() {
+        var pantalla = document.getElementById('pantalla-registro-asesoria');
+        return !!(pantalla && pantalla.classList.contains('activa'));
+    }
+
+    function cerrarLoginRaSiFueraDeModulo() {
+        if (esPantallaRegistroAsesoriaActiva()) return;
+        var overlay = document.getElementById('ra-login-overlay');
+        if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    }
+
     function abrirModuloRegistroAsesoria() {
         if (_raModoFormularioActivo) return;
+        if (!esPantallaRegistroAsesoriaActiva()) return;
         ensureRolesRoot();
         if (!_formInitDone) {
             initRegistroAsesoriaCore();
@@ -1439,6 +1451,7 @@
 
     function initLogin() {
         if (document.getElementById('ra-login-overlay')) return;
+        if (!esPantallaRegistroAsesoriaActiva()) return;
         setUiModoDashboard(false);
         setUiModoFormulario(false);
         var overlay = document.createElement('div');
@@ -1528,6 +1541,7 @@
         wireAutoUpdateDesdeSW();
         ensureRolesRoot();
         wireEntradaRegistroAsesoria();
+        cerrarLoginRaSiFueraDeModulo();
     }
 
     function slugId(texto) {
@@ -2307,6 +2321,10 @@
     window.renderHistorialRegistro = renderHistorialRegistro;
 
     function cargarPantallaRegistroAsesoria() {
+        if (typeof window.mostrarPantalla === 'function') {
+            window.mostrarPantalla('registro-asesoria');
+            return;
+        }
         abrirModuloRegistroAsesoria();
     }
 
@@ -2390,10 +2408,7 @@
     }
 
     function initRegistroAsesoria() {
-        migrarDesdeLocalStorage();
-        wireReinicioGlobalHook();
-        wireEntradaRegistroAsesoria();
-        abrirModuloRegistroAsesoria();
+        bootstrapRaApp();
     }
 
     window.initRegistroAsesoria = initRegistroAsesoria;
