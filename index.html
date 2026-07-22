@@ -4585,7 +4585,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var total = 0, cumple = 0, noCumple = 0;
         var catNames = [];
         var catIncumpl = {};
-        frente.categorias.forEach(function(cat) {
+        obtenerCategoriasVisiblesSegunFiltro(frente.categorias).forEach(function(cat) {
             catNames.push(cat.nombre);
             cat.items.forEach(function(it) {
                 if (it.cumple === true) { cumple++; total++; }
@@ -4607,7 +4607,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function generarRecomendaciones(idx) {
         var frente = frentes[idx];
         var itemsNoCumple = [];
-        frente.categorias.forEach(function(cat) {
+        obtenerCategoriasVisiblesSegunFiltro(frente.categorias).forEach(function(cat) {
             cat.items.forEach(function(it) {
                 if (it.cumple === false) {
                     var descripcion;
