@@ -243,6 +243,34 @@
         } catch (e) { return null; }
     }
 
+    function normalizarUsuarioRaLogin(data) {
+        if (data == null) return null;
+        var u = data;
+        if (typeof u === 'string') {
+            try { u = JSON.parse(u); } catch (e) { return null; }
+        }
+        if (!u || !u.id) return null;
+        return u;
+    }
+
+    function mensajeErrorLoginRa(res, err) {
+        if (err) {
+            return (err.message || String(err)) + (err.code ? ' (' + err.code + ')' : '');
+        }
+        if (res && res.error) {
+            var e = res.error;
+            var msg = e.message || 'Error en RPC ra_login';
+            if (e.code) msg += ' (' + e.code + ')';
+            if (e.details) msg += ' — ' + e.details;
+            if (e.hint) msg += ' — ' + e.hint;
+            return msg;
+        }
+        if (res && (res.data === null || res.data === undefined)) {
+            return 'Nombre o código no coinciden. Verifica mayúsculas y tildes.';
+        }
+        return 'Respuesta de login incompleta (falta id de usuario). Revisa ra_login en Supabase.';
+    }
+
     function migrarSesionLegacy() {
         if (_sesionLegacyMigrada) return;
         _sesionLegacyMigrada = true;
@@ -1274,7 +1302,7 @@
         }
 
         function intentarLogin() {
-            var nombre = (overlay.querySelector('#ra-login-nombre').value || '').trim();
+            var nombre = (overlay.querySelector('#ra-login-nombre').value || '').replace(/\s+/g, ' ').trim();
             var codigo = (overlay.querySelector('#ra-login-codigo').value || '').trim();
             var errEl = overlay.querySelector('#ra-login-error');
             if (!nombre || !codigo) {
@@ -1284,21 +1312,24 @@
             }
             var sb = getSupabaseClient();
             if (!sb) {
-                alert('Servicio no disponible. Verifica tu conexión e intenta más tarde.');
+                errEl.style.display = 'block';
+                errEl.textContent = 'Supabase no disponible. Recarga la app e intenta de nuevo.';
                 return;
             }
             var btn = overlay.querySelector('#ra-login-submit');
             btn.disabled = true;
             btn.textContent = 'Verificando…';
+            console.log('[RA Login] RPC ra_login →', { p_nombre: nombre, p_codigo: codigo });
             sb.rpc('ra_login', { p_nombre: nombre, p_codigo: codigo }).then(function(res) {
+                console.log('[RA Login] respuesta Supabase:', res);
                 btn.disabled = false;
                 btn.textContent = 'Entrar';
-                if (res.error || !res.data) {
+                var u = normalizarUsuarioRaLogin(res.data);
+                if (res.error || !u) {
                     errEl.style.display = 'block';
-                    errEl.textContent = (res.error && res.error.message) ? res.error.message : 'Credenciales inválidas.';
+                    errEl.textContent = mensajeErrorLoginRa(res, null);
                     return;
                 }
-                var u = res.data;
                 setRaSession({
                     id: u.id,
                     nombre: u.nombre || nombre,
@@ -1314,10 +1345,12 @@
                 wireSyncEvents();
                 renderDashboard();
                 if (typeof window.mostrarPantalla === 'function') window.mostrarPantalla('registro-asesoria');
-            }).catch(function() {
+            }).catch(function(err) {
+                console.log('[RA Login] error catch:', err);
                 btn.disabled = false;
                 btn.textContent = 'Entrar';
-                alert('No se pudo validar el acceso. Verifica tu conexión.');
+                errEl.style.display = 'block';
+                errEl.textContent = mensajeErrorLoginRa(null, err);
             });
         }
 
