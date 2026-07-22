@@ -2413,7 +2413,6 @@
 
     window.initRegistroAsesoria = initRegistroAsesoria;
     window.bootstrapRaApp = bootstrapRaApp;
-    window.initLogin = initLogin;
     window.abrirModuloRegistroAsesoria = abrirModuloRegistroAsesoria;
     window.renderDashboard = renderDashboard;
     window.syncPendientesRa = syncPendientes;

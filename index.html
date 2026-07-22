@@ -2620,12 +2620,18 @@ document.addEventListener('DOMContentLoaded', function() {
         reintentarCola();
     });
 
-    // ── Login gate ──
+    // ── Login Supabase (solo sync PDF informes, NO al abrir la app) ──
 
-    async function mostrarLoginSiHaceFalta() {
+    async function mostrarLoginSupabasePdfSiHaceFalta() {
         const modal = document.getElementById('modal-login');
+        if (!modal || !window.ProyeCarSupabase) return false;
         const { data: { session } } = await window.ProyeCarSupabase.supabase.auth.getSession();
-        modal.style.display = session ? 'none' : 'flex';
+        if (session) {
+            modal.style.display = 'none';
+            return true;
+        }
+        modal.style.display = 'flex';
+        return false;
     }
 
     document.getElementById('login-submit').addEventListener('click', async function() {
@@ -2643,7 +2649,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    window.addEventListener('load', mostrarLoginSiHaceFalta);
+    window.mostrarLoginSupabasePdfSiHaceFalta = mostrarLoginSupabasePdfSiHaceFalta;
 
     // Genera un ID único por foto
     function fotoId(frenteIdx, timestamp) {
