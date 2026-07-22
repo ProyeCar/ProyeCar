@@ -995,6 +995,26 @@
                         + '</div>';
                     return;
                 }
+                if (opts.readonly) {
+                    var fechaValor = escHtml(dia) + (hora ? ' · ' + escHtml(hora) : '');
+                    html += ''
+                        + '<div style="font-weight:normal;padding:10px 12px;border-bottom:1px solid #e5e7eb;">'
+                        + '<div style="font-size:12px;line-height:1.4;margin-top:0;">'
+                        + '<span style="font-weight:600;color:#111827;font-size:12px;">Usuario atendido:</span>'
+                        + '<span style="font-weight:normal;color:#6b7280;font-size:12px;"> ' + escHtml(usuario) + '</span>'
+                        + '</div>'
+                        + '<div style="font-size:12px;line-height:1.4;margin-top:2px;">'
+                        + '<span style="font-weight:600;color:#111827;font-size:12px;">Fecha:</span>'
+                        + '<span style="font-weight:normal;color:#6b7280;font-size:12px;"> ' + fechaValor + '</span>'
+                        + '</div>'
+                        + '<div style="font-size:12px;line-height:1.4;margin-top:2px;">'
+                        + '<span style="font-weight:600;color:#111827;font-size:12px;">Asunto:</span>'
+                        + '<span style="font-weight:normal;color:#6b7280;font-size:12px;"> ' + escHtml(asunto) + '</span>'
+                        + '</div>'
+                        + '<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">' + buildRegistroAccionesHtml(r, opts) + '</div>'
+                        + '</div>';
+                    return;
+                }
                 var linea1 = escHtml(usuario);
                 linea1 += ' · ' + escHtml(dia);
                 if (hora) linea1 += ' · ' + escHtml(hora);
