@@ -266,7 +266,7 @@
             return msg;
         }
         if (res && (res.data === null || res.data === undefined)) {
-            return 'Nombre o código no coinciden. Verifica mayúsculas y tildes.';
+            return 'Nombre o código no coinciden. Usa el nombre exacto registrado en el sistema (ortografía y tildes).';
         }
         return 'Respuesta de login incompleta (falta id de usuario). Revisa ra_login en Supabase.';
     }
@@ -352,6 +352,74 @@
                 else reject(new Error('No se pudo copiar'));
             } catch (e) { reject(e); }
         });
+    }
+
+    function mensajeWhatsAppAccesoProyecar(nombre, codigo) {
+        // Formato compartir: nombre + codigo + link ProyeCar
+        return 'Tu acceso a ProyeCar:\nNombre: ' + nombre + '\nCódigo: ' + codigo + '\nLink: https://proyecar.github.io/ProyeCar/';
+    }
+
+    function rolEtiquetaLarga(rol) {
+        var r = String(rol || '').toLowerCase();
+        if (r === 'admin' || r === 'administrador') return 'Admin';
+        if (r === 'jefe') return 'Jefe';
+        return 'Profesional';
+    }
+
+    function normalizarNombreUsuario(val) {
+        return (val || '').replace(/^\uFEFF/, '').replace(/\s+/g, ' ').trim();
+    }
+
+    function normalizarCodigoUsuario(val) {
+        return (val || '').trim().toUpperCase();
+    }
+
+    function cerrarOverlayPorId(id) {
+        var el = document.getElementById(id);
+        if (el && el.parentNode) el.parentNode.removeChild(el);
+    }
+
+    function abrirModalConfirmarUsuario(opts) {
+        // Preview obligatorio antes de crear o editar usuario en Supabase
+        cerrarOverlayPorId('ra-user-confirm-overlay');
+        var overlay = document.createElement('div');
+        overlay.id = 'ra-user-confirm-overlay';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(13,51,33,0.92);z-index:10085;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+        overlay.innerHTML = ''
+            + '<div style="background:#fff;border-radius:14px;max-width:400px;width:100%;padding:20px;box-shadow:0 12px 40px rgba(0,0,0,.25);font-family:system-ui,-apple-system,sans-serif;">'
+            + '<div style="font-size:1rem;font-weight:800;color:#166534;margin-bottom:14px;">✅ Confirmar</div>'
+            + '<div style="background:#f9fafb;border-radius:12px;padding:14px;margin-bottom:14px;font-size:0.88rem;color:#374151;line-height:1.55;">'
+            + '<div><span style="color:#6b7280;">Nombre:</span> ' + escHtml(opts.nombre) + '</div>'
+            + '<div style="margin-top:8px;"><span style="color:#6b7280;">Código:</span> <strong style="font-family:monospace;font-size:1.15rem;letter-spacing:.1em;color:#1a5c35;">' + escHtml(opts.codigo) + '</strong></div>'
+            + '<div style="margin-top:8px;"><span style="color:#6b7280;">Rol:</span> ' + escHtml(rolEtiquetaLarga(opts.rol)) + '</div>'
+            + '</div>'
+            + '<p id="ra-user-confirm-error" style="display:none;margin:0 0 10px;font-size:0.78rem;color:#b91c1c;"></p>'
+            + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+            + '<button type="button" id="ra-user-confirm-ok" style="flex:1;min-width:130px;padding:11px 14px;background:#1a5c35;color:#fff;border:none;border-radius:10px;font-size:0.88rem;font-weight:800;cursor:pointer;">✅ Confirmar</button>'
+            + '<button type="button" id="ra-user-confirm-back" style="flex:1;min-width:130px;padding:11px 14px;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;border-radius:10px;font-size:0.88rem;font-weight:700;cursor:pointer;">✏️ Corregir</button>'
+            + '</div></div>';
+        document.body.appendChild(overlay);
+        overlay.querySelector('#ra-user-confirm-back').onclick = function() {
+            cerrarOverlayPorId('ra-user-confirm-overlay');
+            if (typeof opts.onCorregir === 'function') opts.onCorregir();
+        };
+        overlay.querySelector('#ra-user-confirm-ok').onclick = function() {
+            var btn = overlay.querySelector('#ra-user-confirm-ok');
+            var errEl = overlay.querySelector('#ra-user-confirm-error');
+            errEl.style.display = 'none';
+            btn.disabled = true;
+            btn.textContent = 'Guardando…';
+            Promise.resolve(typeof opts.onConfirm === 'function' ? opts.onConfirm() : null).then(function() {
+                cerrarOverlayPorId('ra-user-confirm-overlay');
+                cerrarOverlayPorId('ra-user-modal-overlay');
+                if (typeof opts.onSuccess === 'function') opts.onSuccess();
+            }).catch(function(err) {
+                btn.disabled = false;
+                btn.textContent = '✅ Confirmar';
+                errEl.style.display = 'block';
+                errEl.textContent = (err && err.message) ? err.message : 'No se pudo guardar el usuario.';
+            });
+        };
     }
 
     function ensureRaSessionBar() {
@@ -986,23 +1054,24 @@
             return '<div style="padding:16px;text-align:center;color:#6b7280;font-size:0.84rem;">No hay usuarios.</div>';
         }
         var rows = lista.map(function(u) {
-            var delBtn = '';
+            var acciones = '';
+            acciones += '<button type="button" class="ra-user-edit" data-id="' + escHtml(u.id) + '" style="padding:6px 10px;background:#ecfdf5;color:#166534;border:1px solid #bbf7d0;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;margin-right:4px;">Editar</button>';
             if (String(u.id) === String(adminId)) {
-                delBtn = '<span style="font-size:0.72rem;color:#9ca3af;">Tú</span>';
+                acciones += '<span style="font-size:0.72rem;color:#9ca3af;">Tú</span>';
             } else {
-                delBtn = '<button type="button" class="ra-user-del" data-id="' + escHtml(u.id) + '" data-nombre="' + escHtml(u.nombre || '') + '" style="padding:6px 10px;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;">Eliminar</button>';
+                acciones += '<button type="button" class="ra-user-del" data-id="' + escHtml(u.id) + '" data-nombre="' + escHtml(u.nombre || '') + '" style="padding:6px 10px;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;">Eliminar</button>';
             }
             return ''
                 + '<tr style="border-top:1px solid #f3f4f6;">'
                 + '<td style="padding:10px 8px;font-size:0.82rem;color:#111827;">' + escHtml(u.nombre || '') + '</td>'
-                + '<td style="padding:10px 8px;font-size:0.82rem;color:#6b7280;font-family:monospace;">******</td>'
+                + '<td style="padding:10px 8px;font-size:0.82rem;color:#1a5c35;font-family:monospace;font-weight:700;letter-spacing:.06em;">' + escHtml(u.codigo_acceso || '—') + '</td>'
                 + '<td style="padding:10px 8px;font-size:0.78rem;color:#374151;">' + escHtml(rolEtiquetaCorta(u.rol)) + '</td>'
-                + '<td style="padding:10px 4px;text-align:right;">' + delBtn + '</td>'
+                + '<td style="padding:10px 4px;text-align:right;white-space:nowrap;">' + acciones + '</td>'
                 + '</tr>';
         }).join('');
         return ''
             + '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">'
-            + '<table style="width:100%;min-width:280px;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;">'
+            + '<table style="width:100%;min-width:320px;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;">'
             + '<thead><tr style="background:#f9fafb;text-align:left;">'
             + '<th style="padding:10px 8px;font-size:0.72rem;color:#6b7280;">Nombre</th>'
             + '<th style="padding:10px 8px;font-size:0.72rem;color:#6b7280;">Código</th>'
@@ -1031,6 +1100,18 @@
     }
 
     function wireAccionesUsuariosAdmin(cont, lista, sb, ses) {
+        cont.querySelectorAll('.ra-user-edit').forEach(function(btn) {
+            btn.onclick = function() {
+                var uid = btn.getAttribute('data-id');
+                var usuario = null;
+                for (var i = 0; i < lista.length; i++) {
+                    if (String(lista[i].id) === String(uid)) { usuario = lista[i]; break; }
+                }
+                if (!usuario) return;
+                var jefes = lista.filter(function(u) { return String(u.rol || '').toLowerCase() === 'jefe'; });
+                abrirModalUsuarioForm({ mode: 'edit', sb: sb, ses: ses, jefes: jefes, usuario: usuario, onSuccess: function() { cargarUsuariosAdmin(sb, ses); } });
+            };
+        });
         cont.querySelectorAll('.ra-user-del').forEach(function(btn) {
             btn.onclick = function() {
                 var uid = btn.getAttribute('data-id');
@@ -1056,36 +1137,48 @@
         });
     }
 
-    function abrirModalNuevoUsuario(sb, ses, jefes) {
+    function abrirModalUsuarioForm(opts) {
         if (document.getElementById('ra-user-modal-overlay')) return;
-        var codigoGen = generarCodigo();
+        var mode = opts.mode === 'edit' ? 'edit' : 'create';
+        var esEdit = mode === 'edit';
+        var usuario = opts.usuario || {};
+        var codigoInicial = esEdit ? normalizarCodigoUsuario(usuario.codigo_acceso || '') : generarCodigo();
+        var titulo = esEdit ? 'Editar Usuario' : 'Nuevo usuario';
         var overlay = document.createElement('div');
         overlay.id = 'ra-user-modal-overlay';
-        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(13,51,33,0.88);z-index:10080;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
-        var jefeOpts = (jefes || []).map(function(j) {
-            return '<option value="' + escHtml(j.id) + '">' + escHtml(j.nombre || '') + '</option>';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(13,51,33,0.88);z-index:10080;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;overflow-y:auto;-webkit-overflow-scrolling:touch;';
+        var jefeOpts = (opts.jefes || []).map(function(j) {
+            var sel = esEdit && usuario.jefe_id && String(usuario.jefe_id) === String(j.id) ? ' selected' : '';
+            return '<option value="' + escHtml(j.id) + '"' + sel + '>' + escHtml(j.nombre || '') + '</option>';
         }).join('');
+        var rolVal = String(usuario.rol || 'profesional').toLowerCase();
+        if (rolVal === 'administrador') rolVal = 'admin';
         overlay.innerHTML = ''
-            + '<div style="background:#fff;border-radius:14px;max-width:420px;width:100%;padding:20px;box-shadow:0 12px 40px rgba(0,0,0,.25);font-family:system-ui,-apple-system,sans-serif;">'
-            + '<h3 style="margin:0 0 14px;font-size:1rem;color:#0d3321;">Nuevo usuario</h3>'
+            + '<div style="background:#fff;border-radius:14px;max-width:420px;width:100%;padding:20px;box-shadow:0 12px 40px rgba(0,0,0,.25);font-family:system-ui,-apple-system,sans-serif;margin:auto;">'
+            + '<h3 style="margin:0 0 14px;font-size:1rem;color:#0d3321;">' + escHtml(titulo) + '</h3>'
             + '<label style="display:block;font-size:0.76rem;font-weight:700;color:#374151;margin-bottom:4px;">Nombre</label>'
-            + '<input type="text" id="ra-user-nombre" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:0.88rem;margin-bottom:12px;">'
+            + '<input type="text" id="ra-user-nombre" value="' + escHtml(esEdit ? (usuario.nombre || '') : '') + '" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:0.88rem;margin-bottom:12px;">'
+            + '<label style="display:block;font-size:0.76rem;font-weight:700;color:#374151;margin-bottom:4px;">Código</label>'
+            + '<div id="ra-user-codigo-display" style="font-size:1.55rem;font-weight:800;letter-spacing:.14em;font-family:monospace;text-align:center;padding:14px 10px;background:#f0fdf4;border:2px dashed #86efac;border-radius:12px;margin-bottom:8px;color:#1a5c35;">' + escHtml(codigoInicial) + '</div>'
+            + '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">'
+            + '<input type="text" id="ra-user-codigo" value="' + escHtml(codigoInicial) + '" maxlength="10" style="flex:1;min-width:140px;box-sizing:border-box;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:0.95rem;font-weight:800;letter-spacing:.08em;font-family:monospace;">'
+            + '<button type="button" id="ra-user-regen-codigo" title="Generar nuevo código" style="padding:10px 12px;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;border-radius:10px;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap;">🔄 Nuevo</button>'
+            + '</div>'
+            + '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">'
+            + '<button type="button" id="ra-user-copy-codigo" style="flex:1;min-width:120px;padding:10px 12px;background:#ecfdf5;color:#166534;border:1px solid #bbf7d0;border-radius:10px;font-size:0.78rem;font-weight:700;cursor:pointer;">📋 Copiar código</button>'
+            + '<button type="button" id="ra-user-wa-share" style="flex:1;min-width:120px;padding:10px 12px;background:#1a5c35;color:#fff;border:none;border-radius:10px;font-size:0.78rem;font-weight:700;cursor:pointer;">📱 WhatsApp</button>'
+            + '</div>'
             + '<label style="display:block;font-size:0.76rem;font-weight:700;color:#374151;margin-bottom:4px;">Rol</label>'
             + '<select id="ra-user-rol" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:0.88rem;margin-bottom:12px;">'
-            + '<option value="profesional">Profesional</option>'
-            + '<option value="jefe">Jefe</option>'
-            + '<option value="admin">Admin</option>'
+            + '<option value="profesional"' + (rolVal === 'profesional' ? ' selected' : '') + '>Profesional</option>'
+            + '<option value="jefe"' + (rolVal === 'jefe' ? ' selected' : '') + '>Jefe</option>'
+            + '<option value="admin"' + (rolVal === 'admin' ? ' selected' : '') + '>Admin</option>'
             + '</select>'
             + '<div id="ra-user-jefe-wrap" style="margin-bottom:12px;">'
             + '<label style="display:block;font-size:0.76rem;font-weight:700;color:#374151;margin-bottom:4px;">Jefe</label>'
             + '<select id="ra-user-jefe" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:0.88rem;">'
             + '<option value="">Seleccionar…</option>' + jefeOpts
             + '</select></div>'
-            + '<label style="display:block;font-size:0.76rem;font-weight:700;color:#374151;margin-bottom:4px;">Código generado</label>'
-            + '<div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;">'
-            + '<input type="text" id="ra-user-codigo" readonly value="' + escHtml(codigoGen) + '" style="flex:1;box-sizing:border-box;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:0.95rem;font-weight:800;letter-spacing:.08em;font-family:monospace;background:#f9fafb;">'
-            + '<button type="button" id="ra-user-copy-codigo" style="padding:10px 12px;background:#ecfdf5;color:#166534;border:1px solid #bbf7d0;border-radius:10px;font-size:0.78rem;font-weight:700;cursor:pointer;">Copiar</button>'
-            + '</div>'
             + '<p id="ra-user-modal-error" style="display:none;margin:0 0 10px;font-size:0.78rem;color:#b91c1c;"></p>'
             + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
             + '<button type="button" id="ra-user-guardar" style="flex:1;min-width:120px;padding:11px 14px;background:#1a5c35;color:#fff;border:none;border-radius:10px;font-size:0.88rem;font-weight:800;cursor:pointer;">Guardar</button>'
@@ -1093,97 +1186,166 @@
             + '</div></div>';
         document.body.appendChild(overlay);
 
-        function cerrar() {
-            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+        var codigoInput = overlay.querySelector('#ra-user-codigo');
+        var codigoDisplay = overlay.querySelector('#ra-user-codigo-display');
+
+        function syncCodigoUi() {
+            var c = normalizarCodigoUsuario(codigoInput.value);
+            codigoInput.value = c;
+            codigoDisplay.textContent = c || '——';
+        }
+
+        function leerFormulario() {
+            var nombre = normalizarNombreUsuario(overlay.querySelector('#ra-user-nombre').value);
+            var rol = overlay.querySelector('#ra-user-rol').value;
+            var codigo = normalizarCodigoUsuario(codigoInput.value);
+            var jefeId = overlay.querySelector('#ra-user-jefe').value || null;
+            if (rol !== 'profesional') jefeId = null;
+            return { nombre: nombre, rol: rol, codigo: codigo, jefeId: jefeId };
         }
 
         function toggleJefe() {
             var rol = overlay.querySelector('#ra-user-rol').value;
-            var wrap = overlay.querySelector('#ra-user-jefe-wrap');
-            wrap.style.display = rol === 'profesional' ? 'block' : 'none';
+            overlay.querySelector('#ra-user-jefe-wrap').style.display = rol === 'profesional' ? 'block' : 'none';
         }
 
+        function cerrar() { cerrarOverlayPorId('ra-user-modal-overlay'); }
+
         toggleJefe();
+        syncCodigoUi();
         overlay.querySelector('#ra-user-rol').onchange = toggleJefe;
         overlay.querySelector('#ra-user-cancelar').onclick = cerrar;
+        codigoInput.addEventListener('input', syncCodigoUi);
+        overlay.querySelector('#ra-user-regen-codigo').onclick = function() {
+            codigoInput.value = generarCodigo();
+            syncCodigoUi();
+        };
         overlay.querySelector('#ra-user-copy-codigo').onclick = function() {
-            var c = overlay.querySelector('#ra-user-codigo').value;
-            copiarTexto('Tu código de acceso ProyeCar: ' + c).then(function() {
+            syncCodigoUi();
+            var datos = leerFormulario();
+            if (!datos.codigo) { alert('Ingresa un código válido.'); return; }
+            copiarTexto(datos.codigo).then(function() {
                 overlay.querySelector('#ra-user-copy-codigo').textContent = 'Copiado';
                 setTimeout(function() {
                     var b = overlay.querySelector('#ra-user-copy-codigo');
-                    if (b) b.textContent = 'Copiar';
+                    if (b) b.textContent = '📋 Copiar código';
                 }, 1500);
             }).catch(function() { alert('No se pudo copiar el código.'); });
         };
+        overlay.querySelector('#ra-user-wa-share').onclick = function() {
+            syncCodigoUi();
+            var datos = leerFormulario();
+            if (!datos.nombre || !datos.codigo) {
+                alert('Completa nombre y código antes de compartir.');
+                return;
+            }
+            var msg = mensajeWhatsAppAccesoProyecar(datos.nombre, datos.codigo);
+            copiarTexto(msg).then(function() {
+                overlay.querySelector('#ra-user-wa-share').textContent = 'Copiado';
+                setTimeout(function() {
+                    var b = overlay.querySelector('#ra-user-wa-share');
+                    if (b) b.textContent = '📱 WhatsApp';
+                }, 1500);
+            }).catch(function() { alert('No se pudo copiar el mensaje.'); });
+        };
 
         overlay.querySelector('#ra-user-guardar').onclick = function() {
-            var nombre = (overlay.querySelector('#ra-user-nombre').value || '').trim();
-            var rol = overlay.querySelector('#ra-user-rol').value;
-            var codigo = (overlay.querySelector('#ra-user-codigo').value || '').trim();
-            var jefeId = overlay.querySelector('#ra-user-jefe').value || null;
+            syncCodigoUi();
+            var datos = leerFormulario();
             var errEl = overlay.querySelector('#ra-user-modal-error');
             errEl.style.display = 'none';
-            if (!nombre) {
+            if (!datos.nombre) {
                 errEl.style.display = 'block';
                 errEl.textContent = 'Ingresa el nombre.';
                 return;
             }
-            if (rol === 'profesional' && !jefeId) {
+            if (!datos.codigo || datos.codigo.length < 4) {
+                errEl.style.display = 'block';
+                errEl.textContent = 'Ingresa un código válido (mínimo 4 caracteres).';
+                return;
+            }
+            if (datos.rol === 'profesional' && !datos.jefeId) {
                 errEl.style.display = 'block';
                 errEl.textContent = 'Selecciona un jefe para el profesional.';
                 return;
             }
-            if (rol !== 'profesional') jefeId = null;
-            var btn = overlay.querySelector('#ra-user-guardar');
-            btn.disabled = true;
-            btn.textContent = 'Guardando…';
-            sb.rpc('ra_create_usuario', {
-                p_admin_id: ses.id,
-                p_codigo_admin: ses.codigo_acceso,
-                p_nombre: nombre,
-                p_codigo_acceso: codigo,
-                p_rol: rol,
-                p_jefe_id: jefeId
-            }).then(function(res) {
-                btn.disabled = false;
-                btn.textContent = 'Guardar';
-                if (res.error) throw res.error;
-                cerrar();
-                mostrarToastUsuarioCreado(codigo, nombre);
-                cargarUsuariosAdmin(sb, ses);
-            }).catch(function(err) {
-                btn.disabled = false;
-                btn.textContent = 'Guardar';
-                errEl.style.display = 'block';
-                errEl.textContent = (err && err.message) ? err.message : 'No se pudo crear el usuario.';
+            abrirModalConfirmarUsuario({
+                nombre: datos.nombre,
+                codigo: datos.codigo,
+                rol: datos.rol,
+                onCorregir: function() {},
+                onConfirm: function() {
+                    if (esEdit) {
+                        return opts.sb.rpc('ra_update_usuario', {
+                            p_admin_id: opts.ses.id,
+                            p_codigo_admin: opts.ses.codigo_acceso,
+                            p_usuario_id: usuario.id,
+                            p_nombre: datos.nombre,
+                            p_codigo_acceso: datos.codigo,
+                            p_rol: datos.rol,
+                            p_jefe_id: datos.jefeId
+                        }).then(function(res) {
+                            if (res.error) throw res.error;
+                            mostrarToastUsuarioGuardado(datos.codigo, datos.nombre, esEdit);
+                        });
+                    }
+                    return opts.sb.rpc('ra_create_usuario', {
+                        p_admin_id: opts.ses.id,
+                        p_codigo_admin: opts.ses.codigo_acceso,
+                        p_nombre: datos.nombre,
+                        p_codigo_acceso: datos.codigo,
+                        p_rol: datos.rol,
+                        p_jefe_id: datos.jefeId
+                    }).then(function(res) {
+                        if (res.error) throw res.error;
+                        mostrarToastUsuarioGuardado(datos.codigo, datos.nombre, esEdit);
+                    });
+                },
+                onSuccess: function() {
+                    if (typeof opts.onSuccess === 'function') opts.onSuccess();
+                }
             });
         };
     }
 
-    function mostrarToastUsuarioCreado(codigo, nombre) {
+    function abrirModalNuevoUsuario(sb, ses, jefes) {
+        abrirModalUsuarioForm({ mode: 'create', sb: sb, ses: ses, jefes: jefes, onSuccess: function() { cargarUsuariosAdmin(sb, ses); } });
+    }
+
+    function mostrarToastUsuarioGuardado(codigo, nombre, esEdit) {
         var prev = document.getElementById('ra-user-created-toast');
         if (prev && prev.parentNode) prev.parentNode.removeChild(prev);
         var toast = document.createElement('div');
         toast.id = 'ra-user-created-toast';
-        toast.style.cssText = 'position:fixed;left:12px;right:12px;bottom:16px;z-index:10090;background:#ecfdf5;border:1px solid #86efac;border-radius:12px;padding:14px;box-shadow:0 8px 24px rgba(0,0,0,.12);font-family:system-ui,-apple-system,sans-serif;';
+        toast.style.cssText = 'position:fixed;left:12px;right:12px;bottom:max(16px,env(safe-area-inset-bottom));z-index:10090;background:#ecfdf5;border:1px solid #86efac;border-radius:12px;padding:14px;box-shadow:0 8px 24px rgba(0,0,0,.12);font-family:system-ui,-apple-system,sans-serif;';
         toast.innerHTML = ''
-            + '<div style="font-size:0.88rem;font-weight:800;color:#166534;margin-bottom:6px;">Usuario creado</div>'
-            + '<div style="font-size:0.82rem;color:#374151;margin-bottom:10px;">' + escHtml(nombre) + ' · Código: <strong style="font-family:monospace;">' + escHtml(codigo) + '</strong></div>'
+            + '<div style="font-size:0.88rem;font-weight:800;color:#166534;margin-bottom:6px;">' + escHtml(esEdit ? 'Usuario actualizado' : 'Usuario creado') + '</div>'
+            + '<div style="font-size:0.82rem;color:#374151;margin-bottom:4px;">' + escHtml(nombre) + '</div>'
+            + '<div style="font-size:1.1rem;font-weight:800;font-family:monospace;letter-spacing:.1em;color:#1a5c35;margin-bottom:10px;">' + escHtml(codigo) + '</div>'
             + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
-            + '<button type="button" id="ra-user-wa-copy" style="flex:1;min-width:140px;padding:10px 12px;background:#1a5c35;color:#fff;border:none;border-radius:10px;font-size:0.8rem;font-weight:700;cursor:pointer;">Copiar para WhatsApp</button>'
+            + '<button type="button" id="ra-user-wa-copy" style="flex:1;min-width:140px;padding:10px 12px;background:#1a5c35;color:#fff;border:none;border-radius:10px;font-size:0.8rem;font-weight:700;cursor:pointer;">Copiar WhatsApp</button>'
+            + '<button type="button" id="ra-user-copy-code-toast" style="padding:10px 12px;background:#ecfdf5;color:#166534;border:1px solid #bbf7d0;border-radius:10px;font-size:0.8rem;font-weight:700;cursor:pointer;">📋 Código</button>'
             + '<button type="button" id="ra-user-toast-close" style="padding:10px 12px;background:#e5e7eb;color:#374151;border:none;border-radius:10px;font-size:0.8rem;font-weight:700;cursor:pointer;">Cerrar</button>'
             + '</div>';
         document.body.appendChild(toast);
+        var msg = mensajeWhatsAppAccesoProyecar(nombre, codigo);
         toast.querySelector('#ra-user-toast-close').onclick = function() {
             if (toast.parentNode) toast.parentNode.removeChild(toast);
         };
         toast.querySelector('#ra-user-wa-copy').onclick = function() {
-            var msg = 'Hola ' + nombre + ', tu código de acceso a ProyeCar Registro de Asesoría es: ' + codigo;
             copiarTexto(msg).then(function() {
                 toast.querySelector('#ra-user-wa-copy').textContent = 'Copiado';
             }).catch(function() { alert('No se pudo copiar.'); });
         };
+        toast.querySelector('#ra-user-copy-code-toast').onclick = function() {
+            copiarTexto(codigo).then(function() {
+                toast.querySelector('#ra-user-copy-code-toast').textContent = 'Copiado';
+            }).catch(function() { alert('No se pudo copiar.'); });
+        };
+    }
+
+    function mostrarToastUsuarioCreado(codigo, nombre) {
+        mostrarToastUsuarioGuardado(codigo, nombre, false);
     }
 
     function renderDashboardAdmin() {
@@ -1302,8 +1464,8 @@
         }
 
         function intentarLogin() {
-            var nombre = (overlay.querySelector('#ra-login-nombre').value || '').replace(/\s+/g, ' ').trim();
-            var codigo = (overlay.querySelector('#ra-login-codigo').value || '').trim();
+            var nombre = (overlay.querySelector('#ra-login-nombre').value || '').replace(/^\uFEFF/, '').replace(/\s+/g, ' ').trim();
+            var codigo = (overlay.querySelector('#ra-login-codigo').value || '').trim().toUpperCase();
             var errEl = overlay.querySelector('#ra-login-error');
             if (!nombre || !codigo) {
                 errEl.style.display = 'block';
