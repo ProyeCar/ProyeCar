@@ -4837,25 +4837,62 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     }
     btnGuardarManual.onclick = () => { saveToLocal(); alert("Datos guardados manualmente."); };
-    btnAgregarFrente.onclick = () => { setTimeout(() => {
-        const nuevoNombre = prompt("Nombre del nuevo frente:", "Nuevo frente");
-        if (nuevoNombre && nuevoNombre.trim() !== "") {
-            frentes.push({ nombre: nuevoNombre.trim(), contratista: "", numeroContrato: "", municipio: "", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" });
-            // Inyectar ítems custom existentes en el nuevo frente
-            var customExistente = extractCustomItems(frentes.slice(0, frentes.length - 1));
-            var nuevoFrente = frentes[frentes.length - 1];
-            nuevoFrente.categorias.forEach(function(cat) {
-                var cItems = customExistente[cat.id] || [];
-                cItems.forEach(function(ci) {
-                    if (!cat.items.find(function(it) { return it.id === ci.id; })) {
-                        cat.items.push({ id: ci.id, texto: ci.texto, cumple: null, obs: "", tipoVerificacion: ci.tipoVerificacion || "foto" });
-                    }
-                });
+    function agregarFrenteConDatos(nombre, municipio, zona) {
+        frentes.push({ nombre: nombre, contratista: "", numeroContrato: "", municipio: municipio || "", zona: zona || "", categorias: JSON.parse(JSON.stringify(CATEGORIAS_BASE)), fotos: [], observaciones: "", recomendaciones: "" });
+        // Inyectar ítems custom existentes en el nuevo frente
+        var customExistente = extractCustomItems(frentes.slice(0, frentes.length - 1));
+        var nuevoFrente = frentes[frentes.length - 1];
+        nuevoFrente.categorias.forEach(function(cat) {
+            var cItems = customExistente[cat.id] || [];
+            cItems.forEach(function(ci) {
+                if (!cat.items.find(function(it) { return it.id === ci.id; })) {
+                    cat.items.push({ id: ci.id, texto: ci.texto, cumple: null, obs: "", tipoVerificacion: ci.tipoVerificacion || "foto" });
+                }
             });
-            saveToLocal();
-            renderFrentes(); // necesario para agregar frente completo
-        } else if (nuevoNombre !== null) alert("Debe ingresar un nombre.");
-    }, 10); };
+        });
+        saveToLocal();
+        renderFrentes(); // necesario para agregar frente completo
+    }
+
+    function ultimoMunicipioUsado() {
+        for (var i = frentes.length - 1; i >= 0; i--) {
+            if ((frentes[i].municipio || '').trim()) return frentes[i].municipio.trim();
+        }
+        return '';
+    }
+
+    btnAgregarFrente.onclick = () => { setTimeout(abrirModalNuevoFrente, 10); };
+
+    function abrirModalNuevoFrente() {
+        refrescarMunicipiosDatalist();
+        var overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+        var card = document.createElement('div');
+        card.style.cssText = 'background:#fff;padding:20px;border-radius:12px;width:100%;max-width:420px;box-shadow:0 8px 32px rgba(0,0,0,0.2);';
+        card.innerHTML = '<div style="font-size:1rem;font-weight:600;margin-bottom:16px;color:#1e3a2f;">Nuevo Frente</div>'
+            + '<label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Nombre del frente</label>'
+            + '<input id="nf-nombre" type="text" value="Nuevo frente" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:16px;margin-bottom:12px;box-sizing:border-box;">'
+            + '<label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Municipio</label>'
+            + '<input id="nf-municipio" type="text" list="municipios-datalist" placeholder="Ej: Cartagena de Indias" value="' + (ultimoMunicipioUsado() || '').replace(/"/g, '&quot;') + '" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:16px;margin-bottom:12px;box-sizing:border-box;">'
+            + '<label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;font-weight:600;margin-bottom:16px;"><input id="nf-zona-cienaga" type="checkbox"> Pertenece a la zona ' + ZONA_CIENAGA + '</label>'
+            + '<div style="display:flex;gap:8px;">'
+            + '<button id="nf-confirmar" style="flex:1;padding:10px;background:#1a5c32;color:#fff;border:none;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer;">Confirmar</button>'
+            + '<button id="nf-cancelar" style="padding:10px 16px;background:#6b7280;color:#fff;border:none;border-radius:8px;font-size:0.9rem;cursor:pointer;">Cancelar</button>'
+            + '</div>';
+        overlay.appendChild(card);
+        document.body.appendChild(overlay);
+        function cerrar() { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }
+        document.getElementById('nf-cancelar').onclick = cerrar;
+        overlay.onclick = function(e) { if (e.target === overlay) cerrar(); };
+        document.getElementById('nf-confirmar').onclick = function() {
+            var nombre = document.getElementById('nf-nombre').value.trim();
+            if (!nombre) { alert("Debe ingresar un nombre."); return; }
+            var municipio = document.getElementById('nf-municipio').value.trim();
+            var zona = document.getElementById('nf-zona-cienaga').checked ? ZONA_CIENAGA : '';
+            cerrar();
+            agregarFrenteConDatos(nombre, municipio, zona);
+        };
+    }
 
     function resolverFrentePdf(fPartial, insp) {
         var base = Object.assign({}, fPartial || {});
