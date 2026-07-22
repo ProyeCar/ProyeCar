@@ -586,7 +586,11 @@
             firmaUsuarioTimestamp: f.usuarioTimestamp || row.firma_usuario_ts || '',
             sincronizado: true,
             profesional_id: row.profesional_id,
-            profesional_nombre: row.profesional_nombre || row.nombre_profesional || ''
+            profesional_nombre: row.profesional_nombre || row.nombre_profesional || '',
+            fecha_ultima_edicion: row.fecha_ultima_edicion || null,
+            fecha_creacion: row.fecha_creacion || null,
+            datos: d,
+            firmas: f
         };
     }
 
@@ -862,6 +866,155 @@
         };
     }
 
+    function parseRegistroFecha(r) {
+        if (!r) return new Date();
+        if (r.fecha_ultima_edicion) return new Date(r.fecha_ultima_edicion);
+        if (r.fecha_creacion) return new Date(r.fecha_creacion);
+        if (r.actualizadoEn) return new Date(r.actualizadoEn);
+        if (r.fecha) {
+            var s = String(r.fecha);
+            if (/^\d{4}-\d{2}-\d{2}/.test(s)) return new Date(s);
+            var p = s.split('/');
+            if (p.length === 3) return new Date(+p[2], +p[1] - 1, +p[0]);
+        }
+        return new Date();
+    }
+
+    function startOfWeekMonday(fecha) {
+        var monday = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
+        monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+        monday.setHours(0, 0, 0, 0);
+        return monday;
+    }
+
+    function getISOWeek(date) {
+        var d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+        var dayNum = d.getUTCDay() || 7;
+        d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+        var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+        return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+    }
+
+    function getWeekLabel(monday) {
+        var sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
+        var meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        var nSemana = getISOWeek(monday);
+        return 'SEMANA ' + nSemana + ' · ' + monday.getDate() + '–' + sunday.getDate() + ' ' + meses[sunday.getMonth()] + ' ' + sunday.getFullYear();
+    }
+
+    function groupByWeek(registros) {
+        var groups = {};
+        registros.forEach(function(r) {
+            var fecha = parseRegistroFecha(r);
+            var monday = startOfWeekMonday(fecha);
+            var key = monday.getFullYear() + '-' + String(monday.getMonth() + 1).padStart(2, '0') + '-' + String(monday.getDate()).padStart(2, '0');
+            if (!groups[key]) groups[key] = { monday: monday, registros: [] };
+            groups[key].registros.push(r);
+        });
+        return Object.keys(groups).sort(function(a, b) { return b.localeCompare(a); }).map(function(k) {
+            return groups[k];
+        });
+    }
+
+    function getHoraFirma(registro) {
+        var ts = (registro.firmas && registro.firmas.funcionarioTimestamp)
+            || registro.firmaFuncionarioTimestamp
+            || registro.hora_firma_profesional
+            || '';
+        if (!ts) return '';
+        return parseTimestampFirmaPdf(ts).hora || '';
+    }
+
+    function getDiaFecha(registro) {
+        var fecha = parseRegistroFecha(registro);
+        var dias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+        var meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        return dias[fecha.getDay()] + ' ' + fecha.getDate() + ' ' + meses[fecha.getMonth()];
+    }
+
+    function getUsuarioAtendido(registro) {
+        var datos = registro.datos || registro.datos_formulario || {};
+        return registro.usuarioAtendido
+            || datos.usuarioAtendido
+            || datos.usuario_atendido
+            || datos.nombre_usuario
+            || datos.usuario
+            || 'Sin usuario';
+    }
+
+    function getAsunto(registro) {
+        var datos = registro.datos || registro.datos_formulario || {};
+        return registro.asunto
+            || datos.asunto_asesoria
+            || datos.asunto
+            || datos.descripcion
+            || 'Sin asunto';
+    }
+
+    function buildRegistroAccionesHtml(r, opts) {
+        opts = opts || {};
+        var id = r.id || r.local_id;
+        var remote = r.remote_id || r.id || '';
+        if (opts.readonly) {
+            return ''
+                + '<button type="button" class="ra-dash-ver" data-id="' + escHtml(id) + '" data-remote="' + escHtml(remote) + '" style="padding:6px 10px;background:#1a5c35;color:#fff;border:none;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;">Ver</button>'
+                + '<button type="button" class="ra-dash-pdf" data-id="' + escHtml(id) + '" data-remote="' + escHtml(remote) + '" style="padding:6px 10px;background:#374151;color:#fff;border:none;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;">PDF</button>';
+        }
+        if (opts.admin) {
+            return ''
+                + '<button type="button" class="ra-dash-edit" data-id="' + escHtml(id) + '" data-remote="' + escHtml(remote) + '" style="padding:6px 10px;background:#1a5c35;color:#fff;border:none;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;">Editar</button>'
+                + '<button type="button" class="ra-dash-del" data-id="' + escHtml(id) + '" data-remote="' + escHtml(remote) + '" style="padding:6px 10px;background:#b91c1c;color:#fff;border:none;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;">Eliminar</button>'
+                + '<button type="button" class="ra-dash-pdf" data-id="' + escHtml(id) + '" data-remote="' + escHtml(remote) + '" style="padding:6px 10px;background:#374151;color:#fff;border:none;border-radius:8px;font-size:0.72rem;font-weight:700;cursor:pointer;">PDF</button>';
+        }
+        return '';
+    }
+
+    function renderListaRegistrosSemanaHtml(items, opts) {
+        opts = opts || {};
+        if (!items.length) {
+            return '<div style="padding:20px;text-align:center;color:#6b7280;font-size:0.88rem;background:#fff;border-radius:12px;">No hay registros.</div>';
+        }
+        var semanas = groupByWeek(items);
+        var html = '<div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 8px rgba(0,0,0,.05);">';
+        semanas.forEach(function(semana, si) {
+            html += '<div style="font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;padding:8px 12px 4px;background:#f9fafb;border-top:' + (si ? '1px solid #e5e7eb' : '0') + ';border-bottom:2px solid #bbf7d0;margin-top:' + (si ? '0' : '0') + ';">' + escHtml(getWeekLabel(semana.monday)) + '</div>';
+            semana.registros.forEach(function(r) {
+                var usuario = getUsuarioAtendido(r);
+                var dia = getDiaFecha(r);
+                var hora = getHoraFirma(r);
+                var asunto = getAsunto(r);
+                var linea1 = escHtml(usuario);
+                if (opts.admin && r.profesional_nombre) {
+                    linea1 = escHtml(r.profesional_nombre) + ' · ' + linea1;
+                }
+                linea1 += ' · ' + escHtml(dia);
+                if (hora) linea1 += ' · ' + escHtml(hora);
+                html += ''
+                    + '<div style="font-weight:normal;padding:10px 12px;border-bottom:1px solid #e5e7eb;">'
+                    + '<div style="font-size:12px;color:#6b7280;line-height:1.4;font-weight:normal;">' + linea1 + '</div>'
+                    + '<div style="font-size:12px;color:#6b7280;line-height:1.4;font-weight:normal;margin-top:2px;">Asunto: ' + escHtml(asunto) + '</div>'
+                    + '<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">' + buildRegistroAccionesHtml(r, opts) + '</div>'
+                    + '</div>';
+            });
+        });
+        html += '</div>';
+        return html;
+    }
+
+    function attachRegCacheToButtons(root, items) {
+        var map = {};
+        items.forEach(function(r) {
+            [r.id, r.remote_id, r.local_id].filter(Boolean).forEach(function(k) {
+                map[String(k)] = r;
+            });
+        });
+        root.querySelectorAll('.ra-dash-ver, .ra-dash-pdf, .ra-dash-edit, .ra-dash-del').forEach(function(btn) {
+            var remote = btn.getAttribute('data-remote');
+            var id = btn.getAttribute('data-id');
+            btn._regCache = map[remote] || map[id] || null;
+        });
+    }
+
     function renderListaRegistrosHtml(items, opts) {
         opts = opts || {};
         if (!items.length) {
@@ -1038,10 +1191,8 @@
                         if (r2.error) throw r2.error;
                         var rows = (r2.data || []).map(remoteRegistroAFormulario);
                         dest.innerHTML = '<div style="font-size:0.82rem;font-weight:700;color:#374151;margin-bottom:8px;">Registros de ' + escHtml(btn.getAttribute('data-nombre')) + '</div>'
-                            + renderListaRegistrosHtml(rows, { readonly: true });
-                        dest.querySelectorAll('.ra-dash-ver, .ra-dash-pdf').forEach(function(vbtn, idx) {
-                            vbtn._regCache = rows[idx];
-                        });
+                            + renderListaRegistrosSemanaHtml(rows, { readonly: true });
+                        attachRegCacheToButtons(dest, rows);
                         wireAccionesListaRegistros(dest, { readonly: true });
                     }).catch(function() {
                         dest.innerHTML = '<div style="padding:12px;color:#b91c1c;">No se pudieron cargar los registros.</div>';
