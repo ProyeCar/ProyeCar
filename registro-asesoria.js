@@ -1576,10 +1576,8 @@
             var rows = (res.data || []).map(remoteRegistroAFormulario);
             var listaEl = document.getElementById('ra-admin-lista');
             listaEl.innerHTML = '<div style="font-size:0.82rem;font-weight:700;color:#374151;margin-bottom:8px;">Todos los registros</div>'
-                + renderListaRegistrosHtml(rows, { admin: true });
-            listaEl.querySelectorAll('.ra-dash-edit, .ra-dash-del, .ra-dash-pdf').forEach(function(btn, idx) {
-                btn._regCache = rows[idx];
-            });
+                + renderListaRegistrosSemanaHtml(rows, { admin: true });
+            attachRegCacheToButtons(listaEl, rows);
             wireAccionesListaRegistros(listaEl, { admin: true });
         }).catch(function() {
             var listaEl = document.getElementById('ra-admin-lista');
