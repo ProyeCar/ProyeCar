@@ -355,6 +355,7 @@
     }
 
     function mensajeWhatsAppAccesoProyecar(nombre, codigo) {
+        // Formato compartir: nombre + codigo + link ProyeCar
         return 'Tu acceso a ProyeCar:\nNombre: ' + nombre + '\nCódigo: ' + codigo + '\nLink: https://proyecar.github.io/ProyeCar/';
     }
 
@@ -379,6 +380,7 @@
     }
 
     function abrirModalConfirmarUsuario(opts) {
+        // Preview obligatorio antes de crear o editar usuario en Supabase
         cerrarOverlayPorId('ra-user-confirm-overlay');
         var overlay = document.createElement('div');
         overlay.id = 'ra-user-confirm-overlay';
