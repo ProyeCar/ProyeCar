@@ -2206,6 +2206,9 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="card">
         <div class="card-header"><h2><span class="icon-box icon-box-verde"><span class="pc-icon-hydrate" data-i="bar-chart-2" data-s="20" data-c="#1a5c35"></span></span>Comparar Inspecciones</h2></div>
         <div class="comp-select">
+            <div><span class="comp-label">Municipio</span><select id="comp-filtro-municipio" class="comp-sel"><option value="">Todos los municipios</option></select></div>
+        </div>
+        <div class="comp-select">
             <div><span class="comp-label">Inspección A</span><select id="comp-sel-a" class="comp-sel"><option value="">— Selecciona —</option></select></div>
             <div><span class="comp-label">Inspección B</span><select id="comp-sel-b" class="comp-sel"><option value="">— Selecciona —</option></select></div>
         </div>
@@ -3851,7 +3854,33 @@ document.addEventListener('DOMContentLoaded', function() {
             reader.readAsDataURL(file);
         }
     };
+    var MUNICIPIOS_CACHE_KEY = 'proyecar_municipios_cache';
+    function refrescarMunicipiosDatalist() {
+        var dl = document.getElementById('municipios-datalist');
+        if (!dl) {
+            dl = document.createElement('datalist');
+            dl.id = 'municipios-datalist';
+            document.body.appendChild(dl);
+        }
+        function pintar(lista) {
+            dl.innerHTML = (lista || []).map(function(m) {
+                return '<option value="' + String(m.nombre || '').replace(/"/g, '&quot;') + '"></option>';
+            }).join('');
+        }
+        var cache = [];
+        try { cache = JSON.parse(localStorage.getItem(MUNICIPIOS_CACHE_KEY) || '[]'); } catch (e) {}
+        pintar(cache);
+        if (window.ProyeCarSupabase && window.ProyeCarSupabase.supabase) {
+            window.ProyeCarSupabase.supabase.rpc('ra_list_municipios').then(function(res) {
+                if (res.error || !res.data) return;
+                localStorage.setItem(MUNICIPIOS_CACHE_KEY, JSON.stringify(res.data));
+                pintar(res.data);
+            }).catch(function() {});
+        }
+    }
+
     function renderFrentes() {
+        refrescarMunicipiosDatalist();
         try {
         var snapshotZona = JSON.stringify((frentes || []).map(function(f) { return { z: f.zona || '', n: f.nombre || '' }; }));
         frentes = normalizeFrentes(frentes);
@@ -3879,6 +3908,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 var muniInp = document.createElement("input");
                 muniInp.type = "text";
                 muniInp.placeholder = "Ej: Cartagena de Indias";
+                muniInp.setAttribute("list", "municipios-datalist");
                 var muniGrupo = '';
                 frentes.forEach(function(ff) { if (!muniGrupo && esFrenteGrupoCienaga(ff) && (ff.municipio || '').trim()) muniGrupo = ff.municipio.trim(); });
                 muniInp.value = muniGrupo;
@@ -3907,7 +3937,7 @@ document.addEventListener('DOMContentLoaded', function() {
             tituloDiv.className = "frente-titulo";
             const camposCard = document.createElement("div");
             camposCard.className = "frente-campos-card";
-            function crearCampoFrente(icon, labelText, placeholder, valor, onSave, esNombre) {
+            function crearCampoFrente(icon, labelText, placeholder, valor, onSave, esNombre, listaDatalist) {
                 const grupo = document.createElement("div");
                 grupo.className = "frente-campo" + (esNombre ? " frente-campo-nombre" : "");
                 const lbl = document.createElement("label");
@@ -3917,6 +3947,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 inp.type = "text";
                 inp.placeholder = placeholder;
                 inp.value = valor || "";
+                if (listaDatalist) inp.setAttribute("list", listaDatalist);
                 inp.className = "frente-campo-input" + (esNombre ? " frente-campo-input-nombre" : "");
                 inp.addEventListener("change", (e) => { onSave(e.target.value); saveToLocal(); });
                 inp.addEventListener("input", (e) => { onSave(e.target.value); });
@@ -3939,7 +3970,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 metaRow.className = "frente-campos-meta";
                 metaRow.appendChild(crearCampoFrente('building-2', 'Contratista:', 'Nombre del contratista', frente.contratista, (v) => { frentes[idx].contratista = v; }, false));
                 metaRow.appendChild(crearCampoFrente('file-text', 'N° de Contrato:', 'Número de contrato', frente.numeroContrato, (v) => { frentes[idx].numeroContrato = v; }, false));
-                metaRow.appendChild(crearCampoFrente('map-pin', 'Municipio:', 'Ej: Mahates, Cartagena', frente.municipio, (v) => { frentes[idx].municipio = v; }, false));
+                metaRow.appendChild(crearCampoFrente('map-pin', 'Municipio:', 'Ej: Mahates, Cartagena', frente.municipio, (v) => { frentes[idx].municipio = v; }, false, 'municipios-datalist'));
                 camposCard.appendChild(metaRow);
             }
             tituloDiv.appendChild(camposCard);
@@ -7097,7 +7128,7 @@ document.addEventListener('DOMContentLoaded', function() {
             + '<label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Fecha</label>'
             + '<input id="edit-hist-fecha" type="date" value="' + esc2(entrada.fecha) + '" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:16px;margin-bottom:12px;box-sizing:border-box;">'
             + '<label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Municipio</label>'
-            + '<input id="edit-hist-ubicacion" type="text" value="' + esc2(entrada.ubicacion) + '" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:16px;margin-bottom:12px;box-sizing:border-box;">'
+            + '<input id="edit-hist-ubicacion" type="text" list="municipios-datalist" value="' + esc2(entrada.ubicacion) + '" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:16px;margin-bottom:12px;box-sizing:border-box;">'
             + '<label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Inspector</label>'
             + '<input id="edit-hist-inspector" type="text" value="' + esc2(entrada.inspector) + '" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:16px;margin-bottom:16px;box-sizing:border-box;">'
             + '<div style="display:flex;gap:8px;">'
@@ -8099,18 +8130,34 @@ document.addEventListener('DOMContentLoaded', function() {
         const hist = getHistorial();
         const selA = document.getElementById('comp-sel-a');
         const selB = document.getElementById('comp-sel-b');
+        const selMuni = document.getElementById('comp-filtro-municipio');
         if (!selA || !selB) return;
+        if (selMuni && !selMuni.dataset.wired) {
+            selMuni.dataset.wired = '1';
+            selMuni.addEventListener('change', renderComparar);
+        }
+        if (selMuni) {
+            const prevMuni = selMuni.value;
+            const municipios = Array.from(new Set(hist.map(r => (r.ubicacion || '').trim()).filter(Boolean))).sort();
+            selMuni.innerHTML = '<option value="">Todos los municipios</option>'
+                + municipios.map(m => `<option value="${m.replace(/"/g, '&quot;')}">${m}</option>`).join('');
+            if (municipios.includes(prevMuni)) selMuni.value = prevMuni;
+        }
+        const muniActivo = selMuni ? selMuni.value : '';
         const prevIdxA = selA.value !== '' ? parseInt(selA.value, 10) : NaN;
         const prevIdxB = selB.value !== '' ? parseInt(selB.value, 10) : NaN;
         const idA = !isNaN(prevIdxA) && hist[prevIdxA] ? hist[prevIdxA].id : null;
         const idB = !isNaN(prevIdxB) && hist[prevIdxB] ? hist[prevIdxB].id : null;
-        const opts = hist.map((r, i) => `<option value="${i}">${r.proyecto || 'Sin nombre'} — ${r.fecha || ''} (${r.pct}%)</option>`).join('');
+        const histFiltrado = hist
+            .map((r, i) => ({ r, i }))
+            .filter(({ r }) => !muniActivo || (r.ubicacion || '').trim() === muniActivo);
+        const opts = histFiltrado.map(({ r, i }) => `<option value="${i}">${r.ubicacion ? r.ubicacion + ' · ' : ''}${r.proyecto || 'Sin nombre'} — ${r.fecha || ''} (${r.pct}%)</option>`).join('');
         selA.innerHTML = '<option value="">— Selecciona —</option>' + opts;
         selB.innerHTML = '<option value="">— Selecciona —</option>' + opts;
         const newIdxA = historialIndicePorId(hist, idA);
         const newIdxB = historialIndicePorId(hist, idB);
-        if (newIdxA >= 0) selA.value = String(newIdxA);
-        if (newIdxB >= 0) selB.value = String(newIdxB);
+        if (newIdxA >= 0 && histFiltrado.some(({ i }) => i === newIdxA)) selA.value = String(newIdxA);
+        if (newIdxB >= 0 && histFiltrado.some(({ i }) => i === newIdxB)) selB.value = String(newIdxB);
     }
 
     document.getElementById('btn-comparar').onclick = function() {

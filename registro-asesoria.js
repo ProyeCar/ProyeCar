@@ -1275,6 +1275,65 @@
             + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
     }
 
+    function cargarMunicipiosAdmin(sb, ses) {
+        var cont = document.getElementById('ra-admin-municipios-body');
+        if (!cont || !sb || !ses) return;
+        cont.innerHTML = '<div style="padding:12px;color:#6b7280;font-size:0.84rem;">Cargando municipios…</div>';
+        sb.rpc('ra_list_municipios').then(function(res) {
+            if (res.error) throw res.error;
+            var lista = res.data || [];
+            if (!lista.length) {
+                cont.innerHTML = '<div style="padding:12px;color:#6b7280;font-size:0.84rem;">Sin municipios registrados.</div>';
+                return;
+            }
+            cont.innerHTML = lista.map(function(m) {
+                return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f3f4f6;font-size:0.84rem;color:#111827;">'
+                    + escHtml(m.nombre || '') + '</div>';
+            }).join('');
+        }).catch(function(err) {
+            cont.innerHTML = '<div style="padding:12px;color:#b91c1c;font-size:0.84rem;">'
+                + escHtml((err && err.message) ? err.message : 'No se pudieron cargar municipios. Ejecuta el SQL de municipios en Supabase.')
+                + '</div>';
+        });
+    }
+
+    function abrirModalNuevoMunicipio(sb, ses) {
+        var overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+        var card = document.createElement('div');
+        card.style.cssText = 'background:#fff;padding:20px;border-radius:12px;width:100%;max-width:360px;box-shadow:0 8px 32px rgba(0,0,0,0.2);';
+        card.innerHTML = '<div style="font-size:1rem;font-weight:700;margin-bottom:14px;color:#1e3a2f;">Nuevo municipio</div>'
+            + '<label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Nombre</label>'
+            + '<input id="muni-add-nombre" type="text" placeholder="Ej: Turbaco" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:16px;margin-bottom:14px;box-sizing:border-box;">'
+            + '<div id="muni-add-error" style="display:none;color:#b91c1c;font-size:0.78rem;margin-bottom:10px;"></div>'
+            + '<div style="display:flex;gap:8px;">'
+            + '<button id="muni-add-save" style="flex:1;padding:10px;background:#1a5c32;color:#fff;border:none;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer;">Confirmar</button>'
+            + '<button id="muni-add-cancel" style="padding:10px 16px;background:#6b7280;color:#fff;border:none;border-radius:8px;font-size:0.9rem;cursor:pointer;">Cancelar</button>'
+            + '</div>';
+        overlay.appendChild(card);
+        document.body.appendChild(overlay);
+        function cerrar() { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); }
+        document.getElementById('muni-add-cancel').onclick = cerrar;
+        overlay.onclick = function(e) { if (e.target === overlay) cerrar(); };
+        document.getElementById('muni-add-save').onclick = function() {
+            var nombre = document.getElementById('muni-add-nombre').value.trim();
+            var errEl = document.getElementById('muni-add-error');
+            if (!nombre) {
+                errEl.textContent = 'El nombre es obligatorio.';
+                errEl.style.display = 'block';
+                return;
+            }
+            sb.rpc('ra_create_municipio', { p_admin_id: ses.id, p_codigo: ses.codigo_acceso, p_nombre: nombre }).then(function(res) {
+                if (res.error) throw res.error;
+                cerrar();
+                cargarMunicipiosAdmin(sb, ses);
+            }).catch(function(err) {
+                errEl.textContent = (err && err.message) ? err.message : 'No se pudo crear el municipio.';
+                errEl.style.display = 'block';
+            });
+        };
+    }
+
     function cargarUsuariosAdmin(sb, ses) {
         var cont = document.getElementById('ra-admin-usuarios-body');
         if (!cont || !sb || !ses) return;
@@ -1549,6 +1608,11 @@
         var ses = getRaSession();
         var sb = getSupabaseClient();
         root.innerHTML = dashboardHeaderHtml('Panel administrador', '<div id="ra-admin-kpis" style="margin-top:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;"></div>')
+            + '<div id="ra-admin-municipios" style="margin-top:14px;background:#fff;border-radius:14px;padding:14px;box-shadow:0 1px 8px rgba(0,0,0,.05);">'
+            + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;">'
+            + '<div style="font-size:0.82rem;font-weight:800;color:#374151;">Municipios</div>'
+            + '<button type="button" id="ra-admin-muni-add" style="padding:8px 12px;background:#1a5c35;color:#fff;border:none;border-radius:10px;font-size:0.78rem;font-weight:700;cursor:pointer;">+ Agregar</button>'
+            + '</div><div id="ra-admin-municipios-body"><div style="padding:12px;color:#6b7280;font-size:0.84rem;">Cargando…</div></div></div>'
             + '<div id="ra-admin-usuarios" style="margin-top:14px;background:#fff;border-radius:14px;padding:14px;box-shadow:0 1px 8px rgba(0,0,0,.05);">'
             + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;">'
             + '<div style="font-size:0.82rem;font-weight:800;color:#374151;">Usuarios del sistema</div>'
@@ -1564,6 +1628,11 @@
             var ubody = document.getElementById('ra-admin-usuarios-body');
             if (ubody) ubody.innerHTML = '<div style="padding:12px;color:#b91c1c;font-size:0.84rem;">Sin conexión a Supabase.</div>';
             return;
+        }
+        cargarMunicipiosAdmin(sb, ses);
+        var btnAddMuni = document.getElementById('ra-admin-muni-add');
+        if (btnAddMuni) {
+            btnAddMuni.onclick = function() { abrirModalNuevoMunicipio(sb, ses); };
         }
         cargarUsuariosAdmin(sb, ses);
         var btnAddUser = document.getElementById('ra-admin-user-add');
