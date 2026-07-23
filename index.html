@@ -1821,7 +1821,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.161";
+const APP_VERSION = "1.5.162";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -7173,7 +7173,16 @@ document.addEventListener('DOMContentLoaded', function() {
             + '<input id="edit-hist-ubicacion" type="text" list="municipios-datalist" value="' + esc2(entrada.ubicacion) + '" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:16px;margin-bottom:12px;box-sizing:border-box;">'
             + '<label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Inspector</label>'
             + '<input id="edit-hist-inspector" type="text" value="' + esc2(entrada.inspector) + '" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:16px;margin-bottom:16px;box-sizing:border-box;">'
-            + '<div style="display:flex;gap:8px;">'
+            + ((entrada.frentes || []).length
+                ? '<label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:6px;">N&uacute;mero de contrato por frente</label>'
+                    + (entrada.frentes || []).map(function(f, j) {
+                        return '<div style="margin-bottom:8px;">'
+                            + '<div style="font-size:0.72rem;color:#6b7280;margin-bottom:2px;">' + esc2(f.nombre || 'Sin nombre') + '</div>'
+                            + '<input id="edit-hist-contrato-' + j + '" type="text" value="' + esc2(f.numeroContrato) + '" placeholder="N&uacute;mero de contrato" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:16px;box-sizing:border-box;">'
+                            + '</div>';
+                    }).join('')
+                : '')
+            + '<div style="display:flex;gap:8px;margin-top:8px;">'
             + '<button id="edit-hist-save" style="flex:1;padding:10px;background:#1a5c32;color:#fff;border:none;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;">' + pcIconBtn('save', 'Guardar cambios', 14, '#fff') + '</button>'
             + '<button id="edit-hist-cancel" style="padding:10px 16px;background:#6b7280;color:#fff;border:none;border-radius:8px;font-size:0.9rem;cursor:pointer;">Cancelar</button>'
             + '</div>';
@@ -7191,6 +7200,10 @@ document.addEventListener('DOMContentLoaded', function() {
             hist[idx].fecha     = document.getElementById('edit-hist-fecha').value;
             hist[idx].ubicacion = document.getElementById('edit-hist-ubicacion').value.trim();
             hist[idx].inspector = document.getElementById('edit-hist-inspector').value.trim();
+            (hist[idx].frentes || []).forEach(function(f, j) {
+                var input = document.getElementById('edit-hist-contrato-' + j);
+                if (input) f.numeroContrato = input.value.trim();
+            });
             saveHistorial(hist);
             cerrarModal();
         };
