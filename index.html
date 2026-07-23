@@ -1821,7 +1821,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.164";
+const APP_VERSION = "1.5.165";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -7559,7 +7559,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 if (comp.sinAnterior) {
-                    var filasTablaSin = (comp.itemsActuales || []).map(function(it) {
+                    var itemsSin = comp.itemsActuales || [];
+                    var cumpleSin = itemsSin.filter(function(it) { return it.cumple === true; }).length;
+                    var noCumpleSin = itemsSin.filter(function(it) { return it.cumple === false; }).length;
+                    var sinCalifSin = itemsSin.length - cumpleSin - noCumpleSin;
+                    var pieSinHtml = typeof svgPieChart === 'function' && itemsSin.length
+                        ? '<div style="display:flex;justify-content:center;margin-bottom:8px;">' + svgPieChart(cumpleSin, noCumpleSin, sinCalifSin, 96) + '</div>'
+                        : '';
+                    var filasTablaSin = itemsSin.map(function(it) {
                         var est = typeof estadoColor === 'function' ? estadoColor(it.cumple) : { bg: '#f3f4f6', text: '#374151', label: '—' };
                         return '<tr><td style="padding:4px 8px;font-size:0.78rem;color:#374151;border-bottom:1px solid #e2e8f0;">' + escHtml(it.texto)
                             + '</td><td style="padding:4px 8px;text-align:center;border-bottom:1px solid #e2e8f0;white-space:nowrap;">'
@@ -7570,6 +7577,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         : '<div style="text-align:center;color:#94a3b8;font-size:0.8rem;">Sin ítems evaluados aún.</div>';
                     html += '<div style="background:#f8fafc;border-radius:12px;padding:12px;color:#6b7280;font-size:0.85rem;margin-bottom:10px;">'
                         + '<div style="font-weight:600;text-align:center;margin-bottom:4px;">Primera inspección - Sin comparación histórica</div>'
+                        + pieSinHtml
                         + tablaSinHtml
                         + '</div>';
                     if (opts.pdfMode) html += '</div>';
