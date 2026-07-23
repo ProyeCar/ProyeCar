@@ -7523,16 +7523,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 if (comp.sinAnterior) {
-                    var pieHtml = (typeof svgPieChart === 'function' && comp.pctActual !== null && comp.pctActual !== undefined)
-                        ? svgPieChart(comp.pieCumple || 0, comp.pieNoCumple || 0, comp.pieSinCalif || 0, 96)
-                        : '';
-                    html += '<div style="background:#f8fafc;border-radius:12px;padding:12px;color:#6b7280;font-size:0.85rem;margin-bottom:10px;text-align:center;">'
-                        + '<div style="font-weight:600;margin-bottom:8px;">Sin historial anterior</div>'
-                        + (pieHtml
-                            ? '<div style="display:flex;justify-content:center;margin-bottom:6px;">' + pieHtml + '</div>'
-                                + '<div style="font-size:20px;font-weight:800;color:' + CHART.REC + ';">' + comp.pctActual + '%</div>'
-                                + '<div style="font-size:0.65rem;font-weight:700;color:' + CHART.REC + ';text-transform:uppercase;">Cumplimiento actual</div>'
-                            : '')
+                    var filasTablaSin = (comp.itemsActuales || []).map(function(it) {
+                        var est = typeof estadoColor === 'function' ? estadoColor(it.cumple) : { bg: '#f3f4f6', text: '#374151', label: '—' };
+                        return '<tr><td style="padding:4px 8px;font-size:0.78rem;color:#374151;border-bottom:1px solid #e2e8f0;">' + escHtml(it.texto)
+                            + '</td><td style="padding:4px 8px;text-align:center;border-bottom:1px solid #e2e8f0;white-space:nowrap;">'
+                            + '<span style="background:' + est.bg + ';color:' + est.text + ';border-radius:10px;padding:2px 8px;font-size:0.68rem;font-weight:700;">' + est.label + '</span></td></tr>';
+                    }).join('');
+                    var tablaSinHtml = filasTablaSin
+                        ? '<table style="width:100%;border-collapse:collapse;margin-top:8px;">' + filasTablaSin + '</table>'
+                        : '<div style="text-align:center;color:#94a3b8;font-size:0.8rem;">Sin ítems evaluados aún.</div>';
+                    html += '<div style="background:#f8fafc;border-radius:12px;padding:12px;color:#6b7280;font-size:0.85rem;margin-bottom:10px;">'
+                        + '<div style="font-weight:600;text-align:center;margin-bottom:4px;">Primera inspección - Sin comparación histórica</div>'
+                        + tablaSinHtml
                         + '</div>';
                     if (opts.pdfMode) html += '</div>';
                     return;
@@ -7888,12 +7890,12 @@ document.addEventListener('DOMContentLoaded', function() {
             var match = buscarHistorialFrentePorNombre(f, actual.fecha);
             var nomDisplay = limpiarNombreFrenteParaMatch(f.nombre) || f.nombre || 'Sin nombre';
             if (!match) {
-                var cumpleF = 0, noCumpleF = 0, sinCalifF = 0;
+                var cumpleF = 0, noCumpleF = 0, itemsActuales = [];
                 (f.categorias || []).forEach(function(cat) {
                     (cat.items || []).forEach(function(it) {
                         if (it.cumple === true) cumpleF++;
                         else if (it.cumple === false) noCumpleF++;
-                        else sinCalifF++;
+                        itemsActuales.push({ texto: it.texto || '', cumple: it.cumple, categoria: cat.nombre || '' });
                     });
                 });
                 var pctActual = (cumpleF + noCumpleF) > 0 ? Math.round(cumpleF / (cumpleF + noCumpleF) * 100) : null;
@@ -7920,9 +7922,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     sinAnterior: true,
                     sinHistorialPrevio: true,
                     pctActual: pctActual,
-                    pieCumple: cumpleF,
-                    pieNoCumple: noCumpleF,
-                    pieSinCalif: sinCalifF,
+                    itemsActuales: itemsActuales,
                     areas: []
                 });
                 return;
