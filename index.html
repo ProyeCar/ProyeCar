@@ -7540,7 +7540,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     var msgSin = comp.sinHistorialPrevio
                         ? 'Sin historial previo para ' + escHtml(nomLimpio || fNombre)
                         : 'Solo en inspección reciente — sin datos anteriores para comparar';
-                    html += '<div style="background:#f8fafc;border-radius:12px;padding:12px;color:#6b7280;font-size:0.85rem;margin-bottom:10px;">' + msgSin + '</div>';
+                    html += '<div style="background:#f8fafc;border-radius:12px;padding:12px;color:#6b7280;font-size:0.85rem;margin-bottom:10px;">' + msgSin
+                        + (comp.pctActual !== null && comp.pctActual !== undefined
+                            ? '<div style="margin-top:8px;text-align:center;"><span style="font-size:22px;font-weight:800;color:' + CHART.REC + ';">' + comp.pctActual + '%</span>'
+                                + '<div style="font-size:0.65rem;font-weight:700;color:' + CHART.REC + ';text-transform:uppercase;">Cumplimiento actual</div></div>'
+                            : '')
+                        + '</div>';
                     if (opts.pdfMode) html += '</div>';
                     return;
                 }
@@ -7895,6 +7900,14 @@ document.addEventListener('DOMContentLoaded', function() {
             var match = buscarHistorialFrentePorNombre(f, actual.fecha);
             var nomDisplay = limpiarNombreFrenteParaMatch(f.nombre) || f.nombre || 'Sin nombre';
             if (!match) {
+                var totalF = 0, cumpleF = 0;
+                (f.categorias || []).forEach(function(cat) {
+                    (cat.items || []).forEach(function(it) {
+                        if (it.cumple === true) { cumpleF++; totalF++; }
+                        else if (it.cumple === false) { totalF++; }
+                    });
+                });
+                var pctActual = totalF > 0 ? Math.round(cumpleF / totalF * 100) : null;
                 omitidos.push({
                     nombre: f.nombre || 'Sin nombre',
                     nomDisplay: nomDisplay,
@@ -7917,6 +7930,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     proyectoAnterior: '',
                     sinAnterior: true,
                     sinHistorialPrevio: true,
+                    pctActual: pctActual,
                     areas: []
                 });
                 return;
