@@ -1821,7 +1821,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.157";
+const APP_VERSION = "1.5.158";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -1924,35 +1924,27 @@ async function forzarActualizacionPWA(versionServidor) {
   window.location.replace(base + 'index.html?v=' + encodeURIComponent(versionServidor || '') + '&_=' + Date.now());
 }
 
-function mostrarBannerActualizacionPWA(versionServidor) {
-  if (document.getElementById('pwa-update-banner')) return;
-  if (!document.body) {
-    document.addEventListener('DOMContentLoaded', function() { mostrarBannerActualizacionPWA(versionServidor); }, { once: true });
-    return;
-  }
-  const b = document.createElement('div');
-  b.id = 'pwa-update-banner';
-  b.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99998;background:#1a5c35;color:#fff;padding:12px 16px;padding-bottom:calc(12px + env(safe-area-inset-bottom));display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:0.85rem;font-family:inherit;box-shadow:0 -2px 10px rgba(0,0,0,0.25);';
-  const txt = document.createElement('span');
-  var enV = APP_VERSION ? (' (tienes v' + APP_VERSION + ')') : '';
-  txt.innerHTML = pcIcon('refresh-cw', 16, '#fff') + ' Actualización v' + versionServidor + ' disponible' + enV;
-  const btn = document.createElement('button');
-  btn.textContent = 'Actualizar ahora';
-  btn.style.cssText = 'background:#fff;color:#1a5c35;border:none;border-radius:20px;padding:8px 16px;font-weight:700;font-size:0.85rem;cursor:pointer;flex-shrink:0;';
-  btn.onclick = function() { forzarActualizacionPWA(versionServidor); };
-  b.appendChild(txt);
-  b.appendChild(btn);
-  document.body.appendChild(b);
+async function autoActualizarPWA(versionServidor, reg) {
   notificarActualizacionPWA(versionServidor);
+  try {
+    if (reg) {
+      await reg.update();
+      if (reg.waiting) {
+        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        return; // el listener de 'controllerchange' hace el reload
+      }
+    }
+  } catch (e) {}
+  forzarActualizacionPWA(versionServidor);
 }
 
-async function verificarActualizacionPWA() {
+async function verificarActualizacionPWA(reg) {
   const versionServidor = await obtenerVersionServidor();
   if (!versionServidor) return;
 
   // Comparar la versión REAL cargada en esta pestaña vs servidor (no confiar solo en localStorage)
   if (compararVersiones(versionServidor, APP_VERSION) > 0) {
-    mostrarBannerActualizacionPWA(versionServidor);
+    await autoActualizarPWA(versionServidor, reg);
     return;
   }
 
@@ -1968,7 +1960,7 @@ function escucharServiceWorkerPWA(reg) {
     nw.addEventListener('statechange', function() {
       if (nw.state === 'installed' && navigator.serviceWorker.controller) {
         if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-        verificarActualizacionPWA();
+        verificarActualizacionPWA(reg);
       }
     });
   });
@@ -1990,18 +1982,18 @@ if ('serviceWorker' in navigator) {
     document.addEventListener('visibilitychange', function() {
       if (document.visibilityState === 'visible') {
         reg.update();
-        verificarActualizacionPWA();
+        verificarActualizacionPWA(reg);
       }
     });
     window.addEventListener('pageshow', function() {
       reg.update();
-      verificarActualizacionPWA();
+      verificarActualizacionPWA(reg);
     });
-    verificarActualizacionPWA();
+    verificarActualizacionPWA(reg);
     setInterval(function() {
       if (document.visibilityState === 'visible') {
         reg.update();
-        verificarActualizacionPWA();
+        verificarActualizacionPWA(reg);
         if (reg.active) reg.active.postMessage({ type: 'CHECK_VERSION' });
       }
     }, 300000);
