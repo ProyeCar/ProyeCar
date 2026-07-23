@@ -7478,7 +7478,8 @@ document.addEventListener('DOMContentLoaded', function() {
             var filtroFrente = opts.filtroFrente || 'todos';
             var filtroArea = opts.filtroArea || 'todas';
             var html = '';
-            if (opts.mostrarEncabezado) {
+            var multiplesFrentesSinFiltro = filtroFrente === 'todos' && (data.comparables || []).length > 1;
+            if (opts.mostrarEncabezado && !multiplesFrentesSinFiltro) {
                 var parHdr = typeof resolverParComparacionPdf === 'function'
                     ? resolverParComparacionPdf(data)
                     : { reciente: data.reciente, anterior: data.anterior, sinHistorialAnterior: false };
@@ -7512,10 +7513,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     html += '<div style="' + hdrStyle + '">' + pcIcon('construction', opts.compacto ? 16 : 18, '#1e3a2f') + ' ' + escHtml(fNombre)
                         + (f.contratista ? ' · ' + escHtml(f.contratista) : '')
                         + (f.numeroContrato ? ' · Contrato ' + escHtml(f.numeroContrato) : '');
-                    if (opts.compacto) {
-                        html += '<div style="font-size:0.68rem;font-weight:500;color:#64748b;margin-top:4px;">Actual: ' + escHtml(comp.fechaReciente || data.reciente && data.reciente.fecha || '')
-                            + ' vs Anterior: ' + escHtml(comp.fechaAnterior || data.anterior && data.anterior.fecha || '') + '</div>';
-                    }
+                    html += '<div style="font-size:0.68rem;font-weight:500;color:#64748b;margin-top:4px;">Actual: ' + escHtml(comp.fechaReciente || data.reciente && data.reciente.fecha || '')
+                        + ' vs Anterior: ' + escHtml(comp.fechaAnterior || '(sin historial previo)') + '</div>';
                     html += '</div>';
                 }
 
