@@ -1821,7 +1821,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.163";
+const APP_VERSION = "1.5.164";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -7626,7 +7626,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                         chartQueue.push({
                             id: chartId, pA: area.pctAnterior, pR: area.pctReciente,
-                            frenteNombre: fNombre, area: area, pdfMode: !!opts.pdfMode, chartH: chartH
+                            frenteNombre: fNombre, area: area, pdfMode: !!opts.pdfMode, chartH: chartH,
+                            fechaAnterior: comp.fechaAnterior, fechaReciente: comp.fechaReciente
                         });
                     } else {
                         html += '<div style="color:#94a3b8;font-size:0.8rem;text-align:center;padding:8px 0;">Sin porcentajes — solo cambios en ítems</div>';
@@ -7664,7 +7665,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     var captured = false;
                     var ch = crearGraficaBarras(canvas, item.pA, item.pR, {
                         responsive: !item.pdfMode,
-                        labels: ['Anterior', 'Reciente'],
+                        labels: [
+                            item.fechaAnterior ? ['Anterior', '(' + item.fechaAnterior + ')'] : 'Anterior',
+                            item.fechaReciente ? ['Reciente', '(' + item.fechaReciente + ')'] : 'Reciente'
+                        ],
                         tickSizeX: item.pdfMode ? COMP_GRAFICA_TYPO.pdfTick : COMP_GRAFICA_TYPO.tickX,
                         tickSizeY: item.pdfMode ? COMP_GRAFICA_TYPO.pdfTick : COMP_GRAFICA_TYPO.tickY,
                         pctFontSize: item.pdfMode ? COMP_GRAFICA_TYPO.pdfPctBar : COMP_GRAFICA_TYPO.pctBar,
@@ -7765,7 +7769,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         pA: area.pctAnterior,
                         pR: area.pctReciente,
                         frenteNombre: fNombre,
-                        area: area
+                        area: area,
+                        fechaAnterior: comp.fechaAnterior,
+                        fechaReciente: comp.fechaReciente
                     });
                 });
             });
@@ -7797,7 +7803,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     tempDiv.appendChild(canvas);
                     var ch = crearGraficaBarras(canvas, item.pA, item.pR, {
                         responsive: false,
-                        labels: ['Anterior', 'Reciente'],
+                        labels: [
+                            item.fechaAnterior ? ['Anterior', '(' + item.fechaAnterior + ')'] : 'Anterior',
+                            item.fechaReciente ? ['Reciente', '(' + item.fechaReciente + ')'] : 'Reciente'
+                        ],
                         tickSizeX: tX,
                         tickSizeY: tY,
                         pctFontSize: pctF,
