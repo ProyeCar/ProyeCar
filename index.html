@@ -1821,7 +1821,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.155";
+const APP_VERSION = "1.5.156";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -1946,28 +1946,13 @@ function mostrarBannerActualizacionPWA(versionServidor) {
   notificarActualizacionPWA(versionServidor);
 }
 
-function mostrarToastRecargaAutoUpdate(versionServidor) {
-  if (document.getElementById('pwa-auto-reload-toast')) return;
-  if (!document.body) {
-    document.addEventListener('DOMContentLoaded', function() { mostrarToastRecargaAutoUpdate(versionServidor); }, { once: true });
-    return;
-  }
-  var t = document.createElement('div');
-  t.id = 'pwa-auto-reload-toast';
-  t.setAttribute('role', 'status');
-  t.style.cssText = 'position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:99999;background:#1a5c35;color:#fff;padding:12px 16px;border-radius:12px;font-size:0.88rem;font-weight:600;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.25);';
-  t.textContent = 'Hay actualizaciones disponibles — recargando… (v' + versionServidor + ')';
-  document.body.appendChild(t);
-}
-
 async function verificarActualizacionPWA() {
   const versionServidor = await obtenerVersionServidor();
   if (!versionServidor) return;
 
   // Comparar la versión REAL cargada en esta pestaña vs servidor (no confiar solo en localStorage)
   if (compararVersiones(versionServidor, APP_VERSION) > 0) {
-    mostrarToastRecargaAutoUpdate(versionServidor);
-    setTimeout(function() { forzarActualizacionPWA(versionServidor); }, 700);
+    mostrarBannerActualizacionPWA(versionServidor);
     return;
   }
 
@@ -7540,7 +7525,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     var msgSin = comp.sinHistorialPrevio
                         ? 'Sin historial previo para ' + escHtml(nomLimpio || fNombre)
                         : 'Solo en inspección reciente — sin datos anteriores para comparar';
-                    html += '<div style="background:#f8fafc;border-radius:12px;padding:12px;color:#6b7280;font-size:0.85rem;margin-bottom:10px;">' + msgSin + '</div>';
+                    html += '<div style="background:#f8fafc;border-radius:12px;padding:12px;color:#6b7280;font-size:0.85rem;margin-bottom:10px;">' + msgSin
+                        + (comp.pctActual !== null && comp.pctActual !== undefined
+                            ? '<div style="margin-top:8px;text-align:center;"><span style="font-size:22px;font-weight:800;color:' + CHART.REC + ';">' + comp.pctActual + '%</span>'
+                                + '<div style="font-size:0.65rem;font-weight:700;color:' + CHART.REC + ';text-transform:uppercase;">Cumplimiento actual</div></div>'
+                            : '')
+                        + '</div>';
                     if (opts.pdfMode) html += '</div>';
                     return;
                 }
@@ -7895,6 +7885,14 @@ document.addEventListener('DOMContentLoaded', function() {
             var match = buscarHistorialFrentePorNombre(f, actual.fecha);
             var nomDisplay = limpiarNombreFrenteParaMatch(f.nombre) || f.nombre || 'Sin nombre';
             if (!match) {
+                var totalF = 0, cumpleF = 0;
+                (f.categorias || []).forEach(function(cat) {
+                    (cat.items || []).forEach(function(it) {
+                        if (it.cumple === true) { cumpleF++; totalF++; }
+                        else if (it.cumple === false) { totalF++; }
+                    });
+                });
+                var pctActual = totalF > 0 ? Math.round(cumpleF / totalF * 100) : null;
                 omitidos.push({
                     nombre: f.nombre || 'Sin nombre',
                     nomDisplay: nomDisplay,
@@ -7917,6 +7915,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     proyectoAnterior: '',
                     sinAnterior: true,
                     sinHistorialPrevio: true,
+                    pctActual: pctActual,
                     areas: []
                 });
                 return;
