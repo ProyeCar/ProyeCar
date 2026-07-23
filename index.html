@@ -5095,7 +5095,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 var msgPdf = comp.sinHistorialPrevio
                     ? ('Sin historial previo para ' + eH(nomLPdf || fNombre))
                     : 'Sin datos anteriores para comparar';
-                h += '<div style="background:#f8fafc;border-radius:12px;padding:12px;color:#6b7280;font-size:0.85rem;margin-bottom:10px;">' + msgPdf + '</div></div>';
+                h += '<div style="font-size:0.78rem;font-weight:600;color:#6b7280;margin-bottom:8px;">' + eH(msgPdf) + '</div>';
+                var chartCol = (typeof CompMotor !== 'undefined' && CompMotor.CHART) ? CompMotor.CHART.REC : '#16a34a';
+                var gruposPdfSin = graficas.filter(function(x) { return x.frenteNombre === fNombre && x.items; });
+                if (filtroAreaPdf !== 'todas') gruposPdfSin = gruposPdfSin.filter(function(x) { return x.areaId === filtroAreaPdf; });
+                gruposPdfSin.forEach(function(g) {
+                    h += '<div style="margin-bottom:14px;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;page-break-inside:avoid;break-inside:avoid;background:#fff;">';
+                    h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px;">'
+                        + '<span style="font-weight:700;font-size:0.85rem;color:#1e3a2f;">' + eH(g.areaNombre) + '</span>'
+                        + '<span style="color:' + chartCol + ';background:#f0fdf4;padding:3px 10px;border-radius:12px;font-weight:700;font-size:0.72rem;">' + g.pctReciente + '% cumple</span></div>';
+                    if (g.imgData) h += '<img src="' + g.imgData + '" style="width:100%;height:auto;border:1px solid #e2e8f0;border-radius:6px;display:block;margin-bottom:8px;object-fit:contain;"/>';
+                    var filasPdfSin = (g.items || []).map(function(it) {
+                        var est = typeof estadoColor === 'function' ? estadoColor(it.cumple) : { bg: '#f3f4f6', text: '#374151', label: '—' };
+                        return '<tr><td style="padding:4px 8px;font-size:0.78rem;color:#374151;border-bottom:1px solid #e2e8f0;">' + eH(it.texto)
+                            + '</td><td style="padding:4px 8px;text-align:center;border-bottom:1px solid #e2e8f0;white-space:nowrap;">'
+                            + '<span style="background:' + est.bg + ';color:' + est.text + ';border-radius:10px;padding:2px 8px;font-size:0.68rem;font-weight:700;">' + est.label + '</span></td></tr>';
+                    }).join('');
+                    h += filasPdfSin ? '<table style="width:100%;border-collapse:collapse;margin-top:4px;">' + filasPdfSin + '</table>' : '';
+                    h += '</div>';
+                });
+                if (!gruposPdfSin.length) h += '<div style="color:#94a3b8;font-size:0.8rem;">Sin ítems evaluados aún.</div>';
+                h += '</div>';
                 return;
             }
             (comp.areas || []).forEach(function(area) {
@@ -7866,7 +7886,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     var gruposSin = {};
                     (comp.itemsActuales || []).forEach(function(it) {
                         var key = it.categoriaId || it.categoria || 'general';
-                        if (!gruposSin[key]) gruposSin[key] = { nombre: it.categoria || 'General', cumple: 0, total: 0 };
+                        if (!gruposSin[key]) gruposSin[key] = { nombre: it.categoria || 'General', cumple: 0, total: 0, items: [] };
+                        gruposSin[key].items.push(it);
                         if (it.cumple === true) { gruposSin[key].cumple++; gruposSin[key].total++; }
                         else if (it.cumple === false) { gruposSin[key].total++; }
                     });
@@ -7878,6 +7899,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             sinAnterior: true,
                             pctCumple: Math.round(g.cumple / g.total * 100),
                             frenteNombre: fNombre,
+                            areaId: key,
+                            items: g.items,
                             area: { nombre: g.nombre }
                         });
                     });
@@ -7945,7 +7968,15 @@ document.addEventListener('DOMContentLoaded', function() {
                         captured = true;
                         var img = '';
                         try { img = canvas.toDataURL('image/png'); } catch (e) { img = ''; }
-                        capturas.push({
+                        capturas.push(item.sinAnterior ? {
+                            frenteNombre: item.frenteNombre,
+                            areaNombre: item.area.nombre,
+                            areaId: item.areaId,
+                            pctReciente: item.pctCumple,
+                            pctAnterior: null,
+                            items: item.items,
+                            imgData: img
+                        } : {
                             frenteNombre: item.frenteNombre,
                             areaNombre: item.area.nombre,
                             pcts: [item.pR, item.pA],
