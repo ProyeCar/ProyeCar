@@ -1821,7 +1821,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.158";
+const APP_VERSION = "1.5.159";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -8656,6 +8656,12 @@ function csHtmlResumenAnalisis(res) {
     res = res || {};
     var rec = res.reciente || {};
     var filtroF = (document.getElementById('filtro-frente-pdf') || {}).value || 'todos';
+    var comparablesRes = res.comparables || [];
+    if (filtroF === 'todos' && comparablesRes.length > 1) {
+        return '<div style="font-weight:700;color:#1e3a2f;margin-bottom:4px;">Análisis comparativo automático</div>'
+            + '<div style="color:#475569;">Reciente: <strong>' + CompMotor.escHtml(rec.proyecto || 'Sin nombre') + '</strong> (' + CompMotor.escHtml(rec.fecha || '') + ')'
+            + ' · cada frente se compara con su propio historial — ver detalle abajo</div>';
+    }
     var antTxt = 'Sin historial previo';
     var antFecha = '';
     var compRef = null;
