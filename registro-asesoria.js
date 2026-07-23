@@ -1608,11 +1608,6 @@
         var ses = getRaSession();
         var sb = getSupabaseClient();
         root.innerHTML = dashboardHeaderHtml('Panel administrador', '<div id="ra-admin-kpis" style="margin-top:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;"></div>')
-            + '<div id="ra-admin-municipios" style="margin-top:14px;background:#fff;border-radius:14px;padding:14px;box-shadow:0 1px 8px rgba(0,0,0,.05);">'
-            + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;">'
-            + '<div style="font-size:0.82rem;font-weight:800;color:#374151;">Municipios</div>'
-            + '<button type="button" id="ra-admin-muni-add" style="padding:8px 12px;background:#1a5c35;color:#fff;border:none;border-radius:10px;font-size:0.78rem;font-weight:700;cursor:pointer;">+ Agregar</button>'
-            + '</div><div id="ra-admin-municipios-body"><div style="padding:12px;color:#6b7280;font-size:0.84rem;">Cargando…</div></div></div>'
             + '<div id="ra-admin-usuarios" style="margin-top:14px;background:#fff;border-radius:14px;padding:14px;box-shadow:0 1px 8px rgba(0,0,0,.05);">'
             + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;">'
             + '<div style="font-size:0.82rem;font-weight:800;color:#374151;">Usuarios del sistema</div>'
@@ -1628,11 +1623,6 @@
             var ubody = document.getElementById('ra-admin-usuarios-body');
             if (ubody) ubody.innerHTML = '<div style="padding:12px;color:#b91c1c;font-size:0.84rem;">Sin conexión a Supabase.</div>';
             return;
-        }
-        cargarMunicipiosAdmin(sb, ses);
-        var btnAddMuni = document.getElementById('ra-admin-muni-add');
-        if (btnAddMuni) {
-            btnAddMuni.onclick = function() { abrirModalNuevoMunicipio(sb, ses); };
         }
         cargarUsuariosAdmin(sb, ses);
         var btnAddUser = document.getElementById('ra-admin-user-add');
