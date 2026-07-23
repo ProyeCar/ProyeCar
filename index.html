@@ -7519,15 +7519,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 if (comp.sinAnterior) {
-                    var nomLimpio = typeof window.limpiarNombreFrenteParaMatch === 'function'
-                        ? window.limpiarNombreFrenteParaMatch(fNombre) : fNombre;
-                    var msgSin = comp.sinHistorialPrevio
-                        ? 'Sin historial previo para ' + escHtml(nomLimpio || fNombre)
-                        : 'Solo en inspección reciente — sin datos anteriores para comparar';
-                    html += '<div style="background:#f8fafc;border-radius:12px;padding:12px;color:#6b7280;font-size:0.85rem;margin-bottom:10px;">' + msgSin
-                        + (comp.pctActual !== null && comp.pctActual !== undefined
-                            ? '<div style="margin-top:8px;text-align:center;"><span style="font-size:22px;font-weight:800;color:' + CHART.REC + ';">' + comp.pctActual + '%</span>'
-                                + '<div style="font-size:0.65rem;font-weight:700;color:' + CHART.REC + ';text-transform:uppercase;">Cumplimiento actual</div></div>'
+                    var pieHtml = (typeof svgPieChart === 'function' && comp.pctActual !== null && comp.pctActual !== undefined)
+                        ? svgPieChart(comp.pieCumple || 0, comp.pieNoCumple || 0, comp.pieSinCalif || 0, 96)
+                        : '';
+                    html += '<div style="background:#f8fafc;border-radius:12px;padding:12px;color:#6b7280;font-size:0.85rem;margin-bottom:10px;text-align:center;">'
+                        + '<div style="font-weight:600;margin-bottom:8px;">Sin historial anterior</div>'
+                        + (pieHtml
+                            ? '<div style="display:flex;justify-content:center;margin-bottom:6px;">' + pieHtml + '</div>'
+                                + '<div style="font-size:20px;font-weight:800;color:' + CHART.REC + ';">' + comp.pctActual + '%</div>'
+                                + '<div style="font-size:0.65rem;font-weight:700;color:' + CHART.REC + ';text-transform:uppercase;">Cumplimiento actual</div>'
                             : '')
                         + '</div>';
                     if (opts.pdfMode) html += '</div>';
@@ -7884,14 +7884,15 @@ document.addEventListener('DOMContentLoaded', function() {
             var match = buscarHistorialFrentePorNombre(f, actual.fecha);
             var nomDisplay = limpiarNombreFrenteParaMatch(f.nombre) || f.nombre || 'Sin nombre';
             if (!match) {
-                var totalF = 0, cumpleF = 0;
+                var cumpleF = 0, noCumpleF = 0, sinCalifF = 0;
                 (f.categorias || []).forEach(function(cat) {
                     (cat.items || []).forEach(function(it) {
-                        if (it.cumple === true) { cumpleF++; totalF++; }
-                        else if (it.cumple === false) { totalF++; }
+                        if (it.cumple === true) cumpleF++;
+                        else if (it.cumple === false) noCumpleF++;
+                        else sinCalifF++;
                     });
                 });
-                var pctActual = totalF > 0 ? Math.round(cumpleF / totalF * 100) : null;
+                var pctActual = (cumpleF + noCumpleF) > 0 ? Math.round(cumpleF / (cumpleF + noCumpleF) * 100) : null;
                 omitidos.push({
                     nombre: f.nombre || 'Sin nombre',
                     nomDisplay: nomDisplay,
@@ -7915,6 +7916,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     sinAnterior: true,
                     sinHistorialPrevio: true,
                     pctActual: pctActual,
+                    pieCumple: cumpleF,
+                    pieNoCumple: noCumpleF,
+                    pieSinCalif: sinCalifF,
                     areas: []
                 });
                 return;
