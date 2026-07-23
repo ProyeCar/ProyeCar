@@ -6253,22 +6253,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 + '});<\/script>';
         }
 
-        // Comparación semanal (HTML pre-construido o auto-incluido si el toggle está activo)
-        if (!window._compPdfHtml && window._csAbierto && window._compPdfData
-            && window._compPdfData.comparables
-            && window._compPdfData.comparables.length
-            && typeof construirHtmlPdfComparacionAuto === 'function') {
-            if (typeof CompMotor !== 'undefined' && CompMotor.capturarGraficasParaPdf) {
-                window.graficasComparacionPDF = await CompMotor.capturarGraficasParaPdf(window._compPdfData, {
-                    filtroFrente: (document.getElementById('filtro-frente-pdf') || {}).value || 'todos',
-                    filtroArea: (document.getElementById('filtro-area-pdf') || {}).value || 'todas'
-                });
-            }
-            window._compPdfHtml = construirHtmlPdfComparacionAuto(
-                window._compPdfData,
-                window.graficasComparacionPDF || []
-            );
-        }
+        // Comparación semanal: SOLO se incluye si el llamador la preparó explícitamente
+        // (generarInformeConComparacion → "Análisis Comparativo"). El Informe General
+        // nunca debe arrastrar comparación histórica por estado ambiental (_csAbierto).
         if (window._compPdfHtml) {
             h += window._compPdfHtml;
             window._compPdfHtml = null;
