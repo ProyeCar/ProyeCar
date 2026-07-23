@@ -1821,7 +1821,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.162";
+const APP_VERSION = "1.5.163";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -3406,12 +3406,19 @@ document.addEventListener('DOMContentLoaded', function() {
         var nameExact = frenteNombreExacto(actual, histF);
         var nameFlex = frenteNombreFlexibleCoincide(actual, histF);
         var sameContract = frenteContratoNumeroCoincide(actual, histF);
+        var contratoA = frenteNumeroContratoNorm(actual);
+        var contratoB = frenteNumeroContratoNorm(histF);
+        // Conflicto real: AMBOS lados tienen contrato registrado y son distintos.
+        // Si uno de los dos está en blanco no cuenta como conflicto (dato faltante,
+        // no evidencia de que sea un frente distinto).
+        var contratoConflicto = !!(contratoA && contratoB && contratoA !== contratoB);
 
-        // Requiere SIEMPRE mismo contrato — un nombre en común (aunque sea
-        // substring, ej. "Villa Estrella" dentro de "Sector Villa Estrella")
-        // nunca basta solo, evita mezclar historiales de frentes distintos.
-        if (sameContract && nameExact) return { level: 'exact' };
-        if (sameContract && nameFlex) return { level: 'legacy' };
+        // Nombre EXACTO (igualdad total, no substring) es señal fuerte: basta con
+        // que el contrato no entre en conflicto (tolera contrato vacío en el histórico).
+        if (nameExact && !contratoConflicto) return { level: 'exact' };
+        // Nombre "flexible" (substring/tokens, ej. "Villa Estrella" dentro de
+        // "Sector Villa Estrella") es señal débil: SIEMPRE exige mismo contrato.
+        if (nameFlex && sameContract) return { level: 'legacy' };
         if (sameContract) return { level: 'tentative', histF: histF };
         return { level: 'none' };
     }
