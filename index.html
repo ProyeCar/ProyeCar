@@ -7595,26 +7595,66 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 if (comp.sinAnterior) {
                     var itemsSin = comp.itemsActuales || [];
-                    var cumpleSin = itemsSin.filter(function(it) { return it.cumple === true; }).length;
-                    var noCumpleSin = itemsSin.filter(function(it) { return it.cumple === false; }).length;
-                    var sinCalifSin = itemsSin.length - cumpleSin - noCumpleSin;
-                    var pieSinHtml = typeof svgPieChart === 'function' && itemsSin.length
-                        ? '<div style="display:flex;justify-content:center;margin-bottom:8px;">' + svgPieChart(cumpleSin, noCumpleSin, sinCalifSin, 96) + '</div>'
-                        : '';
-                    var filasTablaSin = itemsSin.map(function(it) {
-                        var est = typeof estadoColor === 'function' ? estadoColor(it.cumple) : { bg: '#f3f4f6', text: '#374151', label: '—' };
-                        return '<tr><td style="padding:4px 8px;font-size:0.78rem;color:#374151;border-bottom:1px solid #e2e8f0;">' + escHtml(it.texto)
-                            + '</td><td style="padding:4px 8px;text-align:center;border-bottom:1px solid #e2e8f0;white-space:nowrap;">'
-                            + '<span style="background:' + est.bg + ';color:' + est.text + ';border-radius:10px;padding:2px 8px;font-size:0.68rem;font-weight:700;">' + est.label + '</span></td></tr>';
-                    }).join('');
-                    var tablaSinHtml = filasTablaSin
-                        ? '<table style="width:100%;border-collapse:collapse;margin-top:8px;">' + filasTablaSin + '</table>'
-                        : '<div style="text-align:center;color:#94a3b8;font-size:0.8rem;">Sin ítems evaluados aún.</div>';
-                    html += '<div style="background:#f8fafc;border-radius:12px;padding:12px;color:#6b7280;font-size:0.85rem;margin-bottom:10px;">'
-                        + '<div style="font-weight:600;text-align:center;margin-bottom:4px;">Primera inspección - Sin comparación histórica</div>'
-                        + pieSinHtml
-                        + tablaSinHtml
-                        + '</div>';
+                    html += '<div style="font-size:0.78rem;font-weight:600;color:#6b7280;text-align:center;margin-bottom:8px;">Primera inspección — Sin comparación histórica</div>';
+
+                    var gruposSin = {}, ordenSin = [];
+                    itemsSin.forEach(function(it) {
+                        var key = it.categoriaId || it.categoria || 'general';
+                        if (!gruposSin[key]) { gruposSin[key] = { nombre: it.categoria || 'General', id: key, items: [] }; ordenSin.push(key); }
+                        gruposSin[key].items.push(it);
+                    });
+
+                    var huboGrupoSin = false;
+                    ordenSin.forEach(function(key) {
+                        if (filtroArea !== 'todas' && key !== filtroArea) return;
+                        var g = gruposSin[key];
+                        var cumpleG = g.items.filter(function(it) { return it.cumple === true; }).length;
+                        var noCumpleG = g.items.filter(function(it) { return it.cumple === false; }).length;
+                        var totalG = cumpleG + noCumpleG;
+                        if (!totalG) return;
+                        huboGrupoSin = true;
+                        var pctG = Math.round(cumpleG / totalG * 100);
+
+                        todas.push({
+                            frenteNombre: fNombre, areaNombre: g.nombre, areaId: g.id,
+                            pcts: [pctG], pctReciente: pctG, pctAnterior: null, detalle: g.items
+                        });
+
+                        var cardStyleSin = opts.compacto
+                            ? 'margin-bottom:12px;padding:10px;border:1px solid #e2e8f0;border-radius:10px;background:#fff;'
+                            : 'background:#fff;border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:12px 14px;margin-bottom:10px;';
+                        html += '<div style="' + cardStyleSin + '">';
+                        html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;">'
+                            + '<span style="font-weight:700;font-size:0.85rem;color:#1e3a2f;">' + escHtml(g.nombre) + '</span>'
+                            + '<span style="color:' + CHART.REC + ';background:#f0fdf4;padding:3px 10px;border-radius:12px;font-weight:700;font-size:0.72rem;">' + pctG + '% cumple</span></div>';
+
+                        var chartIdSin = 'comp-chart-' + (opts.idPrefix || '') + chartIdx++;
+                        var chartHSin = COMP_GRAFICA_TYPO.chartH;
+                        if (opts.pdfMode) {
+                            chartHSin = COMP_GRAFICA_TYPO.pdfPreviewH;
+                            html += '<div id="' + chartIdSin + '-preview" style="height:' + chartHSin + 'px;background:#f8fafc;border-radius:6px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;overflow:hidden;">'
+                                + '<span style="font-size:0.75rem;color:#94a3b8;">Generando gráfica…</span></div>';
+                        } else {
+                            html += '<div style="position:relative;height:' + chartHSin + 'px;margin-bottom:8px;"><canvas id="' + chartIdSin + '"></canvas></div>';
+                        }
+                        chartQueue.push({
+                            id: chartIdSin, sinAnterior: true, pctCumple: pctG,
+                            frenteNombre: fNombre, area: { nombre: g.nombre }, pdfMode: !!opts.pdfMode, chartH: chartHSin
+                        });
+
+                        var filasG = g.items.map(function(it) {
+                            var est = typeof estadoColor === 'function' ? estadoColor(it.cumple) : { bg: '#f3f4f6', text: '#374151', label: '—' };
+                            return '<tr><td style="padding:4px 8px;font-size:0.78rem;color:#374151;border-bottom:1px solid #e2e8f0;">' + escHtml(it.texto)
+                                + '</td><td style="padding:4px 8px;text-align:center;border-bottom:1px solid #e2e8f0;white-space:nowrap;">'
+                                + '<span style="background:' + est.bg + ';color:' + est.text + ';border-radius:10px;padding:2px 8px;font-size:0.68rem;font-weight:700;">' + est.label + '</span></td></tr>';
+                        }).join('');
+                        html += filasG
+                            ? '<table style="width:100%;border-collapse:collapse;margin-top:4px;">' + filasG + '</table>'
+                            : '<div style="text-align:center;color:#94a3b8;font-size:0.8rem;">Sin ítems evaluados aún.</div>';
+                        html += '</div>';
+                    });
+
+                    if (!huboGrupoSin) html += '<div style="text-align:center;color:#94a3b8;font-size:0.8rem;padding:8px 0;">Sin ítems evaluados aún.</div>';
                     if (opts.pdfMode) html += '</div>';
                     return;
                 }
@@ -7706,52 +7746,70 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     if (!canvas) return;
                     var captured = false;
-                    var ch = crearGraficaBarras(canvas, item.pA, item.pR, {
-                        responsive: !item.pdfMode,
-                        labels: [
-                            item.fechaAnterior ? ['Anterior', '(' + item.fechaAnterior + ')'] : 'Anterior',
-                            item.fechaReciente ? ['Reciente', '(' + item.fechaReciente + ')'] : 'Reciente'
-                        ],
-                        tickSizeX: item.pdfMode ? COMP_GRAFICA_TYPO.pdfTick : COMP_GRAFICA_TYPO.tickX,
-                        tickSizeY: item.pdfMode ? COMP_GRAFICA_TYPO.pdfTick : COMP_GRAFICA_TYPO.tickY,
-                        pctFontSize: item.pdfMode ? COMP_GRAFICA_TYPO.pdfPctBar : COMP_GRAFICA_TYPO.pctBar,
-                        animation: item.pdfMode ? {
-                            onComplete: function() {
-                                if (captured) return;
-                                captured = true;
-                                var imgData = canvas.toDataURL('image/png');
-                                var prev = document.getElementById(item.id + '-preview');
-                                if (prev) {
-                                    prev.innerHTML = '';
-                                    var img = document.createElement('img');
-                                    img.src = imgData;
-                                    img.style.cssText = 'width:100%;height:100%;object-fit:contain;border-radius:4px;';
-                                    prev.appendChild(img);
-                                }
-                                pdfCapturas.push({
-                                    frenteNombre: item.frenteNombre,
-                                    areaNombre: item.area.nombre,
-                                    pcts: [item.pR, item.pA],
-                                    labels: ['Reciente', 'Anterior'],
-                                    pctReciente: item.pR,
-                                    pctAnterior: item.pA,
-                                    diff: item.area.diff,
-                                    mejorados: item.area.mejorados,
-                                    empeorados: item.area.empeorados,
-                                    iguales: item.area.iguales,
-                                    detalle: item.area.detalle,
-                                    imgData: imgData
-                                });
-                                if (pdfCapturas.length === chartQueue.length && opts.onPdfComplete) opts.onPdfComplete(pdfCapturas, todas);
-                                if (tempDiv && tempDiv.parentNode) tempDiv.parentNode.removeChild(tempDiv);
-                            }
-                        } : {}
-                    });
+                    function onChartComplete() {
+                        if (captured) return;
+                        captured = true;
+                        var imgData = canvas.toDataURL('image/png');
+                        var prev = document.getElementById(item.id + '-preview');
+                        if (prev) {
+                            prev.innerHTML = '';
+                            var img = document.createElement('img');
+                            img.src = imgData;
+                            img.style.cssText = 'width:100%;height:100%;object-fit:contain;border-radius:4px;';
+                            prev.appendChild(img);
+                        }
+                        pdfCapturas.push(item.sinAnterior ? {
+                            frenteNombre: item.frenteNombre,
+                            areaNombre: item.area.nombre,
+                            pctReciente: item.pctCumple,
+                            pctAnterior: null,
+                            imgData: imgData
+                        } : {
+                            frenteNombre: item.frenteNombre,
+                            areaNombre: item.area.nombre,
+                            pcts: [item.pR, item.pA],
+                            labels: ['Reciente', 'Anterior'],
+                            pctReciente: item.pR,
+                            pctAnterior: item.pA,
+                            diff: item.area.diff,
+                            mejorados: item.area.mejorados,
+                            empeorados: item.area.empeorados,
+                            iguales: item.area.iguales,
+                            detalle: item.area.detalle,
+                            imgData: imgData
+                        });
+                        if (pdfCapturas.length === chartQueue.length && opts.onPdfComplete) opts.onPdfComplete(pdfCapturas, todas);
+                        if (tempDiv && tempDiv.parentNode) tempDiv.parentNode.removeChild(tempDiv);
+                    }
+                    var ch = item.sinAnterior
+                        ? crearGraficaBarraCumplimiento(canvas, item.pctCumple, {
+                            responsive: !item.pdfMode,
+                            tickSizeX: item.pdfMode ? COMP_GRAFICA_TYPO.pdfTick : COMP_GRAFICA_TYPO.tickX,
+                            tickSizeY: item.pdfMode ? COMP_GRAFICA_TYPO.pdfTick : COMP_GRAFICA_TYPO.tickY,
+                            pctFontSize: item.pdfMode ? COMP_GRAFICA_TYPO.pdfPctBar : COMP_GRAFICA_TYPO.pctBar,
+                            animation: item.pdfMode ? { onComplete: onChartComplete } : {}
+                        })
+                        : crearGraficaBarras(canvas, item.pA, item.pR, {
+                            responsive: !item.pdfMode,
+                            labels: [
+                                item.fechaAnterior ? ['Anterior', '(' + item.fechaAnterior + ')'] : 'Anterior',
+                                item.fechaReciente ? ['Reciente', '(' + item.fechaReciente + ')'] : 'Reciente'
+                            ],
+                            tickSizeX: item.pdfMode ? COMP_GRAFICA_TYPO.pdfTick : COMP_GRAFICA_TYPO.tickX,
+                            tickSizeY: item.pdfMode ? COMP_GRAFICA_TYPO.pdfTick : COMP_GRAFICA_TYPO.tickY,
+                            pctFontSize: item.pdfMode ? COMP_GRAFICA_TYPO.pdfPctBar : COMP_GRAFICA_TYPO.pctBar,
+                            animation: item.pdfMode ? { onComplete: onChartComplete } : {}
+                        });
                     _activeCharts.push(ch);
                     window._compPdfCharts = window._compPdfCharts || [];
                     window._compPdfCharts.push(ch);
                     if (!item.pdfMode) {
-                        pdfCapturas.push({
+                        pdfCapturas.push(item.sinAnterior ? {
+                            frenteNombre: item.frenteNombre,
+                            areaNombre: item.area.nombre,
+                            pctReciente: item.pctCumple,
+                            pctAnterior: null
+                        } : {
                             frenteNombre: item.frenteNombre,
                             areaNombre: item.area.nombre,
                             pctReciente: item.pR,
