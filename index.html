@@ -1821,7 +1821,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.166";
+const APP_VERSION = "1.5.167";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -5663,6 +5663,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 + '<span style="font-weight:600;font-size:9pt;"> &nbsp;&middot;&nbsp; Municipio: ' + esc(muniZona) + '</span></div>';
             cienaga.forEach(function(comp) { h += tarjetaFrente(comp); });
         }
+        h += '<div style="background:#f8fafc;border-radius:10px;padding:10px 12px;margin-top:10px;page-break-inside:avoid;">'
+            + '<div style="font-size:8.5pt;font-weight:700;color:#374151;margin-bottom:6px;">Guía de colores</div>'
+            + '<div style="display:flex;flex-direction:column;gap:3px;font-size:8pt;color:#374151;">'
+            + '<div style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;border-radius:3px;background:' + COMP_CHART.ANT + ';flex-shrink:0;"></span>Cumple &mdash; inspección anterior</div>'
+            + '<div style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;border-radius:3px;background:' + COMP_CHART.REC + ';flex-shrink:0;"></span>Cumple &mdash; inspección reciente / sin historial</div>'
+            + '<div style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;border-radius:3px;background:' + COMP_CHART.NC_A + ';flex-shrink:0;"></span>No cumple &mdash; anterior</div>'
+            + '<div style="display:flex;align-items:center;gap:6px;"><span style="width:12px;height:12px;border-radius:3px;background:' + COMP_CHART.NC_R + ';flex-shrink:0;"></span>No cumple &mdash; reciente / sin historial</div>'
+            + '<div style="display:flex;align-items:center;gap:6px;">&#128994; En buen camino &nbsp; &#128993; Vigilar &nbsp; &#128308; Atención urgente</div>'
+            + '</div></div>';
         h += '<div class="dash-footer">'
             + '<div style="margin-bottom:3px;"><strong>Responsable:</strong> ' + esc(inspector) + '</div>'
             + '<div>Generado el ' + esc(fechaGen) + ' &middot; CARDIQUE &mdash; Área Técnica de Planeación &middot; Documento ejecutivo</div>'
