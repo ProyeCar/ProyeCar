@@ -1821,7 +1821,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.159";
+const APP_VERSION = "1.5.160";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -3407,10 +3407,11 @@ document.addEventListener('DOMContentLoaded', function() {
         var nameFlex = frenteNombreFlexibleCoincide(actual, histF);
         var sameContract = frenteContratoNumeroCoincide(actual, histF);
 
-        if (nameExact || nameFlex) {
-            if (sameContract) return { level: 'exact' };
-            return { level: 'legacy' };
-        }
+        // Requiere SIEMPRE mismo contrato — un nombre en común (aunque sea
+        // substring, ej. "Villa Estrella" dentro de "Sector Villa Estrella")
+        // nunca basta solo, evita mezclar historiales de frentes distintos.
+        if (sameContract && nameExact) return { level: 'exact' };
+        if (sameContract && nameFlex) return { level: 'legacy' };
         if (sameContract) return { level: 'tentative', histF: histF };
         return { level: 'none' };
     }
