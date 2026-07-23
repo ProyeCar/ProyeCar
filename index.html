@@ -1821,7 +1821,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.165";
+const APP_VERSION = "1.5.166";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -7511,6 +7511,32 @@ document.addEventListener('DOMContentLoaded', function() {
                 plugins: [pctPluginFactory(canvas.id, opts.pctFontSize)]
             });
         }
+        function crearGraficaBarraCumplimiento(canvas, pctCumple, opts) {
+            opts = opts || {};
+            var pct = pctCumple !== null && pctCumple !== undefined ? pctCumple : 0;
+            var existing = Chart.getChart ? Chart.getChart(canvas) : null;
+            if (existing) existing.destroy();
+            return new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels: ['Cumple', 'No cumple'],
+                    datasets: [
+                        { data: [pct, 100 - pct], backgroundColor: [CHART.REC, CHART.NC_R], borderRadius: 4, barPercentage: 0.55 }
+                    ]
+                },
+                options: {
+                    responsive: opts.responsive !== false,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    animation: opts.animation !== undefined ? opts.animation : {},
+                    scales: {
+                        x: { grid: { display: false }, ticks: { font: { size: opts.tickSizeX != null ? opts.tickSizeX : COMP_GRAFICA_TYPO.tickX } } },
+                        y: { min: 0, max: 100, ticks: { stepSize: 10, callback: function(v) { return v + '%'; }, font: { size: opts.tickSizeY != null ? opts.tickSizeY : COMP_GRAFICA_TYPO.tickY } }, grid: { color: 'rgba(0,0,0,0.08)', borderDash: [4, 4] } }
+                    }
+                },
+                plugins: [pctPluginFactory(canvas.id, opts.pctFontSize)]
+            });
+        }
         function renderizar(contenedor, data, opts) {
             if (!contenedor || !data) return { chartQueue: [], todas: [] };
             opts = opts || {};
@@ -7769,7 +7795,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 var f = comp.frente || {};
                 var fNombre = f.nombre || ('Frente ' + (fi + 1));
                 if (filtroFrente !== 'todos' && fNombre !== filtroFrente) return;
-                if (comp.sinAnterior) return;
+                if (comp.sinAnterior) {
+                    var gruposSin = {};
+                    (comp.itemsActuales || []).forEach(function(it) {
+                        var key = it.categoriaId || it.categoria || 'general';
+                        if (!gruposSin[key]) gruposSin[key] = { nombre: it.categoria || 'General', cumple: 0, total: 0 };
+                        if (it.cumple === true) { gruposSin[key].cumple++; gruposSin[key].total++; }
+                        else if (it.cumple === false) { gruposSin[key].total++; }
+                    });
+                    Object.keys(gruposSin).forEach(function(key) {
+                        if (filtroArea !== 'todas' && key !== filtroArea) return;
+                        var g = gruposSin[key];
+                        if (!g.total) return;
+                        chartQueue.push({
+                            sinAnterior: true,
+                            pctCumple: Math.round(g.cumple / g.total * 100),
+                            frenteNombre: fNombre,
+                            area: { nombre: g.nombre }
+                        });
+                    });
+                    return;
+                }
                 (comp.areas || []).forEach(function(area) {
                     if (filtroArea !== 'todas' && area.id !== filtroArea) return;
                     if (area.pctReciente === null && area.pctAnterior === null) return;
@@ -7809,17 +7855,21 @@ document.addEventListener('DOMContentLoaded', function() {
                     canvas.width = capW;
                     canvas.height = capH;
                     tempDiv.appendChild(canvas);
-                    var ch = crearGraficaBarras(canvas, item.pA, item.pR, {
-                        responsive: false,
-                        labels: [
-                            item.fechaAnterior ? ['Anterior', '(' + item.fechaAnterior + ')'] : 'Anterior',
-                            item.fechaReciente ? ['Reciente', '(' + item.fechaReciente + ')'] : 'Reciente'
-                        ],
-                        tickSizeX: tX,
-                        tickSizeY: tY,
-                        pctFontSize: pctF,
-                        animation: false
-                    });
+                    var ch = item.sinAnterior
+                        ? crearGraficaBarraCumplimiento(canvas, item.pctCumple, {
+                            responsive: false, tickSizeX: tX, tickSizeY: tY, pctFontSize: pctF, animation: false
+                        })
+                        : crearGraficaBarras(canvas, item.pA, item.pR, {
+                            responsive: false,
+                            labels: [
+                                item.fechaAnterior ? ['Anterior', '(' + item.fechaAnterior + ')'] : 'Anterior',
+                                item.fechaReciente ? ['Reciente', '(' + item.fechaReciente + ')'] : 'Reciente'
+                            ],
+                            tickSizeX: tX,
+                            tickSizeY: tY,
+                            pctFontSize: pctF,
+                            animation: false
+                        });
                     window._compPdfCharts = window._compPdfCharts || [];
                     window._compPdfCharts.push(ch);
                     var captured = false;
@@ -7948,7 +7998,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     (cat.items || []).forEach(function(it) {
                         if (it.cumple === true) cumpleF++;
                         else if (it.cumple === false) noCumpleF++;
-                        itemsActuales.push({ texto: it.texto || '', cumple: it.cumple, categoria: cat.nombre || '' });
+                        itemsActuales.push({ texto: it.texto || '', cumple: it.cumple, categoria: cat.nombre || '', categoriaId: cat.id || '' });
                     });
                 });
                 var pctActual = (cumpleF + noCumpleF) > 0 ? Math.round(cumpleF / (cumpleF + noCumpleF) * 100) : null;
