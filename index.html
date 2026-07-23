@@ -5242,6 +5242,13 @@ document.addEventListener('DOMContentLoaded', function() {
         return nombre + ': ' + frase;
     }
     function semaforoFrenteEjecutivo(comp) {
+        if (comp.sinAnterior) {
+            var pctA = comp.pctActual;
+            if (pctA === null || pctA === undefined) return { color: '#64748b', bg: '#f8fafc', label: 'Sin datos', icon: '&#9898;' };
+            if (pctA < 50) return { color: '#dc2626', bg: '#fef2f2', label: 'Atención urgente', icon: '&#128308;' };
+            if (pctA < 70) return { color: '#d97706', bg: '#fffbeb', label: 'Vigilar', icon: '&#128993;' };
+            return { color: '#16a34a', bg: '#f0fdf4', label: 'En buen camino', icon: '&#128994;' };
+        }
         var rojo = false, todoVerde = true;
         (comp.areas || []).forEach(function(a) {
             var emp = a.empeorados || 0, mej = a.mejorados || 0;
@@ -5611,6 +5618,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 + '<div class="dash-frente-nom">' + esc(fNombre)
                 + (contratista ? ' <span style="font-weight:600;color:#475569;font-size:9pt;">· ' + esc(contratista) + '</span>' : '') + '</div>'
                 + '<span class="dash-frente-sem" style="color:' + sem.color + ';">' + sem.icon + ' ' + esc(sem.label) + '</span></div>';
+            if (comp.sinAnterior) {
+                b += '<div style="font-size:8.5pt;font-weight:500;color:#64748b;margin-bottom:4px;">Primera inspección - Sin comparación histórica</div>';
+                var noCumpleActuales = (comp.itemsActuales || []).filter(function(it) { return it.cumple === false; });
+                if (!noCumpleActuales.length) {
+                    b += '<div class="dash-hallazgo">&#8226; Sin hallazgos relevantes en la inspección actual.</div>';
+                } else {
+                    noCumpleActuales.slice(0, maxAreas).forEach(function(it) {
+                        b += '<div class="dash-hallazgo">&#8226; ' + esc(it.categoria ? it.categoria + ': ' : '') + esc(it.texto) + '</div>';
+                    });
+                    if (noCumpleActuales.length > maxAreas) {
+                        b += '<div class="dash-hallazgo" style="color:#94a3b8;font-size:8.5pt;">&#8226; Otros hallazgos se detallan en el informe técnico completo.</div>';
+                    }
+                }
+                b += '</div>';
+                return b;
+            }
             b += '<div style="font-size:8.5pt;font-weight:500;color:#64748b;margin-bottom:4px;">Actual: ' + esc(comp.fechaReciente || '')
                 + ' vs Anterior: ' + esc(comp.fechaAnterior || '(sin historial previo)') + '</div>';
             var areasFiltradas = (comp.areas || []).filter(function(a) {
