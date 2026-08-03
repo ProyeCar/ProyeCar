@@ -2202,6 +2202,15 @@
             + '.ra-firma-linea-pdf{border-bottom:1px solid #000;width:100%;margin:0}'
             + '.ra-firma-ts-pdf{font-size:8.5pt;color:#374151;text-align:center;margin-top:2px;line-height:1.25;padding:2px 0 0}'
             + '.ra-firma-etiq{text-align:center;font-weight:700;text-transform:uppercase;padding-top:6px}'
+            // Tablet (iframe de vista/impresión más ancho que en celular): el doc es
+            // de unidades fijas (pt/px) sin breakpoint, por eso se ve fino/pixelado.
+            + '@media (min-width:768px){'
+            + 'body,.ra-doc{font-size:14px}'
+            + '.ra-hdr-tbl td,.ra-main td,.ra-main,.ra-personas,.ra-personas th,.ra-personas td{font-size:14px}'
+            + '.ra-firma-linea-pdf{border-bottom-width:1.2px}'
+            + '.ra-firma-img-pdf{min-height:74px}'
+            + '.ra-firma-img-pdf img{max-height:74px!important}'
+            + '}'
             + '@media print{.no-print-bar,.spacer,.spacer-dash{display:none!important}}';
 
         var h = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
