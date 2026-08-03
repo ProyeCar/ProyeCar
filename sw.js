@@ -1,5 +1,5 @@
-// build: 2026-07-20-auto-update-version-poll
-const APP_VERSION = '1.5.167';
+// build: 2026-08-02-pdf-tablet-fix
+const APP_VERSION = '1.5.168';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 const VERSION_CHECK_INTERVAL_MS = 5 * 60 * 1000;
 

@@ -2137,7 +2137,7 @@
 
     function htmlFirmaPdfLinea(dataUrl, timestamp) {
         var img = dataUrl
-            ? '<img src="' + dataUrl + '" alt="" style="max-width:96%;max-height:62px;object-fit:contain;display:block;margin:0 auto;">'
+            ? '<img src="' + dataUrl + '" alt="" style="max-width:96%;max-height:74px;object-fit:contain;display:block;margin:0 auto;">'
             : '&nbsp;';
         var parts = parseTimestampFirmaPdf(timestamp);
         var ts = (parts.fecha || parts.hora)
@@ -2176,45 +2176,41 @@
             ? '<img src="' + logoDataUrl + '" alt="CARDIQUE" style="width:72px;height:auto;display:block;margin:0 auto;">'
             : '';
 
+        // Tamaños incondicionales (no @media min-width): en impresión/PDF real
+        // (@page abajo) los navegadores evalúan los media-query de ancho contra
+        // la caja de página impresa (~688px de contenido en A4 con estos márgenes),
+        // no contra la pantalla de origen, así que un breakpoint tablet (768px)
+        // nunca se activaría en el PDF final. Se sube el tamaño base para todos
+        // los dispositivos en su lugar.
         var CSS = '@page{size:A4;margin:1.2cm 1.4cm}'
             + '*{box-sizing:border-box}'
-            + 'body,.ra-doc{font-family:Calibri,"Calibri Light","Segoe UI",sans-serif;font-size:11pt;color:#000;margin:0;padding:0;background:#fff}'
+            + 'body,.ra-doc{font-family:Calibri,"Calibri Light","Segoe UI",sans-serif;font-size:14px;color:#000;margin:0;padding:0;background:#fff}'
             + '.ra-doc{max-width:100%;margin:0 auto}'
             + '.ra-hdr-tbl{width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:12px}'
-            + '.ra-hdr-tbl td{border:1px solid #000;padding:6px 8px;vertical-align:middle;font-size:11pt}'
+            + '.ra-hdr-tbl td{border:1px solid #000;padding:6px 8px;vertical-align:middle;font-size:14px}'
             + '.ra-hdr-logo{width:20%;text-align:center;vertical-align:middle}'
             + '.ra-hdr-mid{width:52%;text-align:center;font-weight:700;line-height:1.35;text-transform:uppercase;vertical-align:middle}'
             + '.ra-hdr-meta{width:28%;text-align:left;font-weight:700;line-height:1.35;vertical-align:middle}'
-            + '.ra-main{width:100%;border-collapse:collapse;table-layout:fixed;font-size:11pt}'
-            + '.ra-main td{border:1px solid #000;padding:8px 10px;vertical-align:top;font-size:11pt}'
+            + '.ra-main{width:100%;border-collapse:collapse;table-layout:fixed;font-size:14px}'
+            + '.ra-main td{border:1px solid #000;padding:8px 10px;vertical-align:top;font-size:14px}'
             + '.ra-lbl{font-weight:700;text-transform:uppercase}'
             + '.ra-val{min-height:22px}'
             + '.ra-desc{min-height:140px;white-space:pre-wrap;line-height:1.45}'
-            + '.ra-personas{width:100%;border-collapse:collapse;margin-top:6px;font-size:11pt}'
-            + '.ra-personas th,.ra-personas td{border:none;background:transparent;padding:5px 8px;text-align:left;font-size:11pt}'
+            + '.ra-personas{width:100%;border-collapse:collapse;margin-top:6px;font-size:14px}'
+            + '.ra-personas th,.ra-personas td{border:none;background:transparent;padding:5px 8px;text-align:left;font-size:14px}'
             + '.ra-personas thead th{font-weight:700}'
             + '.ra-bloque-firmas-celda{padding:8px 10px;vertical-align:top}'
             + '.ra-bloque-firmas-titulo{font-weight:700;text-transform:uppercase;margin:0 0 10px;line-height:1.35}'
             + '.ra-firmas-flex{display:flex;gap:18px;align-items:flex-start}'
             + '.ra-firma-col{flex:1;min-width:0;border:none;box-shadow:none;padding:0;background:transparent}'
             + '.ra-firma-zona-pdf{text-align:center;width:100%}'
-            + '.ra-firma-img-pdf{min-height:62px;display:flex;align-items:flex-end;justify-content:center;padding:4px 6px 0}'
-            + '.ra-firma-linea-pdf{border-bottom:1px solid #000;width:100%;margin:0}'
+            + '.ra-firma-img-pdf{min-height:74px;display:flex;align-items:flex-end;justify-content:center;padding:4px 6px 0}'
+            // border-bottom-width entero (2px, no 1.2px): un valor fraccional se
+            // redondea al snap de pixel del dispositivo y en algunos DPR queda MAS
+            // fino que el 1px original (verificado: en dpr=1.25 renderiza en 0.8px).
+            + '.ra-firma-linea-pdf{border-bottom:2px solid #000;width:100%;margin:0}'
             + '.ra-firma-ts-pdf{font-size:8.5pt;color:#374151;text-align:center;margin-top:2px;line-height:1.25;padding:2px 0 0}'
             + '.ra-firma-etiq{text-align:center;font-weight:700;text-transform:uppercase;padding-top:6px}'
-            // Tablet (iframe de vista/impresión más ancho que en celular): el doc es
-            // de unidades fijas (pt/px) sin breakpoint, por eso se ve fino/pixelado.
-            + '@media (min-width:768px){'
-            + 'body,.ra-doc{font-size:14px}'
-            + '.ra-hdr-tbl td,.ra-main td,.ra-main,.ra-personas,.ra-personas th,.ra-personas td{font-size:14px}'
-            // border-bottom-width fraccional (1.2px) se redondea al snap de pixel
-            // del dispositivo y en algunos DPR queda MAS fino que el 1px original
-            // (verificado: en dpr=1.25 renderiza en 0.8px) - se usa 2px, entero,
-            // siempre visible sin importar el device pixel ratio.
-            + '.ra-firma-linea-pdf{border-bottom-width:2px}'
-            + '.ra-firma-img-pdf{min-height:74px}'
-            + '.ra-firma-img-pdf img{max-height:74px!important}'
-            + '}'
             + '@media print{.no-print-bar,.spacer,.spacer-dash{display:none!important}}';
 
         var h = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
