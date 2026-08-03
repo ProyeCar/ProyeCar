@@ -2207,7 +2207,11 @@
             + '@media (min-width:768px){'
             + 'body,.ra-doc{font-size:14px}'
             + '.ra-hdr-tbl td,.ra-main td,.ra-main,.ra-personas,.ra-personas th,.ra-personas td{font-size:14px}'
-            + '.ra-firma-linea-pdf{border-bottom-width:1.2px}'
+            // border-bottom-width fraccional (1.2px) se redondea al snap de pixel
+            // del dispositivo y en algunos DPR queda MAS fino que el 1px original
+            // (verificado: en dpr=1.25 renderiza en 0.8px) - se usa 2px, entero,
+            // siempre visible sin importar el device pixel ratio.
+            + '.ra-firma-linea-pdf{border-bottom-width:2px}'
             + '.ra-firma-img-pdf{min-height:74px}'
             + '.ra-firma-img-pdf img{max-height:74px!important}'
             + '}'
