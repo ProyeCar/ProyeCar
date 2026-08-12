@@ -1821,7 +1821,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.168";
+const APP_VERSION = "1.5.169";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -5104,6 +5104,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px;">'
                         + '<span style="font-weight:700;font-size:0.85rem;color:#1e3a2f;">' + eH(g.areaNombre) + '</span>'
                         + '<span style="color:' + chartCol + ';background:#f0fdf4;padding:3px 10px;border-radius:12px;font-weight:700;font-size:0.72rem;">' + g.pctReciente + '% cumple</span></div>';
+                    h += '<div style="font-size:0.72rem;font-weight:600;color:#6b7280;margin-bottom:8px;">Sin inspección anterior con datos de ' + eH(g.areaNombre) + ' para este frente</div>';
                     if (g.imgData) h += '<img src="' + g.imgData + '" style="width:100%;height:auto;border:1px solid #e2e8f0;border-radius:6px;display:block;margin-bottom:8px;object-fit:contain;"/>';
                     var filasPdfSin = (g.items || []).map(function(it) {
                         var est = typeof estadoColor === 'function' ? estadoColor(it.cumple) : { bg: '#f3f4f6', text: '#374151', label: '—' };
@@ -5129,15 +5130,22 @@ document.addEventListener('DOMContentLoaded', function() {
                     h += CompMotor.htmlDiffBadge(diff);
                 }
                 h += '</div>';
-                h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;font-size:0.72rem;font-weight:600;">'
-                    + '<span style="color:#16a34a;background:#f0fdf4;padding:3px 8px;border-radius:12px;">↑ ' + (area.mejorados || 0) + ' mejoraron</span>'
-                    + '<span style="color:#dc2626;background:#fef2f2;padding:3px 8px;border-radius:12px;">↓ ' + (area.empeorados || 0) + ' empeoraron</span>'
-                    + '<span style="color:#6b7280;background:#f3f4f6;padding:3px 8px;border-radius:12px;">= ' + (area.iguales || 0) + ' iguales</span></div>';
+                h += '<div style="font-size:0.72rem;font-weight:600;color:#6b7280;margin-bottom:8px;">'
+                    + (area.sinAnterior
+                        ? eH(area.mensajeSinAnterior)
+                        : 'Anterior: ' + eH(area.fechaAnterior || comp.fechaAnterior || ''))
+                    + '</div>';
+                if (!area.sinAnterior) {
+                    h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;font-size:0.72rem;font-weight:600;">'
+                        + '<span style="color:#16a34a;background:#f0fdf4;padding:3px 8px;border-radius:12px;">↑ ' + (area.mejorados || 0) + ' mejoraron</span>'
+                        + '<span style="color:#dc2626;background:#fef2f2;padding:3px 8px;border-radius:12px;">↓ ' + (area.empeorados || 0) + ' empeoraron</span>'
+                        + '<span style="color:#6b7280;background:#f3f4f6;padding:3px 8px;border-radius:12px;">= ' + (area.iguales || 0) + ' iguales</span></div>';
+                }
                 if (area.pctReciente !== null && area.pctReciente !== undefined) {
                     h += htmlCompPorcentajesPantalla(area.pctAnterior, area.pctReciente);
                 }
                 if (g.imgData) h += '<img src="' + g.imgData + '" style="width:100%;height:auto;border:1px solid #e2e8f0;border-radius:6px;display:block;margin-bottom:8px;object-fit:contain;"/>';
-                if (area.detalle && area.detalle.length && typeof CompMotor !== 'undefined' && CompMotor.htmlDetalleItems) {
+                if (!area.sinAnterior && area.detalle && area.detalle.length && typeof CompMotor !== 'undefined' && CompMotor.htmlDetalleItems) {
                     h += CompMotor.htmlDetalleItems(area.detalle);
                 } else if (area.detalle && area.detalle.length) {
                     var cambios = area.detalle.filter(function(d) { return d.cambio !== 'igual'; });
@@ -7634,6 +7642,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;">'
                             + '<span style="font-weight:700;font-size:0.85rem;color:#1e3a2f;">' + escHtml(g.nombre) + '</span>'
                             + '<span style="color:' + CHART.REC + ';background:#f0fdf4;padding:3px 10px;border-radius:12px;font-weight:700;font-size:0.72rem;">' + pctG + '% cumple</span></div>';
+                        html += '<div style="font-size:0.72rem;font-weight:600;color:#6b7280;margin-bottom:8px;">Sin inspección anterior con datos de ' + escHtml(g.nombre) + ' para este frente</div>';
 
                         var chartIdSin = 'comp-chart-' + (opts.idPrefix || '') + chartIdx++;
                         var chartHSin = COMP_GRAFICA_TYPO.chartH;
@@ -7684,11 +7693,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;">'
                         + '<span style="font-weight:700;font-size:0.85rem;color:#1e3a2f;">' + escHtml(area.nombre) + '</span>'
                         + htmlDiffBadge(area.diff) + '</div>';
+                    html += '<div style="font-size:0.72rem;font-weight:600;color:#6b7280;margin-bottom:8px;">'
+                        + (area.sinAnterior
+                            ? escHtml(area.mensajeSinAnterior)
+                            : 'Anterior: ' + escHtml(area.fechaAnterior || comp.fechaAnterior || ''))
+                        + '</div>';
 
-                    html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;font-size:0.72rem;font-weight:600;">'
-                        + '<span style="color:#16a34a;background:#f0fdf4;padding:3px 8px;border-radius:12px;">↑ ' + (area.mejorados || 0) + ' mejoraron</span>'
-                        + '<span style="color:#dc2626;background:#fef2f2;padding:3px 8px;border-radius:12px;">↓ ' + (area.empeorados || 0) + ' empeoraron</span>'
-                        + '<span style="color:#6b7280;background:#f3f4f6;padding:3px 8px;border-radius:12px;">= ' + (area.iguales || 0) + ' iguales</span></div>';
+                    if (!area.sinAnterior) {
+                        html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;font-size:0.72rem;font-weight:600;">'
+                            + '<span style="color:#16a34a;background:#f0fdf4;padding:3px 8px;border-radius:12px;">↑ ' + (area.mejorados || 0) + ' mejoraron</span>'
+                            + '<span style="color:#dc2626;background:#fef2f2;padding:3px 8px;border-radius:12px;">↓ ' + (area.empeorados || 0) + ' empeoraron</span>'
+                            + '<span style="color:#6b7280;background:#f3f4f6;padding:3px 8px;border-radius:12px;">= ' + (area.iguales || 0) + ' iguales</span></div>';
+                    }
 
                     if (area.pctReciente !== null || area.pctAnterior !== null) {
                         html += '<div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:8px;flex-wrap:wrap;">';
@@ -7717,12 +7733,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         chartQueue.push({
                             id: chartId, pA: area.pctAnterior, pR: area.pctReciente,
                             frenteNombre: fNombre, area: area, pdfMode: !!opts.pdfMode, chartH: chartH,
-                            fechaAnterior: comp.fechaAnterior, fechaReciente: comp.fechaReciente
+                            fechaAnterior: area.fechaAnterior || comp.fechaAnterior, fechaReciente: comp.fechaReciente
                         });
                     } else {
                         html += '<div style="color:#94a3b8;font-size:0.8rem;text-align:center;padding:8px 0;">Sin porcentajes — solo cambios en ítems</div>';
                     }
-                    html += htmlDetalleItems(area.detalle);
+                    if (!area.sinAnterior) html += htmlDetalleItems(area.detalle);
                     html += '</div>';
                 });
                 if (opts.pdfMode) html += '</div>';
@@ -7901,7 +7917,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         pR: area.pctReciente,
                         frenteNombre: fNombre,
                         area: area,
-                        fechaAnterior: comp.fechaAnterior,
+                        fechaAnterior: area.fechaAnterior || comp.fechaAnterior,
                         fechaReciente: comp.fechaReciente
                     });
                 });
@@ -8028,7 +8044,7 @@ document.addEventListener('DOMContentLoaded', function() {
      * anterior a la fecha actual cuyo frente coincide por nombre (flexible).
      * Solo excluye registros con fecha >= inspección actual (misma fecha o futuras).
      */
-    function buscarHistorialFrentePorNombre(fActual, fechaActual) {
+    function buscarHistorialFrentePorNombre(fActual, fechaActual, areaId) {
         var hist = getHistorial();
         var candidatos = [];
         var fechaRef = typeof normalizarFechaInspeccionYMD === 'function'
@@ -8043,6 +8059,13 @@ document.addEventListener('DOMContentLoaded', function() {
             (reg.frentes || []).forEach(function(hf) {
                 var mc = clasificarMatchFrente(fActual, hf);
                 if (mc.level === 'exact' || mc.level === 'legacy') {
+                    if (areaId) {
+                        var catArea = (hf.categorias || []).find(function(cat) { return cat && cat.id === areaId; });
+                        var tieneDatosArea = catArea && (catArea.items || []).some(function(item) {
+                            return item.cumple === true || item.cumple === false;
+                        });
+                        if (!tieneDatosArea) return;
+                    }
                     candidatos.push({
                         insp: reg, frenteHist: hf, level: mc.level,
                         fecha: reg.fecha || '', id: reg.id
@@ -8075,8 +8098,41 @@ document.addEventListener('DOMContentLoaded', function() {
             return { modo: 'auto', reciente: actual, anterior: null, comparables: [], omitidos: [], sinFrentes: true };
         }
         frentesActivos.forEach(function(f) {
-            var match = buscarHistorialFrentePorNombre(f, actual.fecha);
             var nomDisplay = limpiarNombreFrenteParaMatch(f.nombre) || f.nombre || 'Sin nombre';
+            var areas = [], matches = [];
+            (f.categorias || []).forEach(function(catActual) {
+                if (!catActual || (filtroIds.length && filtroIds.indexOf(catActual.id) < 0)) return;
+                var matchArea = buscarHistorialFrentePorNombre(f, actual.fecha, catActual.id);
+                var area;
+                if (matchArea) {
+                    var builtArea = CompMotor.construirDesdePar(actual, matchArea.insp, [f], {
+                        modo: 'auto', filtroAreaIds: [catActual.id]
+                    });
+                    area = builtArea.comparables && builtArea.comparables[0]
+                        && builtArea.comparables[0].areas && builtArea.comparables[0].areas[0];
+                    if (area) {
+                        area.fechaAnterior = matchArea.insp.fecha || '';
+                        area.proyectoAnterior = matchArea.insp.proyecto || '';
+                        matches.push(matchArea);
+                    }
+                } else {
+                    area = {
+                        id: catActual.id,
+                        nombre: catActual.nombre,
+                        pctReciente: CompMotor.pctCat(catActual.items),
+                        pctAnterior: null,
+                        diff: null,
+                        mejorados: null,
+                        empeorados: null,
+                        iguales: null,
+                        detalle: [],
+                        sinAnterior: true,
+                        mensajeSinAnterior: 'Sin inspección anterior con datos de ' + (catActual.nombre || catActual.id) + ' para este frente'
+                    };
+                }
+                if (area) areas.push(area);
+            });
+            var match = matches.length ? matches[0] : null;
             if (!match) {
                 var cumpleF = 0, noCumpleF = 0, itemsActuales = [];
                 (f.categorias || []).forEach(function(cat) {
@@ -8111,15 +8167,32 @@ document.addEventListener('DOMContentLoaded', function() {
                     sinHistorialPrevio: true,
                     pctActual: pctActual,
                     itemsActuales: itemsActuales,
-                    areas: []
+                    areas: areas
                 });
                 return;
             }
-            var filtroArea = typeof areasEvaluadasParaComparacion === 'function'
-                ? areasEvaluadasParaComparacion(actual, match.insp, filtroIds)
-                : filtroIds;
-            var built = CompMotor.construirDesdePar(actual, match.insp, [f], { modo: 'auto', filtroAreaIds: filtroArea });
-            if (built.comparables && built.comparables[0]) comparables.push(built.comparables[0]);
+            var fechasAnteriores = matches.map(function(m) { return m.insp.fecha || ''; })
+                .filter(function(fecha, idx, lista) { return fecha && lista.indexOf(fecha) === idx; });
+            var antecedentesPorArea = fechasAnteriores.length > 1;
+            var textoAnterior = antecedentesPorArea ? 'Antecedente independiente por área' : (match.insp.fecha || '');
+            var anteriorGlobal = antecedentesPorArea
+                ? { proyecto: textoAnterior, fecha: textoAnterior }
+                : match.insp;
+            comparables.push({
+                frente: {
+                    nombre: f.nombre, contratista: f.contratista, numeroContrato: f.numeroContrato,
+                    municipio: f.municipio || '', zona: f.zona || ''
+                },
+                reciente: actual,
+                anterior: anteriorGlobal,
+                fechaReciente: actual.fecha || '',
+                proyectoReciente: actual.proyecto || '',
+                fechaAnterior: textoAnterior,
+                proyectoAnterior: antecedentesPorArea ? textoAnterior : (match.insp.proyecto || ''),
+                sinAnterior: false,
+                sinHistorialPrevio: false,
+                areas: areas
+            });
         });
         return {
             modo: 'auto',
