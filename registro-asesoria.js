@@ -19,7 +19,8 @@
     var _sesionLegacyMigrada = false;
     var IDB_NAME = 'cardique_ra_sync';
     var IDB_STORE = 'registros';
-    var IDB_VERSION = 1;
+    var IDB_STORE_DASH = 'dashboards_pendientes';
+    var IDB_VERSION = 2;
     var _modoSoloLectura = false;
     var _formInitDone = false;
     var _syncIntervalId = null;
@@ -461,6 +462,9 @@
                     store.createIndex('profesional_id', 'profesional_id', { unique: false });
                     store.createIndex('sincronizado', 'sincronizado', { unique: false });
                 }
+                if (!db.objectStoreNames.contains(IDB_STORE_DASH)) {
+                    db.createObjectStore(IDB_STORE_DASH, { keyPath: 'local_id' });
+                }
             };
             req.onsuccess = function() { resolve(req.result); };
             req.onerror = function() { reject(req.error || new Error('IndexedDB error')); };
@@ -469,10 +473,14 @@
     }
 
     function idbTxn(mode, fn) {
+        return idbTxnStore(IDB_STORE, mode, fn);
+    }
+
+    function idbTxnStore(storeName, mode, fn) {
         return openRaDb().then(function(db) {
             return new Promise(function(resolve, reject) {
-                var tx = db.transaction(IDB_STORE, mode);
-                var store = tx.objectStore(IDB_STORE);
+                var tx = db.transaction(storeName, mode);
+                var store = tx.objectStore(storeName);
                 var out;
                 try {
                     out = fn(store);
@@ -534,6 +542,83 @@
             return all.filter(function(r) { return String(r.profesional_id) === String(profId); });
         });
     }
+
+    function idbGetAllDashboardsPendientes() {
+        return idbTxnStore(IDB_STORE_DASH, 'readonly', function(store) {
+            return new Promise(function(resolve, reject) {
+                var req = store.getAll();
+                req.onsuccess = function() { resolve(req.result || []); };
+                req.onerror = function() { reject(req.error); };
+            });
+        }).catch(function() { return []; });
+    }
+
+    function idbPutDashboardPendiente(rec) {
+        return idbTxnStore(IDB_STORE_DASH, 'readwrite', function(store) {
+            return new Promise(function(resolve, reject) {
+                var req = store.put(rec);
+                req.onsuccess = function() { resolve(rec); };
+                req.onerror = function() { reject(req.error); };
+            });
+        });
+    }
+
+    function idbDeleteDashboardPendiente(localId) {
+        return idbTxnStore(IDB_STORE_DASH, 'readwrite', function(store) {
+            return new Promise(function(resolve, reject) {
+                var req = store.delete(localId);
+                req.onsuccess = function() { resolve(true); };
+                req.onerror = function() { reject(req.error); };
+            });
+        }).catch(function() {});
+    }
+
+    /**
+     * Encola un Dashboard Ejecutivo para subir a `dashboards_ejecutivos` (guardado
+     * en IndexedDB primero para que no se pierda si falla la conexión — mismo
+     * patrón outbox que syncPendientes() usa para los registros de asesoría).
+     */
+    function encolarDashboardEjecutivoParaSync(payload) {
+        var rec = {
+            local_id: 'dash_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9),
+            p_profesional_id: payload.profesionalId,
+            p_codigo: payload.codigo,
+            p_frente: payload.frente,
+            p_html: payload.html,
+            intentos: 0
+        };
+        return idbPutDashboardPendiente(rec).then(function() {
+            syncDashboardsPendientes();
+        });
+    }
+    window.encolarDashboardEjecutivoParaSync = encolarDashboardEjecutivoParaSync;
+
+    function syncDashboardsPendientes() {
+        var sb = getSupabaseClient();
+        if (!sb || !navigator.onLine) return Promise.resolve(0);
+        return idbGetAllDashboardsPendientes().then(function(pendientes) {
+            if (!pendientes.length) return 0;
+            var chain = Promise.resolve(0);
+            pendientes.forEach(function(rec) {
+                chain = chain.then(function(n) {
+                    return sb.rpc('ra_guardar_dashboard', {
+                        p_profesional_id: rec.p_profesional_id,
+                        p_codigo: rec.p_codigo,
+                        p_frente: rec.p_frente,
+                        p_html: rec.p_html
+                    }).then(function(res) {
+                        if (res.error) throw res.error;
+                        return idbDeleteDashboardPendiente(rec.local_id).then(function() { return n + 1; });
+                    }).catch(function(err) {
+                        console.warn('No se pudo sincronizar Dashboard Ejecutivo pendiente:', err && err.message);
+                        return n;
+                    });
+                });
+            });
+            return chain;
+        });
+    }
+    window.syncDashboardsPendientes = syncDashboardsPendientes;
 
     function idbClearAll() {
         return idbTxn('readwrite', function(store) {
@@ -787,9 +872,9 @@
     function wireSyncEvents() {
         if (window.__raSyncWired) return;
         window.__raSyncWired = true;
-        window.addEventListener('online', function() { syncPendientes(); });
+        window.addEventListener('online', function() { syncPendientes(); syncDashboardsPendientes(); });
         if (_syncIntervalId) clearInterval(_syncIntervalId);
-        _syncIntervalId = setInterval(function() { syncPendientes(); }, 30000);
+        _syncIntervalId = setInterval(function() { syncPendientes(); syncDashboardsPendientes(); }, 30000);
     }
 
     function dashboardHeaderHtml(titulo, extra) {
@@ -1291,9 +1376,20 @@
                 }).join('');
             dest.querySelectorAll('.ra-jefe-dash-abrir').forEach(function(btn) {
                 btn.onclick = function() {
-                    var row = rows.filter(function(r) { return String(r.id) === btn.getAttribute('data-id'); })[0];
-                    if (!row) return;
-                    abrirDashboardSandboxed(row.dashboard_html);
+                    var dashId = btn.getAttribute('data-id');
+                    btn.disabled = true;
+                    sb.rpc('ra_get_dashboard_html', {
+                        p_jefe_id: ses.id,
+                        p_dashboard_id: dashId,
+                        p_codigo: ses.codigo_acceso
+                    }).then(function(res) {
+                        btn.disabled = false;
+                        if (res.error) { alert('No se pudo cargar el dashboard.'); return; }
+                        abrirDashboardSandboxed(res.data);
+                    }, function() {
+                        btn.disabled = false;
+                        alert('No se pudo cargar el dashboard.');
+                    });
                 };
             });
         }).catch(function() {
