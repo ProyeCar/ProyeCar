@@ -1821,7 +1821,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.170";
+const APP_VERSION = "1.5.171";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -5772,6 +5772,9 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!raw) return;
             var ses = JSON.parse(raw);
             if (!ses || !ses.id || !ses.codigo_acceso) return;
+            var rol = String(ses.rol || '').toLowerCase();
+            var esAdmin = rol === 'admin' || rol === 'administrador';
+            if (!esAdmin && rol !== 'profesional') return;
             if (typeof window.encolarDashboardEjecutivoParaSync !== 'function') {
                 console.warn('guardarDashboardEnPanelJefe: encolarDashboardEjecutivoParaSync no disponible (registro-asesoria.js no cargado).');
                 return;
@@ -5781,10 +5784,11 @@ document.addEventListener('DOMContentLoaded', function() {
             // de asesoría) en vez de un RPC directo: si no hay red o Supabase aún no
             // cargó, el dashboard no se pierde — se reintenta al volver la conexión.
             window.encolarDashboardEjecutivoParaSync({
-                profesionalId: ses.id,
+                actorId: ses.id,
                 codigo: ses.codigo_acceso,
                 frente: frenteSel,
-                html: html
+                html: html,
+                esAdmin: esAdmin
             }).catch(function(err) {
                 console.warn('No se pudo encolar el Dashboard Ejecutivo para el panel jefe:', err && err.message);
             });

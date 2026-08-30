@@ -600,10 +600,12 @@
     function encolarDashboardEjecutivoParaSync(payload) {
         var rec = {
             local_id: 'dash_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9),
-            p_profesional_id: payload.profesionalId,
+            p_actor_id: payload.actorId || payload.profesionalId,
             p_codigo: payload.codigo,
             p_frente: payload.frente,
             p_html: payload.html,
+            p_jefe_id: payload.jefeId || null,
+            es_admin: !!payload.esAdmin,
             intentos: 0
         };
         return idbPutDashboardPendiente(rec).then(function() {
@@ -613,6 +615,25 @@
     window.encolarDashboardEjecutivoParaSync = encolarDashboardEjecutivoParaSync;
 
     var MAX_INTENTOS_DASHBOARD = 8;
+
+    function resolverJefeDashboardAdmin(sb, rec) {
+        if (rec.p_jefe_id) return Promise.resolve(rec.p_jefe_id);
+        return sb.rpc('ra_list_usuarios', {
+            p_admin_id: rec.p_actor_id,
+            p_codigo: rec.p_codigo
+        }).then(function(res) {
+            if (res.error) throw res.error;
+            var jefes = (res.data || []).filter(function(usuario) {
+                return String(usuario.rol || '').toLowerCase() === 'jefe'
+                    && usuario.activo !== false;
+            });
+            if (jefes.length !== 1 || !jefes[0].id) {
+                throw new Error('No se pudo resolver un único jefe activo para el Dashboard Ejecutivo.');
+            }
+            rec.p_jefe_id = jefes[0].id;
+            return idbPutDashboardPendiente(rec).then(function() { return rec.p_jefe_id; });
+        });
+    }
 
     function syncDashboardsPendientes() {
         var sb = getSupabaseClient();
@@ -632,16 +653,25 @@
             var chain = Promise.resolve(0);
             listos.forEach(function(rec) {
                 chain = chain.then(function(n) {
-                    return sb.rpc('ra_guardar_dashboard', {
-                        p_profesional_id: rec.p_profesional_id,
-                        p_codigo: rec.p_codigo,
-                        p_frente: rec.p_frente,
-                        p_html: rec.p_html
+                    var jefeId = rec.es_admin
+                        ? resolverJefeDashboardAdmin(sb, rec)
+                        : Promise.resolve(rec.p_jefe_id || null);
+                    return jefeId.then(function(resolvedJefeId) {
+                        return sb.rpc('ra_guardar_dashboard', {
+                            p_actor_id: rec.p_actor_id,
+                            p_codigo: rec.p_codigo,
+                            p_frente: rec.p_frente,
+                            p_html: rec.p_html,
+                            p_jefe_id: resolvedJefeId
+                        });
                     }).then(function(res) {
                         if (res.error) throw res.error;
                         return idbDeleteDashboardPendiente(rec.local_id).then(function() { return n + 1; });
                     }).catch(function(err) {
                         console.warn('No se pudo sincronizar Dashboard Ejecutivo pendiente:', err && err.message);
+                        // Si aún no se puede resolver el jefe del administrador, el
+                        // dashboard queda en la cola sin consumir intentos.
+                        if (rec.es_admin && !rec.p_jefe_id) return n;
                         rec.intentos = (rec.intentos || 0) + 1;
                         rec.ultimoIntento = Date.now();
                         if (rec.intentos >= MAX_INTENTOS_DASHBOARD) {
@@ -1434,6 +1464,68 @@
         });
     }
 
+    function cargarDashboardsEjecutivosAdmin(sb, ses) {
+        var dest = document.getElementById('ra-admin-dashboards-body');
+        if (!dest || !sb || !ses) return;
+        dest.innerHTML = '<div style="padding:12px;color:#6b7280;font-size:0.84rem;">Cargando dashboards ejecutivos…</div>';
+        sb.rpc('ra_list_admin_dashboards', {
+            p_admin_id: ses.id,
+            p_codigo: ses.codigo_acceso
+        }).then(function(res) {
+            if (res.error) throw res.error;
+            var rows = res.data || [];
+            if (!rows.length) {
+                dest.innerHTML = '<div style="padding:12px;color:#6b7280;font-size:0.84rem;">No hay dashboards ejecutivos guardados.</div>';
+                return;
+            }
+            dest.innerHTML = rows.map(function(d) {
+                var fecha = d.creado_en ? new Date(d.creado_en).toLocaleString('es-CO') : 'Sin fecha';
+                return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #f3f4f6;">'
+                    + '<div style="min-width:0;flex:1;"><div style="font-size:0.84rem;font-weight:700;color:#111827;">' + escHtml(d.profesional_nombre || 'Autor sin nombre') + '</div>'
+                    + '<div style="font-size:0.76rem;color:#6b7280;margin-top:3px;">' + escHtml(d.frente || 'General') + ' · ' + escHtml(fecha) + '</div></div>'
+                    + '<div style="display:flex;gap:6px;flex-shrink:0;"><button type="button" class="ra-admin-dash-open" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#1a5c35;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Abrir</button>'
+                    + '<button type="button" class="ra-admin-dash-delete" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#b91c1c;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Borrar</button></div></div>';
+            }).join('');
+            dest.querySelectorAll('.ra-admin-dash-open').forEach(function(btn) {
+                btn.onclick = function() {
+                    btn.disabled = true;
+                    sb.rpc('ra_get_admin_dashboard_html', {
+                        p_admin_id: ses.id,
+                        p_dashboard_id: btn.getAttribute('data-id'),
+                        p_codigo: ses.codigo_acceso
+                    }).then(function(res) {
+                        btn.disabled = false;
+                        if (res.error || !res.data) { alert('No se pudo cargar el dashboard.'); return; }
+                        abrirDashboardSandboxed(res.data);
+                    }, function() {
+                        btn.disabled = false;
+                        alert('No se pudo cargar el dashboard.');
+                    });
+                };
+            });
+            dest.querySelectorAll('.ra-admin-dash-delete').forEach(function(btn) {
+                btn.onclick = function() {
+                    if (!confirm('¿Eliminar este Dashboard Ejecutivo? Esta acción no se puede deshacer.')) return;
+                    btn.disabled = true;
+                    sb.rpc('ra_delete_dashboard', {
+                        p_admin_id: ses.id,
+                        p_dashboard_id: btn.getAttribute('data-id'),
+                        p_codigo: ses.codigo_acceso
+                    }).then(function(res) {
+                        if (res.error) throw res.error;
+                        cargarDashboardsEjecutivosAdmin(sb, ses);
+                    }).catch(function(err) {
+                        btn.disabled = false;
+                        alert((err && err.message) || 'No se pudo eliminar el dashboard.');
+                    });
+                };
+            });
+        }).catch(function(err) {
+            dest.innerHTML = '<div style="padding:12px;color:#b91c1c;font-size:0.84rem;">'
+                + escHtml((err && err.message) || 'No se pudieron cargar los dashboards ejecutivos.') + '</div>';
+        });
+    }
+
     function rolEtiquetaCorta(rol) {
         var r = String(rol || '').toLowerCase();
         if (r === 'admin' || r === 'administrador') return 'Admin';
@@ -1811,7 +1903,10 @@
             + '<button type="button" id="ra-admin-user-add" style="padding:8px 12px;background:#1a5c35;color:#fff;border:none;border-radius:10px;font-size:0.78rem;font-weight:700;cursor:pointer;">+ Agregar</button>'
             + '</div><div id="ra-admin-usuarios-body"><div style="padding:12px;color:#6b7280;font-size:0.84rem;">Cargando…</div></div></div>'
             + '<div style="margin-top:14px;"><button type="button" id="ra-admin-nuevo" style="width:100%;padding:12px 14px;background:#1a5c35;color:#fff;border:none;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;">+ NUEVO REGISTRO</button></div>'
-            + '<div id="ra-admin-lista" style="margin-top:14px;"><div style="padding:16px;color:#6b7280;">Cargando…</div></div>';
+            + '<div id="ra-admin-lista" style="margin-top:14px;"><div style="padding:16px;color:#6b7280;">Cargando…</div></div>'
+            + '<div id="ra-admin-dashboards" style="margin-top:14px;background:#fff;border-radius:14px;padding:14px;box-shadow:0 1px 8px rgba(0,0,0,.05);">'
+            + '<div style="font-size:0.82rem;font-weight:800;color:#374151;margin-bottom:4px;">Dashboards Ejecutivos</div>'
+            + '<div id="ra-admin-dashboards-body"><div style="padding:12px;color:#6b7280;font-size:0.84rem;">Cargando…</div></div></div>';
         ensureRaSessionBar();
         var btnNuevo = document.getElementById('ra-admin-nuevo');
         if (btnNuevo) btnNuevo.onclick = abrirNuevoRegistro;
@@ -1819,9 +1914,12 @@
             document.getElementById('ra-admin-lista').innerHTML = '<div style="padding:16px;color:#b91c1c;">Sin conexión a Supabase.</div>';
             var ubody = document.getElementById('ra-admin-usuarios-body');
             if (ubody) ubody.innerHTML = '<div style="padding:12px;color:#b91c1c;font-size:0.84rem;">Sin conexión a Supabase.</div>';
+            var dashBody = document.getElementById('ra-admin-dashboards-body');
+            if (dashBody) dashBody.innerHTML = '<div style="padding:12px;color:#b91c1c;font-size:0.84rem;">Sin conexión a Supabase.</div>';
             return;
         }
         cargarUsuariosAdmin(sb, ses);
+        cargarDashboardsEjecutivosAdmin(sb, ses);
         var btnAddUser = document.getElementById('ra-admin-user-add');
         if (btnAddUser) {
             btnAddUser.onclick = function() {
