@@ -649,19 +649,6 @@
             p_frente: rec.p_frente,
             p_html: rec.p_html,
             p_jefe_id: jefeId
-        }).then(function(res) {
-            // La versión anterior del backend solo conocía la firma de cuatro
-            // argumentos. Se mantiene este puente para que los profesionales no
-            // dejen de guardar durante el despliegue de la migración nueva.
-            if (!rec.es_admin && res.error && esFuncionDashboardNoDisponible(res.error)) {
-                return sb.rpc('ra_guardar_dashboard', {
-                    p_profesional_id: rec.p_actor_id,
-                    p_codigo: rec.p_codigo,
-                    p_frente: rec.p_frente,
-                    p_html: rec.p_html
-                });
-            }
-            return res;
         });
     }
 
