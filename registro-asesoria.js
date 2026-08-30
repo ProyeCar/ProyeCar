@@ -635,6 +635,36 @@
         });
     }
 
+    function esFuncionDashboardNoDisponible(error) {
+        var codigo = String((error && error.code) || '');
+        var mensaje = String((error && error.message) || error || '');
+        return codigo === 'PGRST202'
+            || /could not find the function public\.ra_(guardar_dashboard|list_admin_dashboards|get_admin_dashboard_html|delete_dashboard)/i.test(mensaje);
+    }
+
+    function guardarDashboardPendiente(sb, rec, jefeId) {
+        return sb.rpc('ra_guardar_dashboard', {
+            p_actor_id: rec.p_actor_id,
+            p_codigo: rec.p_codigo,
+            p_frente: rec.p_frente,
+            p_html: rec.p_html,
+            p_jefe_id: jefeId
+        }).then(function(res) {
+            // La versión anterior del backend solo conocía la firma de cuatro
+            // argumentos. Se mantiene este puente para que los profesionales no
+            // dejen de guardar durante el despliegue de la migración nueva.
+            if (!rec.es_admin && res.error && esFuncionDashboardNoDisponible(res.error)) {
+                return sb.rpc('ra_guardar_dashboard', {
+                    p_profesional_id: rec.p_actor_id,
+                    p_codigo: rec.p_codigo,
+                    p_frente: rec.p_frente,
+                    p_html: rec.p_html
+                });
+            }
+            return res;
+        });
+    }
+
     function syncDashboardsPendientes() {
         var sb = getSupabaseClient();
         if (!sb || !navigator.onLine) return Promise.resolve(0);
@@ -657,13 +687,7 @@
                         ? resolverJefeDashboardAdmin(sb, rec)
                         : Promise.resolve(rec.p_jefe_id || null);
                     return jefeId.then(function(resolvedJefeId) {
-                        return sb.rpc('ra_guardar_dashboard', {
-                            p_actor_id: rec.p_actor_id,
-                            p_codigo: rec.p_codigo,
-                            p_frente: rec.p_frente,
-                            p_html: rec.p_html,
-                            p_jefe_id: resolvedJefeId
-                        });
+                        return guardarDashboardPendiente(sb, rec, resolvedJefeId);
                     }).then(function(res) {
                         if (res.error) throw res.error;
                         return idbDeleteDashboardPendiente(rec.local_id).then(function() { return n + 1; });
@@ -671,7 +695,7 @@
                         console.warn('No se pudo sincronizar Dashboard Ejecutivo pendiente:', err && err.message);
                         // Si aún no se puede resolver el jefe del administrador, el
                         // dashboard queda en la cola sin consumir intentos.
-                        if (rec.es_admin && !rec.p_jefe_id) return n;
+                        if ((rec.es_admin && !rec.p_jefe_id) || esFuncionDashboardNoDisponible(err)) return n;
                         rec.intentos = (rec.intentos || 0) + 1;
                         rec.ultimoIntento = Date.now();
                         if (rec.intentos >= MAX_INTENTOS_DASHBOARD) {
@@ -1521,6 +1545,10 @@
                 };
             });
         }).catch(function(err) {
+            if (esFuncionDashboardNoDisponible(err)) {
+                dest.innerHTML = '<div style="padding:12px;color:#92400e;font-size:0.84rem;">La gestión de dashboards está pendiente de la actualización de Supabase. Los dashboards del administrador permanecen guardados en este dispositivo.</div>';
+                return;
+            }
             dest.innerHTML = '<div style="padding:12px;color:#b91c1c;font-size:0.84rem;">'
                 + escHtml((err && err.message) || 'No se pudieron cargar los dashboards ejecutivos.') + '</div>';
         });

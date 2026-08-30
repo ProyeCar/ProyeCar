@@ -1,5 +1,5 @@
-// build: 2026-08-30-dashboard-admin
-const APP_VERSION = '1.5.171';
+// build: 2026-08-30-dashboard-rpc-fallback
+const APP_VERSION = '1.5.172';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 const VERSION_CHECK_INTERVAL_MS = 5 * 60 * 1000;
 
