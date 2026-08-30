@@ -466,8 +466,27 @@
                     db.createObjectStore(IDB_STORE_DASH, { keyPath: 'local_id' });
                 }
             };
-            req.onsuccess = function() { resolve(req.result); };
+            req.onsuccess = function() {
+                var db = req.result;
+                // Si otra pestaña abre una versión más nueva mientras esta sigue
+                // viva, cerramos aquí para no bloquearla a su vez; la próxima
+                // operación IDB reabre la conexión vía _raDbPromise reseteado.
+                db.onversionchange = function() {
+                    db.close();
+                    _raDbPromise = null;
+                    console.warn('IndexedDB: conexión cerrada porque se abrió una versión más nueva en otra pestaña. Recarga esta página.');
+                };
+                resolve(db);
+            };
             req.onerror = function() { reject(req.error || new Error('IndexedDB error')); };
+            // Sin este handler, una pestaña vieja con la conexión anterior abierta
+            // deja el open() colgado para siempre (ni onsuccess ni onerror disparan)
+            // y toda la cola offline (registros + dashboards) queda muda.
+            req.onblocked = function() {
+                console.warn('IndexedDB: actualización bloqueada por otra pestaña con una versión anterior de la app abierta. Ciérrala y recarga.');
+                _raDbPromise = null;
+                reject(new Error('IndexedDB bloqueada por otra pestaña abierta con una versión anterior.'));
+            };
         });
         return _raDbPromise;
     }
@@ -593,13 +612,25 @@
     }
     window.encolarDashboardEjecutivoParaSync = encolarDashboardEjecutivoParaSync;
 
+    var MAX_INTENTOS_DASHBOARD = 8;
+
     function syncDashboardsPendientes() {
         var sb = getSupabaseClient();
         if (!sb || !navigator.onLine) return Promise.resolve(0);
         return idbGetAllDashboardsPendientes().then(function(pendientes) {
-            if (!pendientes.length) return 0;
+            var ahora = Date.now();
+            // Backoff exponencial (30s, 1m, 2m, ... tope 30min) por registro: un
+            // fallo permanente (codigo revocado, RPC caida) no debe reintentarse
+            // cada 30s para siempre — eso vuelve a subir el HTML completo (con
+            // gráficas en base64) en cada intento.
+            var listos = pendientes.filter(function(rec) {
+                if (!rec.intentos) return true;
+                var backoffMs = Math.min(30000 * Math.pow(2, rec.intentos), 30 * 60 * 1000);
+                return (ahora - (rec.ultimoIntento || 0)) >= backoffMs;
+            });
+            if (!listos.length) return 0;
             var chain = Promise.resolve(0);
-            pendientes.forEach(function(rec) {
+            listos.forEach(function(rec) {
                 chain = chain.then(function(n) {
                     return sb.rpc('ra_guardar_dashboard', {
                         p_profesional_id: rec.p_profesional_id,
@@ -611,7 +642,13 @@
                         return idbDeleteDashboardPendiente(rec.local_id).then(function() { return n + 1; });
                     }).catch(function(err) {
                         console.warn('No se pudo sincronizar Dashboard Ejecutivo pendiente:', err && err.message);
-                        return n;
+                        rec.intentos = (rec.intentos || 0) + 1;
+                        rec.ultimoIntento = Date.now();
+                        if (rec.intentos >= MAX_INTENTOS_DASHBOARD) {
+                            console.warn('Dashboard Ejecutivo pendiente descartado tras ' + rec.intentos + ' intentos fallidos:', rec.local_id);
+                            return idbDeleteDashboardPendiente(rec.local_id).then(function() { return n; });
+                        }
+                        return idbPutDashboardPendiente(rec).then(function() { return n; });
                     });
                 });
             });
@@ -1384,7 +1421,7 @@
                         p_codigo: ses.codigo_acceso
                     }).then(function(res) {
                         btn.disabled = false;
-                        if (res.error) { alert('No se pudo cargar el dashboard.'); return; }
+                        if (res.error || !res.data) { alert('No se pudo cargar el dashboard.'); return; }
                         abrirDashboardSandboxed(res.data);
                     }, function() {
                         btn.disabled = false;
