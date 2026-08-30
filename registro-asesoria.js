@@ -605,6 +605,8 @@
             p_frente: payload.frente,
             p_html: payload.html,
             p_jefe_id: payload.jefeId || null,
+            p_contrato: payload.contrato || null,
+            p_municipio: payload.municipio || null,
             es_admin: !!payload.esAdmin,
             intentos: 0
         };
@@ -648,7 +650,9 @@
             p_codigo: rec.p_codigo,
             p_frente: rec.p_frente,
             p_html: rec.p_html,
-            p_jefe_id: jefeId
+            p_jefe_id: jefeId,
+            p_contrato: rec.p_contrato || null,
+            p_municipio: rec.p_municipio || null
         });
     }
 
@@ -960,7 +964,7 @@
         return ''
             + '<div style="background:#fff;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 2px 12px rgba(0,0,0,.06);font-family:system-ui,-apple-system,sans-serif;">'
             + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">'
-            + '<div><div style="font-size:0.72rem;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;">Registro de asesoría</div>'
+            + '<div><div style="font-size:0.72rem;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;">Registros</div>'
             + '<h2 style="margin:4px 0 0;font-size:1.05rem;color:#0d3321;">' + escHtml(titulo) + '</h2>'
             + (ses ? '<p style="margin:6px 0 0;font-size:0.82rem;color:#374151;">' + escHtml(ses.nombre) + ' · ' + escHtml(ses.rol || '') + '</p>' : '')
             + '</div>'
@@ -973,7 +977,7 @@
         var btn = document.getElementById('ra-btn-cerrar-sesion');
         if (!btn) return;
         btn.onclick = function() {
-            if (!confirm('¿Cerrar sesión de registro de asesoría?')) return;
+            if (!confirm('¿Cerrar sesión de Registros?')) return;
             clearRaSession();
             setUiModoDashboard(false);
             setUiModoFormulario(false);
@@ -1431,6 +1435,12 @@
         document.body.appendChild(overlay);
     }
 
+    function filaDashboardInfo(icono, label, valor) {
+        return '<div style="font-size:12px;line-height:1.4;margin-top:2px;">'
+            + icono + ' <span style="font-weight:600;color:#111827;">' + escHtml(label) + ':</span>'
+            + ' <span style="font-weight:normal;color:#6b7280;">' + escHtml(valor || 'Sin especificar') + '</span></div>';
+    }
+
     function etiquetaFrenteDashboard(frente) {
         var f = String(frente || '').trim().toLowerCase();
         if (!f || f === 'todos') return 'Inspección en Campo';
@@ -1455,9 +1465,12 @@
             dest.innerHTML = '<div style="font-size:0.82rem;font-weight:700;color:#374151;margin-bottom:8px;">Dashboards Ejecutivos</div>'
                 + rows.map(function(d) {
                     var fecha = d.creado_en ? new Date(d.creado_en).toLocaleString('es-CO') : '';
-                    return '<button type="button" class="ra-jefe-dash-abrir" data-id="' + escHtml(d.id) + '" style="width:100%;text-align:left;padding:10px 12px;margin-bottom:6px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;font-size:0.8rem;color:#14532d;cursor:pointer;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
-                        + '<span style="display:inline-flex;align-items:center;gap:4px;background:#1a5c35;color:#fff;padding:3px 9px;border-radius:999px;font-size:0.72rem;font-weight:700;">📊 ' + escHtml(etiquetaFrenteDashboard(d.frente)) + '</span>'
-                        + '<span style="color:#6b7280;font-weight:400;">' + escHtml(fecha) + '</span></button>';
+                    return '<button type="button" class="ra-jefe-dash-abrir" data-id="' + escHtml(d.id) + '" style="width:100%;text-align:left;padding:10px 12px;margin-bottom:6px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;font-size:0.8rem;color:#14532d;cursor:pointer;display:block;">'
+                        + '<span style="display:inline-flex;align-items:center;gap:4px;background:#1a5c35;color:#fff;padding:3px 9px;border-radius:999px;font-size:0.72rem;font-weight:700;margin-bottom:4px;">📊 ' + escHtml(etiquetaFrenteDashboard(d.frente)) + '</span>'
+                        + filaDashboardInfo('📄', 'Contrato', d.contrato)
+                        + filaDashboardInfo('📅', 'Fecha y hora', fecha)
+                        + filaDashboardInfo('📍', 'Municipio', d.municipio)
+                        + '</button>';
                 }).join('');
             dest.querySelectorAll('.ra-jefe-dash-abrir').forEach(function(btn) {
                 btn.onclick = function() {
@@ -1498,11 +1511,13 @@
             }
             dest.innerHTML = rows.map(function(d) {
                 var fecha = d.creado_en ? new Date(d.creado_en).toLocaleString('es-CO') : 'Sin fecha';
-                return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #f3f4f6;">'
+                return '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:10px 0;border-top:1px solid #f3f4f6;">'
                     + '<div style="min-width:0;flex:1;"><div style="font-size:0.84rem;font-weight:700;color:#111827;">' + escHtml(d.profesional_nombre || 'Autor sin nombre') + '</div>'
-                    + '<div style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap;">'
-                    + '<span style="display:inline-flex;align-items:center;gap:4px;background:#1a5c35;color:#fff;padding:2px 8px;border-radius:999px;font-size:0.68rem;font-weight:700;">📊 ' + escHtml(etiquetaFrenteDashboard(d.frente)) + '</span>'
-                    + '<span style="font-size:0.76rem;color:#6b7280;">' + escHtml(fecha) + '</span></div></div>'
+                    + '<span style="display:inline-flex;align-items:center;gap:4px;background:#1a5c35;color:#fff;padding:2px 8px;border-radius:999px;font-size:0.68rem;font-weight:700;margin-top:4px;">📊 ' + escHtml(etiquetaFrenteDashboard(d.frente)) + '</span>'
+                    + filaDashboardInfo('📄', 'Contrato', d.contrato)
+                    + filaDashboardInfo('📅', 'Fecha y hora', fecha)
+                    + filaDashboardInfo('📍', 'Municipio', d.municipio)
+                    + '</div>'
                     + '<div style="display:flex;gap:6px;flex-shrink:0;"><button type="button" class="ra-admin-dash-open" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#1a5c35;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Abrir</button>'
                     + '<button type="button" class="ra-admin-dash-delete" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#b91c1c;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Borrar</button></div></div>';
             }).join('');
@@ -2020,7 +2035,7 @@
         overlay.style.cssText = 'position:fixed;inset:0;background:rgba(13,51,33,0.92);z-index:10070;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
         overlay.innerHTML = ''
             + '<div style="background:#fff;border-radius:14px;max-width:400px;width:100%;padding:22px 20px;box-shadow:0 12px 40px rgba(0,0,0,.25);font-family:system-ui,-apple-system,sans-serif;">'
-            + '<h2 style="margin:0 0 6px;font-size:1.05rem;color:#0d3321;">Acceso Registro de Asesoría</h2>'
+            + '<h2 style="margin:0 0 6px;font-size:1.05rem;color:#0d3321;">Acceso Registros</h2>'
             + '<p style="margin:0 0 16px;font-size:0.82rem;color:#6b7280;line-height:1.45;">Ingresa tu nombre y código de acceso.</p>'
             + '<label style="display:block;font-size:0.78rem;font-weight:700;color:#374151;margin-bottom:4px;">Nombre</label>'
             + '<input type="text" id="ra-login-nombre" autocomplete="name" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:0.9rem;margin-bottom:12px;">'
