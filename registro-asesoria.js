@@ -1431,6 +1431,12 @@
         document.body.appendChild(overlay);
     }
 
+    function etiquetaFrenteDashboard(frente) {
+        var f = String(frente || '').trim().toLowerCase();
+        if (!f || f === 'todos') return 'Inspección en Campo';
+        return frente;
+    }
+
     function cargarDashboardsEjecutivosJefe(sb, ses, profId) {
         var dest = document.getElementById('ra-jefe-dashboards');
         if (!dest) return;
@@ -1449,8 +1455,9 @@
             dest.innerHTML = '<div style="font-size:0.82rem;font-weight:700;color:#374151;margin-bottom:8px;">Dashboards Ejecutivos</div>'
                 + rows.map(function(d) {
                     var fecha = d.creado_en ? new Date(d.creado_en).toLocaleString('es-CO') : '';
-                    return '<button type="button" class="ra-jefe-dash-abrir" data-id="' + escHtml(d.id) + '" style="width:100%;text-align:left;padding:10px 12px;margin-bottom:6px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;font-size:0.8rem;color:#14532d;cursor:pointer;">'
-                        + '📊 ' + escHtml(d.frente || 'General') + ' <span style="color:#6b7280;font-weight:400;">· ' + escHtml(fecha) + '</span></button>';
+                    return '<button type="button" class="ra-jefe-dash-abrir" data-id="' + escHtml(d.id) + '" style="width:100%;text-align:left;padding:10px 12px;margin-bottom:6px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;font-size:0.8rem;color:#14532d;cursor:pointer;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
+                        + '<span style="display:inline-flex;align-items:center;gap:4px;background:#1a5c35;color:#fff;padding:3px 9px;border-radius:999px;font-size:0.72rem;font-weight:700;">📊 ' + escHtml(etiquetaFrenteDashboard(d.frente)) + '</span>'
+                        + '<span style="color:#6b7280;font-weight:400;">' + escHtml(fecha) + '</span></button>';
                 }).join('');
             dest.querySelectorAll('.ra-jefe-dash-abrir').forEach(function(btn) {
                 btn.onclick = function() {
@@ -1493,7 +1500,9 @@
                 var fecha = d.creado_en ? new Date(d.creado_en).toLocaleString('es-CO') : 'Sin fecha';
                 return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #f3f4f6;">'
                     + '<div style="min-width:0;flex:1;"><div style="font-size:0.84rem;font-weight:700;color:#111827;">' + escHtml(d.profesional_nombre || 'Autor sin nombre') + '</div>'
-                    + '<div style="font-size:0.76rem;color:#6b7280;margin-top:3px;">' + escHtml(d.frente || 'General') + ' · ' + escHtml(fecha) + '</div></div>'
+                    + '<div style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap;">'
+                    + '<span style="display:inline-flex;align-items:center;gap:4px;background:#1a5c35;color:#fff;padding:2px 8px;border-radius:999px;font-size:0.68rem;font-weight:700;">📊 ' + escHtml(etiquetaFrenteDashboard(d.frente)) + '</span>'
+                    + '<span style="font-size:0.76rem;color:#6b7280;">' + escHtml(fecha) + '</span></div></div>'
                     + '<div style="display:flex;gap:6px;flex-shrink:0;"><button type="button" class="ra-admin-dash-open" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#1a5c35;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Abrir</button>'
                     + '<button type="button" class="ra-admin-dash-delete" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#b91c1c;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Borrar</button></div></div>';
             }).join('');
