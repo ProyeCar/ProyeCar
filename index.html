@@ -5728,6 +5728,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         function entregarDashboard(h) {
             entregarHtmlEnVentanaPdf(h);
+            guardarDashboardEnPanelJefe(h, compD);
         }
         CompMotor.capturarGraficasParaPdf(compD, {
             filtroFrente: (document.getElementById('filtro-frente-pdf') || {}).value || 'todos',
@@ -5758,6 +5759,31 @@ document.addEventListener('DOMContentLoaded', function() {
             window._pdfWin = null;
             alert('No se pudieron generar los gráficos del dashboard.' + (err && err.message ? ' (' + err.message + ')' : ''));
         });
+    }
+    function guardarDashboardEnPanelJefe(html, compD) {
+        try {
+            var raw = localStorage.getItem('proyecar_session');
+            if (!raw) return;
+            var ses = JSON.parse(raw);
+            if (!ses || !ses.id || !ses.codigo_acceso) return;
+            var sb = window.ProyeCarSupabase && window.ProyeCarSupabase.supabase;
+            if (!sb) return;
+            var frenteSel = (document.getElementById('filtro-frente-pdf') || {}).value || 'todos';
+            sb.rpc('ra_guardar_dashboard', {
+                p_profesional_id: ses.id,
+                p_codigo: ses.codigo_acceso,
+                p_frente: frenteSel,
+                p_html: html
+            }).then(function(res) {
+                if (res && res.error) {
+                    console.warn('No se pudo sincronizar el Dashboard Ejecutivo al panel jefe:', res.error.message);
+                }
+            }, function(err) {
+                console.warn('No se pudo sincronizar el Dashboard Ejecutivo al panel jefe:', err && err.message);
+            });
+        } catch (e) {
+            console.warn('guardarDashboardEnPanelJefe:', e);
+        }
     }
     window.construirHtmlDashboardEjecutivo = construirHtmlDashboardEjecutivo;
     window.generarDashboardEjecutivo = generarDashboardEjecutivo;

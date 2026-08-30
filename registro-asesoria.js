@@ -1223,9 +1223,11 @@
                         if (r2.error) throw r2.error;
                         var rows = (r2.data || []).map(remoteRegistroAFormulario);
                         dest.innerHTML = '<div style="font-size:0.82rem;font-weight:700;color:#374151;margin-bottom:8px;">Registros de ' + escHtml(btn.getAttribute('data-nombre')) + '</div>'
-                            + renderListaRegistrosSemanaHtml(rows, { readonly: true });
+                            + renderListaRegistrosSemanaHtml(rows, { readonly: true })
+                            + '<div id="ra-jefe-dashboards" style="margin-top:16px;"></div>';
                         attachRegCacheToButtons(dest, rows);
                         wireAccionesListaRegistros(dest, { readonly: true });
+                        cargarDashboardsEjecutivosJefe(sb, ses, profId);
                     }).catch(function() {
                         dest.innerHTML = '<div style="padding:12px;color:#b91c1c;">No se pudieron cargar los registros.</div>';
                     });
@@ -1234,6 +1236,68 @@
         }).catch(function() {
             var cont = document.getElementById('ra-jefe-contenido');
             if (cont) cont.innerHTML = '<div style="padding:16px;color:#b91c1c;">Error al cargar subordinados.</div>';
+        });
+    }
+
+    function abrirDashboardSandboxed(html) {
+        var blob = new Blob([html || ''], { type: 'text/html' });
+        var url = URL.createObjectURL(blob);
+        var overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#111827;display:flex;flex-direction:column;';
+        var bar = document.createElement('div');
+        bar.style.cssText = 'padding:10px 14px;background:#14532d;display:flex;justify-content:flex-end;flex-shrink:0;';
+        var btnCerrar = document.createElement('button');
+        btnCerrar.type = 'button';
+        btnCerrar.textContent = 'Cerrar';
+        btnCerrar.style.cssText = 'padding:8px 16px;border:none;border-radius:8px;background:#fff;color:#14532d;font-weight:700;cursor:pointer;';
+        var cerrar = function() {
+            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            URL.revokeObjectURL(url);
+        };
+        btnCerrar.onclick = cerrar;
+        bar.appendChild(btnCerrar);
+        var iframe = document.createElement('iframe');
+        iframe.src = url;
+        // Sandbox sin allow-scripts ni allow-same-origin: el HTML almacenado (generado
+        // por otro usuario) se muestra pero cualquier <script> queda inerte y sin acceso
+        // al origen/localStorage del jefe. Los gráficos ya están capturados como <img>.
+        iframe.setAttribute('sandbox', '');
+        iframe.style.cssText = 'flex:1;border:none;background:#fff;width:100%;';
+        overlay.appendChild(bar);
+        overlay.appendChild(iframe);
+        document.body.appendChild(overlay);
+    }
+
+    function cargarDashboardsEjecutivosJefe(sb, ses, profId) {
+        var dest = document.getElementById('ra-jefe-dashboards');
+        if (!dest) return;
+        dest.innerHTML = '<div style="padding:8px;color:#6b7280;font-size:0.8rem;">Cargando dashboards ejecutivos…</div>';
+        sb.rpc('ra_list_jefe_dashboards', {
+            p_jefe_id: ses.id,
+            p_profesional_id: profId,
+            p_codigo: ses.codigo_acceso
+        }).then(function(res) {
+            if (res.error) throw res.error;
+            var rows = res.data || [];
+            if (!rows.length) {
+                dest.innerHTML = '<div style="padding:8px;color:#9ca3af;font-size:0.78rem;">Sin dashboards ejecutivos guardados.</div>';
+                return;
+            }
+            dest.innerHTML = '<div style="font-size:0.82rem;font-weight:700;color:#374151;margin-bottom:8px;">Dashboards Ejecutivos</div>'
+                + rows.map(function(d) {
+                    var fecha = d.creado_en ? new Date(d.creado_en).toLocaleString('es-CO') : '';
+                    return '<button type="button" class="ra-jefe-dash-abrir" data-id="' + escHtml(d.id) + '" style="width:100%;text-align:left;padding:10px 12px;margin-bottom:6px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;font-size:0.8rem;color:#14532d;cursor:pointer;">'
+                        + '📊 ' + escHtml(d.frente || 'General') + ' <span style="color:#6b7280;font-weight:400;">· ' + escHtml(fecha) + '</span></button>';
+                }).join('');
+            dest.querySelectorAll('.ra-jefe-dash-abrir').forEach(function(btn) {
+                btn.onclick = function() {
+                    var row = rows.filter(function(r) { return String(r.id) === btn.getAttribute('data-id'); })[0];
+                    if (!row) return;
+                    abrirDashboardSandboxed(row.dashboard_html);
+                };
+            });
+        }).catch(function() {
+            dest.innerHTML = '<div style="padding:8px;color:#b91c1c;font-size:0.78rem;">No se pudieron cargar los dashboards ejecutivos.</div>';
         });
     }
 
