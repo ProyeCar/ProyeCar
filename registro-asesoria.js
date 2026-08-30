@@ -19,7 +19,8 @@
     var _sesionLegacyMigrada = false;
     var IDB_NAME = 'cardique_ra_sync';
     var IDB_STORE = 'registros';
-    var IDB_VERSION = 1;
+    var IDB_STORE_DASH = 'dashboards_pendientes';
+    var IDB_VERSION = 2;
     var _modoSoloLectura = false;
     var _formInitDone = false;
     var _syncIntervalId = null;
@@ -461,18 +462,44 @@
                     store.createIndex('profesional_id', 'profesional_id', { unique: false });
                     store.createIndex('sincronizado', 'sincronizado', { unique: false });
                 }
+                if (!db.objectStoreNames.contains(IDB_STORE_DASH)) {
+                    db.createObjectStore(IDB_STORE_DASH, { keyPath: 'local_id' });
+                }
             };
-            req.onsuccess = function() { resolve(req.result); };
+            req.onsuccess = function() {
+                var db = req.result;
+                // Si otra pestaña abre una versión más nueva mientras esta sigue
+                // viva, cerramos aquí para no bloquearla a su vez; la próxima
+                // operación IDB reabre la conexión vía _raDbPromise reseteado.
+                db.onversionchange = function() {
+                    db.close();
+                    _raDbPromise = null;
+                    console.warn('IndexedDB: conexión cerrada porque se abrió una versión más nueva en otra pestaña. Recarga esta página.');
+                };
+                resolve(db);
+            };
             req.onerror = function() { reject(req.error || new Error('IndexedDB error')); };
+            // Sin este handler, una pestaña vieja con la conexión anterior abierta
+            // deja el open() colgado para siempre (ni onsuccess ni onerror disparan)
+            // y toda la cola offline (registros + dashboards) queda muda.
+            req.onblocked = function() {
+                console.warn('IndexedDB: actualización bloqueada por otra pestaña con una versión anterior de la app abierta. Ciérrala y recarga.');
+                _raDbPromise = null;
+                reject(new Error('IndexedDB bloqueada por otra pestaña abierta con una versión anterior.'));
+            };
         });
         return _raDbPromise;
     }
 
     function idbTxn(mode, fn) {
+        return idbTxnStore(IDB_STORE, mode, fn);
+    }
+
+    function idbTxnStore(storeName, mode, fn) {
         return openRaDb().then(function(db) {
             return new Promise(function(resolve, reject) {
-                var tx = db.transaction(IDB_STORE, mode);
-                var store = tx.objectStore(IDB_STORE);
+                var tx = db.transaction(storeName, mode);
+                var store = tx.objectStore(storeName);
                 var out;
                 try {
                     out = fn(store);
@@ -534,6 +561,101 @@
             return all.filter(function(r) { return String(r.profesional_id) === String(profId); });
         });
     }
+
+    function idbGetAllDashboardsPendientes() {
+        return idbTxnStore(IDB_STORE_DASH, 'readonly', function(store) {
+            return new Promise(function(resolve, reject) {
+                var req = store.getAll();
+                req.onsuccess = function() { resolve(req.result || []); };
+                req.onerror = function() { reject(req.error); };
+            });
+        }).catch(function() { return []; });
+    }
+
+    function idbPutDashboardPendiente(rec) {
+        return idbTxnStore(IDB_STORE_DASH, 'readwrite', function(store) {
+            return new Promise(function(resolve, reject) {
+                var req = store.put(rec);
+                req.onsuccess = function() { resolve(rec); };
+                req.onerror = function() { reject(req.error); };
+            });
+        });
+    }
+
+    function idbDeleteDashboardPendiente(localId) {
+        return idbTxnStore(IDB_STORE_DASH, 'readwrite', function(store) {
+            return new Promise(function(resolve, reject) {
+                var req = store.delete(localId);
+                req.onsuccess = function() { resolve(true); };
+                req.onerror = function() { reject(req.error); };
+            });
+        }).catch(function() {});
+    }
+
+    /**
+     * Encola un Dashboard Ejecutivo para subir a `dashboards_ejecutivos` (guardado
+     * en IndexedDB primero para que no se pierda si falla la conexión — mismo
+     * patrón outbox que syncPendientes() usa para los registros de asesoría).
+     */
+    function encolarDashboardEjecutivoParaSync(payload) {
+        var rec = {
+            local_id: 'dash_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9),
+            p_profesional_id: payload.profesionalId,
+            p_codigo: payload.codigo,
+            p_frente: payload.frente,
+            p_html: payload.html,
+            intentos: 0
+        };
+        return idbPutDashboardPendiente(rec).then(function() {
+            syncDashboardsPendientes();
+        });
+    }
+    window.encolarDashboardEjecutivoParaSync = encolarDashboardEjecutivoParaSync;
+
+    var MAX_INTENTOS_DASHBOARD = 8;
+
+    function syncDashboardsPendientes() {
+        var sb = getSupabaseClient();
+        if (!sb || !navigator.onLine) return Promise.resolve(0);
+        return idbGetAllDashboardsPendientes().then(function(pendientes) {
+            var ahora = Date.now();
+            // Backoff exponencial (30s, 1m, 2m, ... tope 30min) por registro: un
+            // fallo permanente (codigo revocado, RPC caida) no debe reintentarse
+            // cada 30s para siempre — eso vuelve a subir el HTML completo (con
+            // gráficas en base64) en cada intento.
+            var listos = pendientes.filter(function(rec) {
+                if (!rec.intentos) return true;
+                var backoffMs = Math.min(30000 * Math.pow(2, rec.intentos), 30 * 60 * 1000);
+                return (ahora - (rec.ultimoIntento || 0)) >= backoffMs;
+            });
+            if (!listos.length) return 0;
+            var chain = Promise.resolve(0);
+            listos.forEach(function(rec) {
+                chain = chain.then(function(n) {
+                    return sb.rpc('ra_guardar_dashboard', {
+                        p_profesional_id: rec.p_profesional_id,
+                        p_codigo: rec.p_codigo,
+                        p_frente: rec.p_frente,
+                        p_html: rec.p_html
+                    }).then(function(res) {
+                        if (res.error) throw res.error;
+                        return idbDeleteDashboardPendiente(rec.local_id).then(function() { return n + 1; });
+                    }).catch(function(err) {
+                        console.warn('No se pudo sincronizar Dashboard Ejecutivo pendiente:', err && err.message);
+                        rec.intentos = (rec.intentos || 0) + 1;
+                        rec.ultimoIntento = Date.now();
+                        if (rec.intentos >= MAX_INTENTOS_DASHBOARD) {
+                            console.warn('Dashboard Ejecutivo pendiente descartado tras ' + rec.intentos + ' intentos fallidos:', rec.local_id);
+                            return idbDeleteDashboardPendiente(rec.local_id).then(function() { return n; });
+                        }
+                        return idbPutDashboardPendiente(rec).then(function() { return n; });
+                    });
+                });
+            });
+            return chain;
+        });
+    }
+    window.syncDashboardsPendientes = syncDashboardsPendientes;
 
     function idbClearAll() {
         return idbTxn('readwrite', function(store) {
@@ -787,9 +909,9 @@
     function wireSyncEvents() {
         if (window.__raSyncWired) return;
         window.__raSyncWired = true;
-        window.addEventListener('online', function() { syncPendientes(); });
+        window.addEventListener('online', function() { syncPendientes(); syncDashboardsPendientes(); });
         if (_syncIntervalId) clearInterval(_syncIntervalId);
-        _syncIntervalId = setInterval(function() { syncPendientes(); }, 30000);
+        _syncIntervalId = setInterval(function() { syncPendientes(); syncDashboardsPendientes(); }, 30000);
     }
 
     function dashboardHeaderHtml(titulo, extra) {
@@ -1223,9 +1345,11 @@
                         if (r2.error) throw r2.error;
                         var rows = (r2.data || []).map(remoteRegistroAFormulario);
                         dest.innerHTML = '<div style="font-size:0.82rem;font-weight:700;color:#374151;margin-bottom:8px;">Registros de ' + escHtml(btn.getAttribute('data-nombre')) + '</div>'
-                            + renderListaRegistrosSemanaHtml(rows, { readonly: true });
+                            + renderListaRegistrosSemanaHtml(rows, { readonly: true })
+                            + '<div id="ra-jefe-dashboards" style="margin-top:16px;"></div>';
                         attachRegCacheToButtons(dest, rows);
                         wireAccionesListaRegistros(dest, { readonly: true });
+                        cargarDashboardsEjecutivosJefe(sb, ses, profId);
                     }).catch(function() {
                         dest.innerHTML = '<div style="padding:12px;color:#b91c1c;">No se pudieron cargar los registros.</div>';
                     });
@@ -1234,6 +1358,79 @@
         }).catch(function() {
             var cont = document.getElementById('ra-jefe-contenido');
             if (cont) cont.innerHTML = '<div style="padding:16px;color:#b91c1c;">Error al cargar subordinados.</div>';
+        });
+    }
+
+    function abrirDashboardSandboxed(html) {
+        var blob = new Blob([html || ''], { type: 'text/html' });
+        var url = URL.createObjectURL(blob);
+        var overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#111827;display:flex;flex-direction:column;';
+        var bar = document.createElement('div');
+        bar.style.cssText = 'padding:10px 14px;background:#14532d;display:flex;justify-content:flex-end;flex-shrink:0;';
+        var btnCerrar = document.createElement('button');
+        btnCerrar.type = 'button';
+        btnCerrar.textContent = 'Cerrar';
+        btnCerrar.style.cssText = 'padding:8px 16px;border:none;border-radius:8px;background:#fff;color:#14532d;font-weight:700;cursor:pointer;';
+        var cerrar = function() {
+            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            URL.revokeObjectURL(url);
+        };
+        btnCerrar.onclick = cerrar;
+        bar.appendChild(btnCerrar);
+        var iframe = document.createElement('iframe');
+        iframe.src = url;
+        // Sandbox sin allow-scripts ni allow-same-origin: el HTML almacenado (generado
+        // por otro usuario) se muestra pero cualquier <script> queda inerte y sin acceso
+        // al origen/localStorage del jefe. Los gráficos ya están capturados como <img>.
+        iframe.setAttribute('sandbox', '');
+        iframe.style.cssText = 'flex:1;border:none;background:#fff;width:100%;';
+        overlay.appendChild(bar);
+        overlay.appendChild(iframe);
+        document.body.appendChild(overlay);
+    }
+
+    function cargarDashboardsEjecutivosJefe(sb, ses, profId) {
+        var dest = document.getElementById('ra-jefe-dashboards');
+        if (!dest) return;
+        dest.innerHTML = '<div style="padding:8px;color:#6b7280;font-size:0.8rem;">Cargando dashboards ejecutivos…</div>';
+        sb.rpc('ra_list_jefe_dashboards', {
+            p_jefe_id: ses.id,
+            p_profesional_id: profId,
+            p_codigo: ses.codigo_acceso
+        }).then(function(res) {
+            if (res.error) throw res.error;
+            var rows = res.data || [];
+            if (!rows.length) {
+                dest.innerHTML = '<div style="padding:8px;color:#9ca3af;font-size:0.78rem;">Sin dashboards ejecutivos guardados.</div>';
+                return;
+            }
+            dest.innerHTML = '<div style="font-size:0.82rem;font-weight:700;color:#374151;margin-bottom:8px;">Dashboards Ejecutivos</div>'
+                + rows.map(function(d) {
+                    var fecha = d.creado_en ? new Date(d.creado_en).toLocaleString('es-CO') : '';
+                    return '<button type="button" class="ra-jefe-dash-abrir" data-id="' + escHtml(d.id) + '" style="width:100%;text-align:left;padding:10px 12px;margin-bottom:6px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;font-size:0.8rem;color:#14532d;cursor:pointer;">'
+                        + '📊 ' + escHtml(d.frente || 'General') + ' <span style="color:#6b7280;font-weight:400;">· ' + escHtml(fecha) + '</span></button>';
+                }).join('');
+            dest.querySelectorAll('.ra-jefe-dash-abrir').forEach(function(btn) {
+                btn.onclick = function() {
+                    var dashId = btn.getAttribute('data-id');
+                    btn.disabled = true;
+                    sb.rpc('ra_get_dashboard_html', {
+                        p_jefe_id: ses.id,
+                        p_dashboard_id: dashId,
+                        p_codigo: ses.codigo_acceso
+                    }).then(function(res) {
+                        btn.disabled = false;
+                        if (res.error || !res.data) { alert('No se pudo cargar el dashboard.'); return; }
+                        abrirDashboardSandboxed(res.data);
+                    }, function() {
+                        btn.disabled = false;
+                        alert('No se pudo cargar el dashboard.');
+                    });
+                };
+            });
+        }).catch(function() {
+            dest.innerHTML = '<div style="padding:8px;color:#b91c1c;font-size:0.78rem;">No se pudieron cargar los dashboards ejecutivos.</div>';
         });
     }
 

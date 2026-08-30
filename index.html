@@ -1821,7 +1821,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.169";
+const APP_VERSION = "1.5.170";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -5548,9 +5548,10 @@ document.addEventListener('DOMContentLoaded', function() {
     window.entregarHtmlEnVentanaPdf = entregarHtmlEnVentanaPdf;
     window.htmlBarraAccionesPdf = htmlBarraAccionesPdf;
 
-    function construirHtmlDashboardEjecutivo(compD, graficas) {
+    function construirHtmlDashboardEjecutivo(compD, graficas, opts) {
         compD = compD || {};
         graficas = graficas || [];
+        opts = opts || {};
         function esc(s) {
             return (s || '').toString()
                 .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -5605,7 +5606,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var h = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
             + '<meta name="viewport" content="width=device-width,initial-scale=1">'
             + '<title>Dashboard Ejecutivo CARDIQUE</title><style>' + CSS + '</style></head><body>';
-        h += htmlBarraAccionesPdf({ compact: true });
+        if (!opts.sinBarraAcciones) h += htmlBarraAccionesPdf({ compact: true });
 
         var totalGraficas = chartSlots.length;
         h += '<div class="dash-charts">';
@@ -5704,7 +5705,7 @@ document.addEventListener('DOMContentLoaded', function() {
             + '<div style="margin-bottom:3px;"><strong>Responsable:</strong> ' + esc(inspector) + '</div>'
             + '<div>Generado el ' + esc(fechaGen) + ' &middot; CARDIQUE &mdash; Área Técnica de Planeación &middot; Documento ejecutivo</div>'
             + '</div></div>';
-        h += scriptAccionesPdfInforme();
+        if (!opts.sinBarraAcciones) h += scriptAccionesPdfInforme();
         h += '</body></html>';
         return h;
     }
@@ -5726,8 +5727,9 @@ document.addEventListener('DOMContentLoaded', function() {
         function restaurarBtn() {
             if (btnDash) { btnDash.disabled = false; btnDash.innerHTML = btnOrigHtml; }
         }
-        function entregarDashboard(h) {
+        function entregarDashboard(h, hArchivo) {
             entregarHtmlEnVentanaPdf(h);
+            guardarDashboardEnPanelJefe(hArchivo, compD);
         }
         CompMotor.capturarGraficasParaPdf(compD, {
             filtroFrente: (document.getElementById('filtro-frente-pdf') || {}).value || 'todos',
@@ -5742,22 +5744,53 @@ document.addEventListener('DOMContentLoaded', function() {
             pctFontSize: COMP_GRAFICA_TYPO.pctBar * 2
         }).then(function(graficas) {
             restaurarBtn();
-            var h;
+            var h, hArchivo;
             try {
                 h = construirHtmlDashboardEjecutivo(compD, graficas || []);
+                // Copia sin la barra "Volver/Imprimir" ni su <script>: la que ve el
+                // jefe se abre en un iframe sandbox (sin scripts), donde esos botones
+                // quedarían inertes y con el layout roto (sin el CSS que los soporta
+                // en el overlay del profesional).
+                hArchivo = construirHtmlDashboardEjecutivo(compD, graficas || [], { sinBarraAcciones: true });
             } catch (e) {
                 if (window._pdfWin && !window._pdfWin.closed) { try { window._pdfWin.close(); } catch (e2) {} }
                 window._pdfWin = null;
                 alert('Error al construir el dashboard: ' + (e && e.message ? e.message : e));
                 return;
             }
-            entregarDashboard(h);
+            entregarDashboard(h, hArchivo);
         }).catch(function(err) {
             restaurarBtn();
             if (window._pdfWin && !window._pdfWin.closed) { try { window._pdfWin.close(); } catch (e) {} }
             window._pdfWin = null;
             alert('No se pudieron generar los gráficos del dashboard.' + (err && err.message ? ' (' + err.message + ')' : ''));
         });
+    }
+    function guardarDashboardEnPanelJefe(html, compD) {
+        try {
+            var raw = localStorage.getItem('proyecar_session');
+            if (!raw) return;
+            var ses = JSON.parse(raw);
+            if (!ses || !ses.id || !ses.codigo_acceso) return;
+            if (typeof window.encolarDashboardEjecutivoParaSync !== 'function') {
+                console.warn('guardarDashboardEnPanelJefe: encolarDashboardEjecutivoParaSync no disponible (registro-asesoria.js no cargado).');
+                return;
+            }
+            var frenteSel = (document.getElementById('filtro-frente-pdf') || {}).value || 'todos';
+            // Se encola en IndexedDB (mismo outbox offline-first que usan los registros
+            // de asesoría) en vez de un RPC directo: si no hay red o Supabase aún no
+            // cargó, el dashboard no se pierde — se reintenta al volver la conexión.
+            window.encolarDashboardEjecutivoParaSync({
+                profesionalId: ses.id,
+                codigo: ses.codigo_acceso,
+                frente: frenteSel,
+                html: html
+            }).catch(function(err) {
+                console.warn('No se pudo encolar el Dashboard Ejecutivo para el panel jefe:', err && err.message);
+            });
+        } catch (e) {
+            console.warn('guardarDashboardEnPanelJefe:', e);
+        }
     }
     window.construirHtmlDashboardEjecutivo = construirHtmlDashboardEjecutivo;
     window.generarDashboardEjecutivo = generarDashboardEjecutivo;
