@@ -4589,16 +4589,15 @@ document.addEventListener('DOMContentLoaded', function() {
         obtenerCategoriasVisiblesSegunFiltro(frente.categorias).forEach(function(cat) {
             catNames.push(cat.nombre);
             cat.items.forEach(function(it) {
-                total++;
-                if (it.cumple === true) cumple++;
-                else if (it.cumple === false) { noCumple++; catIncumpl[cat.nombre] = (catIncumpl[cat.nombre] || 0) + 1; }
+                if (it.cumple === true) { cumple++; total++; }
+                else if (it.cumple === false) { noCumple++; total++; catIncumpl[cat.nombre] = (catIncumpl[cat.nombre] || 0) + 1; }
             });
         });
         var pct = total > 0 ? Math.round(cumple / total * 100) : 0;
         var areasIncumpl = Object.keys(catIncumpl).sort(function(a,b){ return catIncumpl[b]-catIncumpl[a]; });
         var areaMax = areasIncumpl.length > 0 ? areasIncumpl[0] : 'los componentes evaluados';
         var texto = 'Durante la visita de inspección al frente ' + frente.nombre
-                + ', se revisaron ' + total + ' ítem(s) en los componentes ' + catNames.join(', ')
+            + ', se evaluaron ' + total + ' ítem(s) en los componentes ' + catNames.join(', ')
             + '. Se registró un cumplimiento del ' + pct + '%, identificándose ' + noCumple + ' hallazgo(s) de incumplimiento, principalmente en ' + areaMax
             + '. Se requiere atención prioritaria en los aspectos señalados para garantizar el cumplimiento de las obligaciones contractuales y normativas vigentes.';
         frentes[idx].observaciones = texto;
@@ -5987,11 +5986,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     var it=fr.categorias[ci].items[ii];
                     if (it.cumple===true) c++; else if (it.cumple===false) n++; else s++;
                 }
-            var tot=c+n+s, pct=tot>0?parseFloat((c/tot*100).toFixed(1)):0;
+            var tot=c+n+s, pct=(c+n)>0?parseFloat((c/(c+n)*100).toFixed(1)):0;
             stats.push({nombre:fr.nombre,muni:fr.municipio||'',c:c,n:n,s:s,tot:tot,pct:pct,cont:fr.contratista||'No especificado',contrato:fr.numeroContrato||'No especificado'});
             gC+=c; gN+=n; gS+=s;
         }
-        var gTot=gC+gN+gS, gPct=gTot>0?parseFloat((gC/gTot*100).toFixed(1)):0;
+        var gTot=gC+gN+gS, gPct=(gC+gN)>0?parseFloat((gC/(gC+gN)*100).toFixed(1)):0;
         var sCol=gPct>=80?'#16a34a':gPct>=50?'#d97706':'#dc2626';
 
 
@@ -6009,7 +6008,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if(vs[i]===tot)p+='<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="'+cols[i]+'"/>';
                 else p+='<path d="M'+cx+','+cy+' L'+x1.toFixed(1)+','+y1.toFixed(1)+' A'+r+','+r+' 0 '+la+',1 '+x2.toFixed(1)+','+y2.toFixed(1)+' Z" fill="'+cols[i]+'"/>';
                 a=ea;}
-            var pctNum=Math.round(c/tot*100);
+            var pctNum=(c+n)>0?Math.round(c/(c+n)*100):0;
             var ncNum=100-pctNum;
             var cx=sz/2, cy=sz/2, r=sz*0.38;
             var lbl='';
@@ -6163,7 +6162,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     if (arc + arn === 0) continue;
                     var artot = arc + arn + ars;
-                    var arpct = parseFloat((arc / artot * 100).toFixed(1));
+                    var arpct = parseFloat((arc / (arc + arn) * 100).toFixed(1));
                     var arcol = arpct >= 80 ? '#16a34a' : arpct >= 50 ? '#d97706' : '#dc2626';
                     h += '<div style="flex:1;min-width:130px;border:1px solid #e2e8f0;border-radius:8px;padding:10px 8px;background:white;text-align:center;page-break-inside:avoid;break-inside:avoid;">'
                         + '<div style="font-weight:700;font-size:8pt;color:#1e3a2f;margin-bottom:6px;">' + esc(arcat.nombre) + '</div>'
@@ -6259,7 +6258,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 if (arc + arn === 0) continue;
                 var artot = arc + arn + ars;
-                var arpct = parseFloat((arc / artot * 100).toFixed(1));
+                var arpct = parseFloat((arc / (arc + arn) * 100).toFixed(1));
                 arAreas.push({ nombre: arcat.nombre, c: arc, n: arn, s: ars, tot: artot, pct: arpct });
             }
             if (arAreas.length > 0) {
@@ -7053,7 +7052,7 @@ document.addEventListener('DOMContentLoaded', function() {
             else s++;
         })));
         const t = c + n + s;
-        return { cumple: c, noCumple: n, sinCalif: s, total: t, pct: t > 0 ? parseFloat((c/t*100).toFixed(1)) : 0 };
+        return { cumple: c, noCumple: n, sinCalif: s, total: t, pct: (c + n) > 0 ? parseFloat((c/(c+n)*100).toFixed(1)) : 0 };
     }
 
     function getHistorial() {
@@ -7185,8 +7184,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (item.cumple === true) hc++;
                 else if (item.cumple === false) hn++;
             })));
-            const hSinCalif = frentesHist.reduce((total, f) => total + (f.categorias || []).reduce((catTotal, cat) => catTotal + (cat.items || []).filter(item => item.cumple !== true && item.cumple !== false).length, 0), 0);
-            const hTotal = hc + hn + hSinCalif;
+            const hTotal = hc + hn;
             const pctCalc = hTotal > 0 ? parseFloat((hc / hTotal * 100).toFixed(1)) : (r.pct || 0);
             const color = pctCalc >= 80 ? '#16a34a' : pctCalc >= 50 ? '#d97706' : '#dc2626';
             const tags = frentesHist.map(f => `<span class="hist-tag">${f.nombre}${f.municipio ? ' · ' + f.municipio : ''}</span>`).join('');
@@ -7206,8 +7204,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     let cumpleCat = 0, totalCat = 0;
                     cats.filter(c => c.nombre === nombre).forEach(cat => {
                         (cat.items || []).forEach(item => {
-                            if (item.cumple === true) cumpleCat++;
-                            totalCat++;
+                            if (item.cumple === true)  { cumpleCat++; totalCat++; }
+                            else if (item.cumple === false) { totalCat++; }
                         });
                     });
                     if (totalCat === 0) return '';
@@ -7384,8 +7382,8 @@ document.addEventListener('DOMContentLoaded', function() {
         function pctCat(items) {
             var c = 0, t = 0;
             (items || []).forEach(function(it) {
-                if (it.cumple === true) c++;
-                t++;
+                if (it.cumple === true) { c++; t++; }
+                else if (it.cumple === false) { t++; }
             });
             return t > 0 ? Math.round(c / t * 100) : null;
         }
@@ -7713,7 +7711,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         var g = gruposSin[key];
                         var cumpleG = g.items.filter(function(it) { return it.cumple === true; }).length;
                         var noCumpleG = g.items.filter(function(it) { return it.cumple === false; }).length;
-                        var totalG = g.items.length;
+                        var totalG = cumpleG + noCumpleG;
                         if (!totalG) return;
                         huboGrupoSin = true;
                         var pctG = Math.round(cumpleG / totalG * 100);
@@ -7979,8 +7977,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         var key = it.categoriaId || it.categoria || 'general';
                         if (!gruposSin[key]) gruposSin[key] = { nombre: it.categoria || 'General', cumple: 0, total: 0, items: [] };
                         gruposSin[key].items.push(it);
-                        if (it.cumple === true) gruposSin[key].cumple++;
-                        gruposSin[key].total++;
+                        if (it.cumple === true) { gruposSin[key].cumple++; gruposSin[key].total++; }
+                        else if (it.cumple === false) { gruposSin[key].total++; }
                     });
                     Object.keys(gruposSin).forEach(function(key) {
                         if (filtroArea !== 'todas' && key !== filtroArea) return;
@@ -8230,7 +8228,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         itemsActuales.push({ texto: it.texto || '', cumple: it.cumple, categoria: cat.nombre || '', categoriaId: cat.id || '' });
                     });
                 });
-                var pctActual = (itemsActuales.length) > 0 ? Math.round(cumpleF / itemsActuales.length * 100) : null;
+                var pctActual = (cumpleF + noCumpleF) > 0 ? Math.round(cumpleF / (cumpleF + noCumpleF) * 100) : null;
                 omitidos.push({
                     nombre: f.nombre || 'Sin nombre',
                     nomDisplay: nomDisplay,
