@@ -1821,7 +1821,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.175";
+const APP_VERSION = "1.5.176";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -7400,8 +7400,9 @@ document.addEventListener('DOMContentLoaded', function() {
         function pctCat(items) {
             var c = 0, t = 0;
             (items || []).forEach(function(it) {
-                if (it.cumple === true) { c++; t++; }
-                else if (it.cumple === false) { t++; }
+                var v = normalizarEstadoCumplimiento(it.cumple);
+                if (v === true) { c++; t++; }
+                else if (v === false) { t++; }
             });
             return t > 0 ? Math.round(c / t * 100) : null;
         }
@@ -8391,40 +8392,6 @@ document.addEventListener('DOMContentLoaded', function() {
         return res;
     }
 
-    function seleccionarParHistorialAutomatico() {
-        var hist = getHistorial();
-        if (!hist.length) return null;
-        var candidatos = hist.slice();
-        var contratos = [];
-        if (typeof frentes !== 'undefined' && frentes.length) {
-            frentes.forEach(function(f) {
-                var c = (f.numeroContrato || '').trim();
-                if (c && contratos.indexOf(c) < 0) contratos.push(c);
-            });
-        }
-        if (contratos.length === 1) {
-            var cNorm = contratos[0].toLowerCase();
-            candidatos = candidatos.filter(function(r) {
-                return (r.frentes || []).some(function(f) {
-                    return ((f.numeroContrato || '').trim().toLowerCase()) === cNorm;
-                });
-            });
-        }
-        candidatos.sort(function(a, b) {
-            var fa = new Date(a.fecha || 0), fb = new Date(b.fecha || 0);
-            if (fb - fa !== 0) return fb - fa;
-            return (b.id || 0) - (a.id || 0);
-        });
-        if (candidatos.length < 2) return null;
-        var par = CompMotor.ordenarRecienteAnterior(candidatos[0], candidatos[1]);
-        return {
-            reciente: par.reciente,
-            anterior: par.anterior,
-            idxReciente: hist.indexOf(par.reciente),
-            idxAnterior: hist.indexOf(par.anterior)
-        };
-    }
-
     function poblarFiltrosComparacion(meta, ids) {
         ids = ids || {};
         var filtroFrenteId = ids.filtroFrente || 'filtro-frente';
@@ -8533,7 +8500,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     window.resolverAnalisisComparativoPorFrente = resolverAnalisisComparativoPorFrente;
     window.ejecutarAnalisisComparativoAutomatico = ejecutarAnalisisComparativoAutomatico;
-    window.seleccionarParHistorialAutomatico = seleccionarParHistorialAutomatico;
     window.ejecutarComparacionInspecciones = ejecutarComparacionInspecciones;
 
     function renderComparar() {
@@ -8717,8 +8683,9 @@ document.addEventListener('DOMContentLoaded', function() {
     function _compPdfPctCat(items) {
         var c = 0, t = 0;
         (items || []).forEach(function(it) {
-            if (it.cumple === true) { c++; t++; }
-            else if (it.cumple === false) { t++; }
+            var v = normalizarEstadoCumplimiento(it.cumple);
+            if (v === true) { c++; t++; }
+            else if (v === false) { t++; }
         });
         return t > 0 ? Math.round(c / t * 100) : null;
     }
