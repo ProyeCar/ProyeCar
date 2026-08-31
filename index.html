@@ -1843,12 +1843,12 @@ function fechaHoyLocalYMD() {
 }
 window.fechaHoyLocalYMD = fechaHoyLocalYMD;
 
-/** Normaliza YYYY-MM-DD de inspección: vacío o anterior a HOY (Colombia) → hoy. */
+/** Normaliza YYYY-MM-DD de inspección: solo valores vacíos o inválidos usan hoy. */
 function normalizarFechaInspeccionYMD(fechaStr) {
   var hoy = fechaHoyLocalYMD();
   var actual = (fechaStr || '').trim();
   var esYMD = /^\d{4}-\d{2}-\d{2}$/.test(actual);
-  if (!actual || (esYMD && actual < hoy)) return hoy;
+  if (!actual || !esYMD) return hoy;
   return actual;
 }
 window.normalizarFechaInspeccionYMD = normalizarFechaInspeccionYMD;
@@ -4589,15 +4589,16 @@ document.addEventListener('DOMContentLoaded', function() {
         obtenerCategoriasVisiblesSegunFiltro(frente.categorias).forEach(function(cat) {
             catNames.push(cat.nombre);
             cat.items.forEach(function(it) {
-                if (it.cumple === true) { cumple++; total++; }
-                else if (it.cumple === false) { noCumple++; total++; catIncumpl[cat.nombre] = (catIncumpl[cat.nombre] || 0) + 1; }
+                total++;
+                if (it.cumple === true) cumple++;
+                else if (it.cumple === false) { noCumple++; catIncumpl[cat.nombre] = (catIncumpl[cat.nombre] || 0) + 1; }
             });
         });
         var pct = total > 0 ? Math.round(cumple / total * 100) : 0;
         var areasIncumpl = Object.keys(catIncumpl).sort(function(a,b){ return catIncumpl[b]-catIncumpl[a]; });
         var areaMax = areasIncumpl.length > 0 ? areasIncumpl[0] : 'los componentes evaluados';
         var texto = 'Durante la visita de inspección al frente ' + frente.nombre
-            + ', se evaluaron ' + total + ' ítem(s) en los componentes ' + catNames.join(', ')
+                + ', se revisaron ' + total + ' ítem(s) en los componentes ' + catNames.join(', ')
             + '. Se registró un cumplimiento del ' + pct + '%, identificándose ' + noCumple + ' hallazgo(s) de incumplimiento, principalmente en ' + areaMax
             + '. Se requiere atención prioritaria en los aspectos señalados para garantizar el cumplimiento de las obligaciones contractuales y normativas vigentes.';
         frentes[idx].observaciones = texto;
@@ -6162,7 +6163,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     if (arc + arn === 0) continue;
                     var artot = arc + arn + ars;
-                    var arpct = parseFloat((arc / (arc + arn) * 100).toFixed(1));
+                    var arpct = parseFloat((arc / artot * 100).toFixed(1));
                     var arcol = arpct >= 80 ? '#16a34a' : arpct >= 50 ? '#d97706' : '#dc2626';
                     h += '<div style="flex:1;min-width:130px;border:1px solid #e2e8f0;border-radius:8px;padding:10px 8px;background:white;text-align:center;page-break-inside:avoid;break-inside:avoid;">'
                         + '<div style="font-weight:700;font-size:8pt;color:#1e3a2f;margin-bottom:6px;">' + esc(arcat.nombre) + '</div>'
@@ -6258,7 +6259,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 if (arc + arn === 0) continue;
                 var artot = arc + arn + ars;
-                var arpct = parseFloat((arc / (arc + arn) * 100).toFixed(1));
+                var arpct = parseFloat((arc / artot * 100).toFixed(1));
                 arAreas.push({ nombre: arcat.nombre, c: arc, n: arn, s: ars, tot: artot, pct: arpct });
             }
             if (arAreas.length > 0) {
@@ -7059,6 +7060,11 @@ document.addEventListener('DOMContentLoaded', function() {
         try { return JSON.parse(localStorage.getItem('cardique_historial') || '[]'); } catch(e) { return []; }
     }
 
+    /** Fecha real de la inspección; los registros importados conservan la fecha de archivo en `fecha`. */
+    function fechaInspeccionRegistro(reg) {
+        return String((reg && (reg.fechaInspeccionCampo || reg.fecha)) || '').trim().substring(0, 10);
+    }
+
     var HIST_TZ_COLOMBIA = 'America/Bogota';
 
     /** Fecha YYYY-MM-DD en Colombia al momento del guardado (no UTC ni campo diligenciado). */
@@ -7179,7 +7185,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (item.cumple === true) hc++;
                 else if (item.cumple === false) hn++;
             })));
-            const hTotal = hc + hn;
+            const hSinCalif = frentesHist.reduce((total, f) => total + (f.categorias || []).reduce((catTotal, cat) => catTotal + (cat.items || []).filter(item => item.cumple !== true && item.cumple !== false).length, 0), 0);
+            const hTotal = hc + hn + hSinCalif;
             const pctCalc = hTotal > 0 ? parseFloat((hc / hTotal * 100).toFixed(1)) : (r.pct || 0);
             const color = pctCalc >= 80 ? '#16a34a' : pctCalc >= 50 ? '#d97706' : '#dc2626';
             const tags = frentesHist.map(f => `<span class="hist-tag">${f.nombre}${f.municipio ? ' · ' + f.municipio : ''}</span>`).join('');
@@ -7199,8 +7206,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     let cumpleCat = 0, totalCat = 0;
                     cats.filter(c => c.nombre === nombre).forEach(cat => {
                         (cat.items || []).forEach(item => {
-                            if (item.cumple === true)  { cumpleCat++; totalCat++; }
-                            else if (item.cumple === false) { totalCat++; }
+                            if (item.cumple === true) cumpleCat++;
+                            totalCat++;
                         });
                     });
                     if (totalCat === 0) return '';
@@ -7377,8 +7384,8 @@ document.addEventListener('DOMContentLoaded', function() {
         function pctCat(items) {
             var c = 0, t = 0;
             (items || []).forEach(function(it) {
-                if (it.cumple === true) { c++; t++; }
-                else if (it.cumple === false) { t++; }
+                if (it.cumple === true) c++;
+                t++;
             });
             return t > 0 ? Math.round(c / t * 100) : null;
         }
@@ -7706,7 +7713,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         var g = gruposSin[key];
                         var cumpleG = g.items.filter(function(it) { return it.cumple === true; }).length;
                         var noCumpleG = g.items.filter(function(it) { return it.cumple === false; }).length;
-                        var totalG = cumpleG + noCumpleG;
+                        var totalG = g.items.length;
                         if (!totalG) return;
                         huboGrupoSin = true;
                         var pctG = Math.round(cumpleG / totalG * 100);
@@ -7972,8 +7979,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         var key = it.categoriaId || it.categoria || 'general';
                         if (!gruposSin[key]) gruposSin[key] = { nombre: it.categoria || 'General', cumple: 0, total: 0, items: [] };
                         gruposSin[key].items.push(it);
-                        if (it.cumple === true) { gruposSin[key].cumple++; gruposSin[key].total++; }
-                        else if (it.cumple === false) { gruposSin[key].total++; }
+                        if (it.cumple === true) gruposSin[key].cumple++;
+                        gruposSin[key].total++;
                     });
                     Object.keys(gruposSin).forEach(function(key) {
                         if (filtroArea !== 'todas' && key !== filtroArea) return;
@@ -8134,7 +8141,7 @@ document.addEventListener('DOMContentLoaded', function() {
         hist.forEach(function(reg) {
             if (!reg || !reg.frentes) return;
             if (fechaRef && /^\d{4}-\d{2}-\d{2}$/.test(fechaRef)) {
-                var regFecha = String(reg.fecha || '').trim().substring(0, 10);
+                var regFecha = fechaInspeccionRegistro(reg);
                 if (/^\d{4}-\d{2}-\d{2}$/.test(regFecha) && regFecha >= fechaRef) return;
             }
             (reg.frentes || []).forEach(function(hf) {
@@ -8149,7 +8156,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     candidatos.push({
                         insp: reg, frenteHist: hf, level: mc.level,
-                        fecha: reg.fecha || '', id: reg.id
+                         fecha: fechaInspeccionRegistro(reg), id: reg.id
                     });
                 }
             });
@@ -8223,7 +8230,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         itemsActuales.push({ texto: it.texto || '', cumple: it.cumple, categoria: cat.nombre || '', categoriaId: cat.id || '' });
                     });
                 });
-                var pctActual = (cumpleF + noCumpleF) > 0 ? Math.round(cumpleF / (cumpleF + noCumpleF) * 100) : null;
+                var pctActual = (itemsActuales.length) > 0 ? Math.round(cumpleF / itemsActuales.length * 100) : null;
                 omitidos.push({
                     nombre: f.nombre || 'Sin nombre',
                     nomDisplay: nomDisplay,
@@ -8253,13 +8260,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 return;
             }
-            var fechasAnteriores = matches.map(function(m) { return m.insp.fecha || ''; })
+            var fechasAnteriores = matches.map(function(m) { return fechaInspeccionRegistro(m.insp); })
                 .filter(function(fecha, idx, lista) { return fecha && lista.indexOf(fecha) === idx; });
             var antecedentesPorArea = fechasAnteriores.length > 1;
-            var textoAnterior = antecedentesPorArea ? 'Antecedente independiente por área' : (match.insp.fecha || '');
+            var fechaAnterior = fechaInspeccionRegistro(match.insp);
+            var textoAnterior = antecedentesPorArea ? 'Antecedente independiente por área' : fechaAnterior;
             var anteriorGlobal = antecedentesPorArea
                 ? { proyecto: textoAnterior, fecha: textoAnterior }
-                : match.insp;
+                : Object.assign({}, match.insp, { fecha: fechaAnterior });
             comparables.push({
                 frente: {
                     nombre: f.nombre, contratista: f.contratista, numeroContrato: f.numeroContrato,
