@@ -1,5 +1,5 @@
-// build: 2026-08-31-confirmar-frente-tentative-al-archivar
-const APP_VERSION = '1.5.181';
+// build: 2026-08-31-editar-nombre-frente-historial
+const APP_VERSION = '1.5.182';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 const VERSION_CHECK_INTERVAL_MS = 5 * 60 * 1000;
 

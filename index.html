@@ -1821,7 +1821,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.181";
+const APP_VERSION = "1.5.182";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -7459,10 +7459,11 @@ document.addEventListener('DOMContentLoaded', function() {
             + '<label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Inspector</label>'
             + '<input id="edit-hist-inspector" type="text" value="' + esc2(entrada.inspector) + '" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:16px;margin-bottom:16px;box-sizing:border-box;">'
             + ((entrada.frentes || []).length
-                ? '<label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:6px;">N&uacute;mero de contrato por frente</label>'
+                ? '<label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:6px;">Frentes de este registro</label>'
                     + (entrada.frentes || []).map(function(f, j) {
-                        return '<div style="margin-bottom:8px;">'
-                            + '<div style="font-size:0.72rem;color:#6b7280;margin-bottom:2px;">' + esc2(f.nombre || 'Sin nombre') + '</div>'
+                        return '<div style="margin-bottom:12px;">'
+                            + '<div style="font-size:0.72rem;color:#6b7280;margin-bottom:2px;">Nombre del frente</div>'
+                            + '<input id="edit-hist-nombre-' + j + '" type="text" value="' + esc2(f.nombre) + '" placeholder="Nombre del frente" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:16px;margin-bottom:6px;box-sizing:border-box;">'
                             + '<input id="edit-hist-contrato-' + j + '" type="text" value="' + esc2(f.numeroContrato) + '" placeholder="N&uacute;mero de contrato" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:16px;box-sizing:border-box;">'
                             + '</div>';
                     }).join('')
@@ -7486,10 +7487,13 @@ document.addEventListener('DOMContentLoaded', function() {
             hist[idx].ubicacion = document.getElementById('edit-hist-ubicacion').value.trim();
             hist[idx].inspector = document.getElementById('edit-hist-inspector').value.trim();
             (hist[idx].frentes || []).forEach(function(f, j) {
+                var inputNombre = document.getElementById('edit-hist-nombre-' + j);
+                if (inputNombre) f.nombre = inputNombre.value.trim();
                 var input = document.getElementById('edit-hist-contrato-' + j);
                 if (input) f.numeroContrato = input.value.trim();
             });
             saveHistorial(hist);
+            sincronizarDependientesHistorial();
             cerrarModal();
         };
     }
