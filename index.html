@@ -3405,9 +3405,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Coincidencia por palabras clave significativas
         return tokensOverlapCount(tokensNombreFrente(actual), tokensNombreFrente(histF)) >= 1;
     }
-    function frenteNombreLegacyCoincide(actual, histF) {
-        return frenteNombreFlexibleCoincide(actual, histF);
-    }
     /**
      * Motor único de matching (Comparar Inspecciones + análisis comparativo).
      * Prioridad: 1) nombre flexible  2) N° contrato refuerza  3) sin nombre similar → sin match.
