@@ -1821,7 +1821,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.180";
+const APP_VERSION = "1.5.181";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -7214,16 +7214,70 @@ document.addEventListener('DOMContentLoaded', function() {
     window.getHistorial = getHistorial;
     window.saveHistorial = saveHistorial;
 
-    document.getElementById('btn-archivar').onclick = () => {
-        const areasEval = obtenerFiltroCategoriasActivas();
-        const frentesArch = frentesParaInspeccionActiva(frentes, areasEval);
-        const data = { frentes: frentesArch, proyecto: proyectoInput.value, fecha: fechaInput.value, ubicacion: ubicacionInput.value, inspector: inspectorInput.value, areasEvaluadas: areasEval };
-        if (!data.frentes || data.frentes.length === 0) {
-            alert(hayFrentesSeleccionadosInspeccion()
-                ? 'Ningún frente seleccionado coincide con el filtro de áreas activo.'
-                : 'No hay frentes para archivar.');
-            return;
-        }
+    /**
+     * Frentes a archivar que comparten contrato+municipio con un registro histórico
+     * de nombre distinto (match 'tentative', sin confirmar todavía). Uno por frente:
+     * el candidato histórico más reciente que aún no tenga vínculo confirmado.
+     */
+    function detectarTentativosSinConfirmar(frentesArch) {
+        const hist = getHistorial();
+        const pendientes = [];
+        (frentesArch || []).forEach(function(f) {
+            let mejor = null;
+            hist.forEach(function(reg) {
+                (reg.frentes || []).forEach(function(hf) {
+                    const mc = clasificarMatchFrente(f, hf);
+                    if (mc.level !== 'tentative') return;
+                    if (isMatchConfirmedFor(f, hf)) return;
+                    const fecha = fechaInspeccionRegistro(reg);
+                    if (!mejor || fecha > mejor.fecha) {
+                        mejor = { frente: f, histF: hf, histId: reg.id, fecha: fecha };
+                    }
+                });
+            });
+            if (mejor) pendientes.push(mejor);
+        });
+        return pendientes;
+    }
+
+    function escArchivarTexto(s) {
+        return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    /** Pregunta una por una (si hay varias) antes de proceder con onListo(). */
+    function confirmarTentativosYArchivar(pendientes, onListo) {
+        if (!pendientes.length) { onListo(); return; }
+        const actual = pendientes[0];
+        const resto = pendientes.slice(1);
+        const nombreHist = escArchivarTexto(limpiarNombreFrenteParaMatch(actual.histF.nombre) || actual.histF.nombre);
+        const nombreActual = escArchivarTexto(limpiarNombreFrenteParaMatch(actual.frente.nombre) || actual.frente.nombre);
+        const modal = crearModalOverlay(
+            '<div style="font-size:1rem;font-weight:700;color:#1e3a2f;margin-bottom:10px;display:flex;align-items:center;gap:8px;">' +
+                pcIcon('link', 20, '#d97706') + ' Confirmar frente</div>' +
+            '<p style="font-size:0.88rem;color:#475569;line-height:1.5;margin:0 0 18px;">' +
+                '"<strong>' + nombreActual + '</strong>" comparte contrato y municipio con un registro del ' + escArchivarTexto(actual.fecha) +
+                ' llamado "<strong>' + nombreHist + '</strong>", pero el nombre no coincide. ¿Es el mismo frente?</p>' +
+            '<div style="display:flex;gap:10px;flex-wrap:wrap;">' +
+                '<button id="modal-tentativo-si" style="flex:1;min-width:120px;padding:11px 16px;background:#16a34a;color:#fff;border:none;border-radius:10px;font-size:0.88rem;font-weight:700;cursor:pointer;">Sí, es el mismo</button>' +
+                '<button id="modal-tentativo-no" style="padding:11px 16px;background:#e5e7eb;color:#374151;border:none;border-radius:10px;font-size:0.88rem;font-weight:600;cursor:pointer;">No, es otro</button>' +
+            '</div>'
+        );
+        modal.card.querySelector('#modal-tentativo-si').onclick = function() {
+            window.confirmarMatchFrente(actual.frente, actual.histId, actual.histF.nombre, {
+                zona: actual.histF.zona || '',
+                contratista: actual.histF.contratista || '',
+                numeroContrato: actual.histF.numeroContrato || ''
+            });
+            modal.cerrar();
+            confirmarTentativosYArchivar(resto, onListo);
+        };
+        modal.card.querySelector('#modal-tentativo-no').onclick = function() {
+            modal.cerrar();
+            confirmarTentativosYArchivar(resto, onListo);
+        };
+    }
+
+    function ejecutarArchivado(data, areasEval) {
         const stats = calcularPct(data.frentes, areasEval);
         const ahoraArchivo = new Date();
         const fechaInspeccion = normalizarFechaInspeccionYMD(data.fecha);
@@ -7260,6 +7314,20 @@ document.addEventListener('DOMContentLoaded', function() {
         saveHistorial(hist);
         alert('Inspección archivada en historial.');
         mostrarPantalla('historial');
+    }
+
+    document.getElementById('btn-archivar').onclick = () => {
+        const areasEval = obtenerFiltroCategoriasActivas();
+        const frentesArch = frentesParaInspeccionActiva(frentes, areasEval);
+        const data = { frentes: frentesArch, proyecto: proyectoInput.value, fecha: fechaInput.value, ubicacion: ubicacionInput.value, inspector: inspectorInput.value, areasEvaluadas: areasEval };
+        if (!data.frentes || data.frentes.length === 0) {
+            alert(hayFrentesSeleccionadosInspeccion()
+                ? 'Ningún frente seleccionado coincide con el filtro de áreas activo.'
+                : 'No hay frentes para archivar.');
+            return;
+        }
+        const pendientes = detectarTentativosSinConfirmar(data.frentes);
+        confirmarTentativosYArchivar(pendientes, function() { ejecutarArchivado(data, areasEval); });
     };
 
     document.getElementById('btn-limpiar-hist').onclick = () => {

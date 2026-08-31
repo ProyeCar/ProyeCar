@@ -1,5 +1,5 @@
-// build: 2026-08-31-pwa-update-banner-datos-sin-guardar
-const APP_VERSION = '1.5.180';
+// build: 2026-08-31-confirmar-frente-tentative-al-archivar
+const APP_VERSION = '1.5.181';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 const VERSION_CHECK_INTERVAL_MS = 5 * 60 * 1000;
 
