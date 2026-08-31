@@ -1821,7 +1821,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.178";
+const APP_VERSION = "1.5.179";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -5273,10 +5273,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 : 'sin hallazgos relevantes; se mantiene el nivel de cumplimiento.';
         } else if (pendientes.length) {
             var tp = listaFrases(pendientes, 2);
-            if (empeoraron.length) {
+            // La dirección real la da el neto mejorados-empeorados (el mismo dato que
+            // ya usa el gráfico), no la sola presencia de un retroceso puntual: varios
+            // ítems pueden mejorar y uno empeorar, y el balance sigue siendo positivo.
+            var netoPend = (area.mejorados || 0) - (area.empeorados || 0);
+            if (empeoraron.length && netoPend < 0) {
                 frase = 'persisten hallazgos por resolver en ' + tp + ', con retrocesos que requieren seguimiento.';
             } else if (mejoraron.length) {
                 frase = 'se observaron avances, aunque persisten hallazgos en ' + tp + '.';
+            } else if (empeoraron.length) {
+                frase = 'persisten hallazgos por resolver en ' + tp + ', con retrocesos que requieren seguimiento.';
             } else {
                 frase = 'se mantienen hallazgos pendientes en ' + tp + '.';
             }
@@ -5626,6 +5632,10 @@ document.addEventListener('DOMContentLoaded', function() {
             + '.dash-frente-nom{font-size:10pt;font-weight:800;color:#1e3a2f;line-height:1.25;overflow-wrap:break-word;word-wrap:break-word;hyphens:none}'
             + '.dash-frente-sem{font-size:8.5pt;font-weight:700;white-space:nowrap;flex-shrink:0}'
             + '.dash-hallazgo{font-size:9pt;color:#374151;line-height:1.45;margin:3px 0 0 10px;overflow-wrap:break-word;word-wrap:break-word;word-break:normal;hyphens:none;-webkit-hyphens:none;text-align:justify}'
+            // Justificado solo en desktop: en columnas angostas (mobile) el justify
+            // reparte pocas palabras por línea y deja "ríos" de espacio feos.
+            + '.dash-hallazgo-td{text-align:justify;line-height:1.5;overflow-wrap:break-word;word-wrap:break-word}'
+            + '@media (max-width:640px){.dash-hallazgo-td{text-align:left}}'
             + '.dash-footer{margin-top:14px;padding-top:8px;border-top:1px solid #d1d5db;font-size:8pt;color:#64748b;page-break-inside:avoid}'
             + '@media print{.no-print-bar,.spacer-dash{display:none!important}}';
         var h = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
@@ -5660,7 +5670,7 @@ document.addEventListener('DOMContentLoaded', function() {
         h += '<div class="dash-resumen">';
         h += '<div class="dash-title" style="text-align:center;margin:14px 0 12px;">'
             + '<div style="font-size:12pt;font-weight:800;color:#1e3a2f;">Resumen por Frente</div>'
-            + '<div style="font-size:9pt;color:#64748b;margin-top:2px;">Hallazgos que requieren atención</div></div>';
+            + '<div style="font-size:9pt;color:#64748b;margin-top:2px;">Estado comparativo por área</div></div>';
         // Tarjeta de sector/frente: semáforo + solo las áreas que requieren
         // atención (resumen conciso para dejar espacio a todos los gráficos).
         function tarjetaFrente(comp) {
@@ -5695,7 +5705,15 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             var conAtencion = areasFiltradas.filter(areaNecesitaAtencion);
             if (!conAtencion.length) {
-                b += '<div class="dash-hallazgo">&#8226; Sin hallazgos relevantes; se mantiene el nivel de cumplimiento en las áreas evaluadas.</div>';
+                // Ninguna área necesita atención, pero eso puede ser porque siempre
+                // estuvieron bien o porque justo mejoraron hasta salir de esa zona:
+                // no son el mismo mensaje.
+                var huboMejoraGeneral = areasFiltradas.some(function(a) {
+                    return (a.mejorados || 0) > 0 || (a.diff !== null && a.diff !== undefined && a.diff > 0);
+                });
+                b += '<div class="dash-hallazgo">&#8226; ' + (huboMejoraGeneral
+                    ? 'Se registraron mejoras en las áreas evaluadas; no quedan hallazgos pendientes que requieran atención.'
+                    : 'Sin hallazgos relevantes; se mantiene el nivel de cumplimiento en las áreas evaluadas.') + '</div>';
             } else {
                 conAtencion.slice(0, maxAreas).forEach(function(area) {
                     b += '<div class="dash-hallazgo">&#8226; ' + esc(resumirAreaEjecutiva(area)) + '</div>';
@@ -5724,7 +5742,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 + '<thead><tr><th style="background:#1e3a2f;color:#fff;padding:6px 8px;text-align:left;">Frente</th><th style="background:#1e3a2f;color:#fff;padding:6px 8px;text-align:left;">Hallazgos</th></tr></thead><tbody>';
             frentesConHallazgos.forEach(function(c) {
                 h += '<tr><td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;font-weight:700;color:#1e3a2f;vertical-align:top;white-space:nowrap;">' + esc(c.frente.nombre || 'Sin nombre') + '</td>'
-                    + '<td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;color:#374151;">' + esc(c.frente.hallazgos).replace(/\n/g, '<br>') + '</td></tr>';
+                    + '<td class="dash-hallazgo-td" style="padding:6px 8px;border-bottom:1px solid #e2e8f0;color:#374151;">' + esc(c.frente.hallazgos).replace(/\n/g, '<br>') + '</td></tr>';
             });
             h += '</tbody></table>';
         }

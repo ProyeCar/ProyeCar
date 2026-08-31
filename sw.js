@@ -1,5 +1,5 @@
-// build: 2026-08-31-frente-match-textocompleto-fix
-const APP_VERSION = '1.5.178';
+// build: 2026-08-31-dashboard-narrativa-justify-fix
+const APP_VERSION = '1.5.179';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 const VERSION_CHECK_INTERVAL_MS = 5 * 60 * 1000;
 
