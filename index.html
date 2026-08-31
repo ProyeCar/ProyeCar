@@ -1821,7 +1821,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.177";
+const APP_VERSION = "1.5.178";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -3321,15 +3321,17 @@ document.addEventListener('DOMContentLoaded', function() {
         return frenteContratoNumeroCoincide(f, ref);
     }
     function frenteTextoMatchCompleto(f) {
+        // Solo texto derivado del NOMBRE del frente. zona/municipio (y su marcador
+        // ZONA_CIENAGA) se excluyen a propósito: se repiten igual en muchos frentes
+        // distintos del mismo proyecto/contrato ("Ciénaga de la Virgen", "Cartagena de
+        // Indias"...) y su sola presencia, o la de una de sus palabras sueltas, no
+        // distingue un sector de otro (mismo motivo que el fix de tokensNombreFrente).
+        // La señal "grupo Ciénaga" ya se evalúa aparte con esFrenteGrupoCienaga/
+        // nombreContieneCienaga sobre los campos crudos, sin necesitar este texto.
         if (!f) return '';
         var parts = [];
-        if (f.zona) parts.push(f.zona);
-        if (f.municipio) parts.push(f.municipio);
         if (f.nombre) parts.push(f.nombre);
         parts.push(limpiarNombreFrenteParaMatch(f.nombre));
-        if (esFrenteGrupoCienaga(f) || nombreContieneCienaga(f.nombre) || nombreContieneCienaga(f.zona)) {
-            parts.push(ZONA_CIENAGA);
-        }
         return parts.join(' ');
     }
     function frenteNormSinAcentos(s) {
