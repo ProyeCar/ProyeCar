@@ -1821,7 +1821,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.174";
+const APP_VERSION = "1.5.175";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -2994,12 +2994,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const FRENTES_STORAGE_KEY = 'inspectorFrentesData';
     const FRENTES_BACKUP_KEY = 'inspectorFrentesData_backup';
 
+    function normalizarEstadoCumplimiento(valor) {
+        if (valor === true || valor === 1) return true;
+        if (valor === false || valor === 0) return false;
+        var texto = String(valor == null ? '' : valor).trim().toLowerCase();
+        if (texto === 'true' || texto === 'cumple' || texto === 'si' || texto === 'sí') return true;
+        if (texto === 'false' || texto === 'no cumple' || texto === 'no') return false;
+        return null;
+    }
     function normalizeItem(item) {
         if (!item || typeof item !== 'object') return null;
         return {
             id: item.id || ('item_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5)),
             texto: item.texto || '',
-            cumple: item.cumple === true ? true : (item.cumple === false ? false : null),
+            cumple: normalizarEstadoCumplimiento(item.cumple),
             obs: item.obs || '',
             tipoVerificacion: item.tipoVerificacion || 'foto',
             verificacionVerbal: item.verificacionVerbal || ''
@@ -3037,9 +3045,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!ex) {
                 dest.items.push(item);
             } else {
-                if (item.cumple !== null && item.cumple !== undefined && (ex.cumple === null || ex.cumple === undefined)) {
-                    ex.cumple = item.cumple;
-                }
+                if (item.cumple !== null && item.cumple !== undefined) ex.cumple = item.cumple;
                 if (item.obs && item.obs.trim() && (!ex.obs || !ex.obs.trim())) ex.obs = item.obs;
                 if (item.tipoVerificacion && !ex.tipoVerificacion) ex.tipoVerificacion = item.tipoVerificacion;
                 if (item.verificacionVerbal && !ex.verificacionVerbal) ex.verificacionVerbal = item.verificacionVerbal;
@@ -7056,7 +7062,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function getHistorial() {
-        try { return JSON.parse(localStorage.getItem('cardique_historial') || '[]'); } catch(e) { return []; }
+        try {
+            var historial = JSON.parse(localStorage.getItem('cardique_historial') || '[]');
+            return Array.isArray(historial) ? historial.map(function(reg) {
+                if (!reg || !Array.isArray(reg.frentes)) return reg;
+                return Object.assign({}, reg, { frentes: reg.frentes.map(function(fr) {
+                    return Object.assign({}, fr, { categorias: (fr.categorias || []).map(function(cat) {
+                        return Object.assign({}, cat, { items: (cat.items || []).map(function(item) {
+                            return Object.assign({}, item, { cumple: normalizarEstadoCumplimiento(item.cumple) });
+                        }) });
+                    }) });
+                }) });
+            }) : [];
+        } catch(e) { return []; }
     }
 
     /** Fecha real de la inspección; los registros importados conservan la fecha de archivo en `fecha`. */
