@@ -1821,7 +1821,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.176";
+const APP_VERSION = "1.5.177";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -3340,7 +3340,10 @@ document.addEventListener('DOMContentLoaded', function() {
         un: 1, una: 1, unos: 1, unas: 1, the: 1, and: 1, sector: 1, zona: 1
     };
     function tokensNombreFrente(f) {
-        var text = frenteNormSinAcentos(frenteTextoMatchCompleto(f));
+        // Solo el nombre del sector (limpio de prefijos "Frente N -"/"Ciénaga de la Virgen -"),
+        // NUNCA zona/municipio: esos campos se repiten en muchos frentes distintos del mismo
+        // proyecto/contrato y su solapamiento no dice nada sobre si es el mismo sector.
+        var text = frenteNormSinAcentos(limpiarNombreFrenteParaMatch(f && f.nombre));
         var raw = text.split(/[^a-z0-9]+/).filter(function(w) {
             return w.length >= 3 && !FRENTE_MATCH_STOPWORDS[w];
         });
