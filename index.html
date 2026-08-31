@@ -4723,7 +4723,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         contratista: fr.contratista,
                         numeroContrato: fr.numeroContrato || '',
                         municipio: fr.municipio || '',
-                        obsGlobal: fr.obsGlobal,
+                        observaciones: fr.observaciones || '',
                         recomendaciones: fr.recomendaciones,
                         hallazgos: fr.hallazgos || '',
                         categorias: fr.categorias.map(function(cat) {
@@ -4792,7 +4792,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         ubicacion: data.ubicacion || "",
                         inspector: data.inspector || "No especificado",
                         pct: entradaPct,
-                        frentes: data.frentes,
+                        frentes: normalizeFrentes(data.frentes),
                         importado: true
                     };
                     historial.unshift(entrada);
@@ -7483,7 +7483,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         contratista: fRef.contratista,
                         numeroContrato: fRef.numeroContrato,
                         municipio: fRef.municipio || '',
-                        zona: fRef.zona || (typeof esFrenteGrupoCienaga === 'function' && esFrenteGrupoCienaga(fRef) ? ZONA_CIENAGA : '')
+                        zona: fRef.zona || (typeof esFrenteGrupoCienaga === 'function' && esFrenteGrupoCienaga(fRef) ? ZONA_CIENAGA : ''),
+                        hallazgos: fRef.hallazgos || ''
                     },
                     reciente: reciente,
                     anterior: anterior,
