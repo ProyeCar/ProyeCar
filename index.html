@@ -1821,7 +1821,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.187";
+const APP_VERSION = "1.5.188";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -5701,11 +5701,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Solo se capturan unidades con dimensión visual real. Esto
                 // evita que style/script/link u otros nodos display:none entren
                 // accidentalmente a html2canvas y produzcan ratios 0/NaN.
-                var unidades = candidatas.filter(function(n) {
-                    if (!n || /^(STYLE|SCRIPT|LINK|META|TEMPLATE)$/.test(n.tagName || '')) return false;
-                    var r = n.getBoundingClientRect ? n.getBoundingClientRect() : null;
-                    return !!(r && r.width > 0 && r.height > 0);
-                });
+                var unidades = [];
                 // Cada tarjeta de frente es una unidad indivisible. Un encabezado
                 // de zona fuerza página nueva para quedar antes de su primer frente.
                 var indiceZona = unidades.map(function(n) { return n.classList && n.classList.contains('sec-h'); });
@@ -5734,7 +5730,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     var unidad = unidades[i], esZona = indiceZona[i];
                     capturarUnidad(unidad).then(function(canvas) { ponerCanvas(canvas, !!esZona, unidad); siguiente(i + 1); }).catch(function(err) { limpiarHost(); reject(err); });
                 }
-                esperarRender().then(function() { siguiente(0); }).catch(function(err) { limpiarHost(); reject(err); });
+                esperarRender().then(function() {
+                    // El layout solo es fiable después de dos frames; filtrar
+                    // antes descartaba elementos válidos con rect 0×0.
+                    unidades = candidatas.filter(function(n) {
+                        if (!n || /^(STYLE|SCRIPT|LINK|META|TEMPLATE)$/.test(n.tagName || '')) return false;
+                        var r = n.getBoundingClientRect ? n.getBoundingClientRect() : null;
+                        return !!(r && r.width > 0 && r.height > 0);
+                    });
+                    indiceZona = unidades.map(function(n) { return n.classList && n.classList.contains('sec-h'); });
+                    siguiente(0);
+                }).catch(function(err) { limpiarHost(); reject(err); });
             } catch (e) { reject(e); }
         });
     }
