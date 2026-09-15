@@ -1414,15 +1414,16 @@
             if (typeof window.generarPdfBinarioDesdeHtmlDashboard !== 'function') throw new Error('Generador PDF no disponible.');
             return window.generarPdfBinarioDesdeHtmlDashboard(html || '');
         }).then(function(blobPdf) {
-            var archivoPdf = new File([blobPdf], 'Dashboard_Ejecutivo_CARDIQUE.pdf', { type: 'application/pdf' });
-            if (navigator.share && navigator.canShare && navigator.canShare({ files: [archivoPdf] })) {
-                return navigator.share({ title: 'Dashboard Ejecutivo CARDIQUE', files: [archivoPdf] });
-            }
+            // La descarga directa no depende de user activation, que se pierde
+            // mientras esperamos la captura asíncrona del PDF.
+            var nombre = 'Dashboard_Ejecutivo_CARDIQUE.pdf';
             var enlace = document.createElement('a');
             enlace.href = URL.createObjectURL(blobPdf);
-            enlace.download = archivoPdf.name;
+            enlace.download = nombre;
+            document.body.appendChild(enlace);
             enlace.click();
-            setTimeout(function() { URL.revokeObjectURL(enlace.href); }, 1000);
+            document.body.removeChild(enlace);
+            setTimeout(function() { URL.revokeObjectURL(enlace.href); }, 10000);
         }).catch(function(e) {
             if (!e || e.name !== 'AbortError') alert((e && e.message) || 'No se pudo generar el PDF.');
         }).finally(function() {
