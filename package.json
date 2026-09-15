@@ -3,6 +3,7 @@
     "jimp": "^1.6.1"
   },
   "dependencies": {
-    "jspdf": "^4.2.1"
+    "jspdf": "^4.2.1",
+    "html2canvas": "^1.4.1"
   }
 }

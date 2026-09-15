@@ -1,5 +1,5 @@
 // build: 2026-08-31-editar-nombre-frente-historial
-const APP_VERSION = '1.5.184';
+const APP_VERSION = '1.5.185';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 const VERSION_CHECK_INTERVAL_MS = 5 * 60 * 1000;
 
@@ -11,6 +11,7 @@ const PRECACHE_URLS = [
   './registro-asesoria.js',
   './supabase-pdfs.js',
   './vendor/jspdf.umd.min.js',
+  './vendor/html2canvas.min.js',
   './manifest.json',
   './version.json',
   './assets/cardique-logo-registro.jpg',
