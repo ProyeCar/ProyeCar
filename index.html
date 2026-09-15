@@ -1821,7 +1821,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.191";
+const APP_VERSION = "1.5.192";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -5737,7 +5737,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     indiceZona = unidades.map(function(n) { return n.classList && n.classList.contains('sec-h'); });
                     Promise.all(unidades.map(capturarUnidad)).then(function(canvases) {
                         canvases.forEach(function(canvas, i) { ponerCanvas(canvas, !!indiceZona[i], unidades[i]); });
-                        var salida = pdf.output('blob');
+                        var salida = pdf.output('datauristring');
                         console.log('[Dashboard PDF] generación completada en', Math.round(((window.performance && performance.now) ? performance.now() : Date.now()) - inicioPdf), 'ms; unidades=', unidades.length);
                         limpiarHost();
                         resolve(salida);
