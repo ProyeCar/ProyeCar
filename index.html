@@ -1821,7 +1821,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.189";
+const APP_VERSION = "1.5.190";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -5692,6 +5692,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 var pdf = new JsPDF({ unit: 'pt', format: 'a4' });
                 var pageW = pdf.internal.pageSize.getWidth(), pageH = pdf.internal.pageSize.getHeight();
                 var margen = 28, cursorY = margen, escala = Math.min(2, window.devicePixelRatio || 1);
+                var inicioPdf = (window.performance && performance.now) ? performance.now() : Date.now();
                 var candidatas = [];
                 Array.prototype.forEach.call(safe.children || [], function(n) {
                     if (n.classList && n.classList.contains('dash-resumen')) {
@@ -5725,11 +5726,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     cursorY += h + 10;
                 }
                 function limpiarHost() { if (host && host.parentNode) host.parentNode.removeChild(host); }
-                function siguiente(i) {
-                    if (i >= unidades.length) { var salida = pdf.output('blob'); limpiarHost(); resolve(salida); return; }
-                    var unidad = unidades[i], esZona = indiceZona[i];
-                    capturarUnidad(unidad).then(function(canvas) { ponerCanvas(canvas, !!esZona, unidad); siguiente(i + 1); }).catch(function(err) { limpiarHost(); reject(err); });
-                }
                 esperarRender().then(function() {
                     // El layout solo es fiable después de dos frames; filtrar
                     // antes descartaba elementos válidos con rect 0×0.
@@ -5739,7 +5735,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         return !!(r && r.width > 0 && r.height > 0);
                     });
                     indiceZona = unidades.map(function(n) { return n.classList && n.classList.contains('sec-h'); });
-                    siguiente(0);
+                    Promise.all(unidades.map(capturarUnidad)).then(function(canvases) {
+                        canvases.forEach(function(canvas, i) { ponerCanvas(canvas, !!indiceZona[i], unidades[i]); });
+                        var salida = pdf.output('blob');
+                        console.log('[Dashboard PDF] generación completada en', Math.round(((window.performance && performance.now) ? performance.now() : Date.now()) - inicioPdf), 'ms; unidades=', unidades.length);
+                        limpiarHost();
+                        resolve(salida);
+                    }).catch(function(err) { limpiarHost(); reject(err); });
                 }).catch(function(err) { limpiarHost(); reject(err); });
             } catch (e) { reject(e); }
         });
