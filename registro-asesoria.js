@@ -1435,7 +1435,22 @@
         btnImprimir.type = 'button';
         btnImprimir.textContent = 'Imprimir / Guardar PDF';
         btnImprimir.style.cssText = 'padding:8px 12px;border:none;border-radius:8px;background:#f59e0b;color:#fff;font-weight:700;cursor:pointer;min-height:44px;';
-        btnImprimir.onclick = function() { try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch (e) {} };
+        btnImprimir.onclick = function() {
+            console.log('[Dashboard PDF] click imprimir: usando window.print del documento padre');
+            var parsed = new DOMParser().parseFromString(html || '', 'text/html');
+            var hostPrint = document.createElement('div');
+            hostPrint.id = 'pc-dashboard-print-host';
+            hostPrint.innerHTML = parsed.body ? parsed.body.innerHTML : '';
+            hostPrint.querySelectorAll('script,button,nav,iframe').forEach(function(n) { n.remove(); });
+            var estilo = document.createElement('style');
+            estilo.textContent = Array.from(parsed.head ? parsed.head.querySelectorAll('style') : []).map(function(s) { return s.textContent; }).join('\n') + '@media screen{#pc-dashboard-print-host{display:none!important}}@media print{body>*:not(#pc-dashboard-print-host){display:none!important}#pc-dashboard-print-host{display:block!important;position:static!important;width:100%!important;background:#fff!important}#pc-dashboard-print-host *{-webkit-print-color-adjust:exact;print-color-adjust:exact}}';
+            document.head.appendChild(estilo);
+            document.body.appendChild(hostPrint);
+            var limpiar = function() { window.removeEventListener('afterprint', limpiar); if (hostPrint.parentNode) hostPrint.parentNode.removeChild(hostPrint); if (estilo.parentNode) estilo.parentNode.removeChild(estilo); };
+            window.addEventListener('afterprint', limpiar);
+            window.print();
+            setTimeout(limpiar, 2000);
+        };
         bar.insertBefore(btnImprimir, btnCerrar);
         iframe.style.cssText = 'flex:1;border:none;background:#fff;width:100%;';
         overlay.appendChild(bar);
