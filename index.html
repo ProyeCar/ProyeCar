@@ -1821,7 +1821,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.186";
+const APP_VERSION = "1.5.187";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -5523,6 +5523,7 @@ document.addEventListener('DOMContentLoaded', function() {
             + '.pc-pdf-hint{flex:0 0 auto;background:#ecfdf5;color:#166534;font-size:12.5px;line-height:1.4;padding:8px 14px;border-top:1px solid #bbf7d0}'
             + '.pc-pdf-scroll{flex:1 1 auto;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;width:100%;background:#fff}'
             + '.spacer,.spacer-dash{display:none!important}'
+            + '@media screen and (max-width:480px){.no-print-bar{display:grid!important;grid-template-columns:1fr 1fr;gap:8px;padding:8px 10px!important}.no-print-bar button{width:100%;min-width:0;margin-left:0!important;padding-left:8px!important;padding-right:8px!important;font-size:12px!important}.pc-pdf-hint{font-size:11px;text-align:center;padding:6px 10px;order:3}}'
             + '}'
             + '@media print{'
             + 'html,body{height:auto!important;overflow:visible!important}'
@@ -5677,6 +5678,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 Array.prototype.forEach.call(parsed.head ? parsed.head.querySelectorAll('style') : [], function(s) { safe.insertBefore(s.cloneNode(true), safe.firstChild); });
                 host.appendChild(safe);
                 document.body.appendChild(host);
+                function esperarRender() {
+                    var imgs = Array.prototype.slice.call(safe.querySelectorAll('img'));
+                    return Promise.all(imgs.map(function(img) {
+                        if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+                        return new Promise(function(done) {
+                            var fin = function() { img.removeEventListener('load', fin); img.removeEventListener('error', fin); done(); };
+                            img.addEventListener('load', fin); img.addEventListener('error', fin);
+                            setTimeout(fin, 2000);
+                        });
+                    })).then(function() { return new Promise(function(done) { requestAnimationFrame(function() { requestAnimationFrame(done); }); }); });
+                }
                 var pdf = new JsPDF({ unit: 'pt', format: 'a4' });
                 var pageW = pdf.internal.pageSize.getWidth(), pageH = pdf.internal.pageSize.getHeight();
                 var margen = 28, cursorY = margen, escala = Math.min(2, window.devicePixelRatio || 1);
@@ -5693,7 +5705,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     return window.html2canvas(node, { backgroundColor: '#ffffff', scale: escala, useCORS: false, allowTaint: false, logging: false });
                 }
                 function ponerCanvas(canvas, forzarPagina) {
-                    var w = canvas.width ? pageW : pageW, h = canvas.height * w / canvas.width;
+                    if (!canvas || !Number.isFinite(canvas.width) || !Number.isFinite(canvas.height) || canvas.width <= 0 || canvas.height <= 0) throw new Error('La captura PDF no tiene dimensiones válidas.');
+                    var w = pageW, h = canvas.height * w / canvas.width;
+                    if (!Number.isFinite(h) || h <= 0) throw new Error('La proporción de la captura PDF no es válida.');
                     if (forzarPagina || (cursorY > margen && cursorY + h > pageH - margen)) { pdf.addPage(); cursorY = margen; }
                     if (h > pageH - 2 * margen) { w = pageW * ((pageH - 2 * margen) / h); h = pageH - 2 * margen; }
                     pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', (pageW - w) / 2, cursorY, w, h);
@@ -5705,7 +5719,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     var unidad = unidades[i], esZona = indiceZona[i];
                     capturarUnidad(unidad).then(function(canvas) { ponerCanvas(canvas, !!esZona); siguiente(i + 1); }).catch(function(err) { limpiarHost(); reject(err); });
                 }
-                siguiente(0);
+                esperarRender().then(function() { siguiente(0); }).catch(function(err) { limpiarHost(); reject(err); });
             } catch (e) { reject(e); }
         });
     }
