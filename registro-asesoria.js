@@ -1413,10 +1413,9 @@
         overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#111827;display:flex;flex-direction:column;';
         var bar = document.createElement('div');
         bar.style.cssText = 'padding:10px 14px;background:#14532d;display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-shrink:0;';
-        var btnPdf = document.createElement('button');
-        btnPdf.type = 'button';
-        btnPdf.textContent = '🖨️ Imprimir / Guardar PDF';
-        btnPdf.style.cssText = 'padding:8px 12px;border:none;border-radius:8px;background:#dcfce7;color:#14532d;font-weight:700;cursor:pointer;';
+        var hintPdf = document.createElement('span');
+        hintPdf.textContent = 'Usa Ctrl+P / Cmd+P para imprimir o guardar como PDF';
+        hintPdf.style.cssText = 'margin-right:auto;color:#dcfce7;font-size:0.78rem;font-weight:600;';
         var btnCerrar = document.createElement('button');
         btnCerrar.type = 'button';
         btnCerrar.textContent = 'Cerrar';
@@ -1425,25 +1424,17 @@
             if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
             URL.revokeObjectURL(url);
         };
-        btnPdf.onclick = function() {
-            try {
-                iframe.contentWindow.focus();
-                iframe.contentWindow.print();
-            } catch (e) {
-                alert('No se pudo abrir la impresión del dashboard.');
-            }
-        };
         btnCerrar.onclick = cerrar;
-        bar.appendChild(btnPdf);
+        bar.appendChild(hintPdf);
         bar.appendChild(btnCerrar);
         var iframe = document.createElement('iframe');
         iframe.src = url;
+        iframe.setAttribute('tabindex', '0');
+        iframe.onload = function() { try { iframe.focus(); } catch (e) {} };
         // Sandbox sin allow-scripts ni allow-same-origin: el HTML almacenado (generado
         // por otro usuario) se muestra pero cualquier <script> queda inerte y sin acceso
         // al origen/localStorage del jefe. Los gráficos ya están capturados como <img>.
-        // `allow-modals` habilita el diálogo nativo de impresión sin permitir
-        // scripts ni acceso al origen/localStorage del informe almacenado.
-        iframe.setAttribute('sandbox', 'allow-modals');
+        iframe.setAttribute('sandbox', '');
         iframe.style.cssText = 'flex:1;border:none;background:#fff;width:100%;';
         overlay.appendChild(bar);
         overlay.appendChild(iframe);
