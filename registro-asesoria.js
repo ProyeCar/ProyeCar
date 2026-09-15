@@ -1414,16 +1414,22 @@
             if (typeof window.generarPdfBinarioDesdeHtmlDashboard !== 'function') throw new Error('Generador PDF no disponible.');
             return window.generarPdfBinarioDesdeHtmlDashboard(html || '');
         }).then(function(blobPdf) {
-            // La descarga directa no depende de user activation, que se pierde
-            // mientras esperamos la captura asíncrona del PDF.
-            var nombre = 'Dashboard_Ejecutivo_CARDIQUE.pdf';
-            var enlace = document.createElement('a');
-            enlace.href = URL.createObjectURL(blobPdf);
-            enlace.download = nombre;
-            document.body.appendChild(enlace);
-            enlace.click();
-            document.body.removeChild(enlace);
-            setTimeout(function() { URL.revokeObjectURL(enlace.href); }, 10000);
+            // Safari iOS falla al navegar a blob: grandes; data: URI es
+            // compatible y no depende de user activation tras el await.
+            return new Promise(function(resolve, reject) {
+                var lector = new FileReader();
+                lector.onload = function() {
+                    var enlace = document.createElement('a');
+                    enlace.href = lector.result;
+                    enlace.download = 'Dashboard_Ejecutivo_CARDIQUE.pdf';
+                    document.body.appendChild(enlace);
+                    enlace.click();
+                    document.body.removeChild(enlace);
+                    resolve();
+                };
+                lector.onerror = reject;
+                lector.readAsDataURL(blobPdf);
+            });
         }).catch(function(e) {
             if (!e || e.name !== 'AbortError') alert((e && e.message) || 'No se pudo generar el PDF.');
         }).finally(function() {
