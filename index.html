@@ -1821,7 +1821,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.185";
+const APP_VERSION = "1.5.186";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -5677,17 +5677,35 @@ document.addEventListener('DOMContentLoaded', function() {
                 Array.prototype.forEach.call(parsed.head ? parsed.head.querySelectorAll('style') : [], function(s) { safe.insertBefore(s.cloneNode(true), safe.firstChild); });
                 host.appendChild(safe);
                 document.body.appendChild(host);
-                window.html2canvas(safe, { backgroundColor: '#ffffff', scale: Math.min(2, window.devicePixelRatio || 1), useCORS: false, allowTaint: false, logging: false })
-                    .then(function(canvas) {
-                        var pdf = new JsPDF({ unit: 'pt', format: 'a4' });
-                        var pageW = pdf.internal.pageSize.getWidth(), pageH = pdf.internal.pageSize.getHeight();
-                        var imgW = pageW, imgH = canvas.height * imgW / canvas.width, y = 0;
-                        var img = canvas.toDataURL('image/jpeg', 0.92);
-                        while (y < imgH) { if (y > 0) pdf.addPage(); pdf.addImage(img, 'JPEG', 0, -y, imgW, imgH); y += pageH; }
-                        resolve(pdf.output('blob'));
-                    })
-                    .catch(reject)
-                    .finally(function() { if (host && host.parentNode) host.parentNode.removeChild(host); });
+                var pdf = new JsPDF({ unit: 'pt', format: 'a4' });
+                var pageW = pdf.internal.pageSize.getWidth(), pageH = pdf.internal.pageSize.getHeight();
+                var margen = 28, cursorY = margen, escala = Math.min(2, window.devicePixelRatio || 1);
+                var unidades = [];
+                Array.prototype.forEach.call(safe.children || [], function(n) {
+                    if (n.classList && n.classList.contains('dash-resumen')) {
+                        Array.prototype.forEach.call(n.children || [], function(hijo) { unidades.push(hijo); });
+                    } else unidades.push(n);
+                });
+                // Cada tarjeta de frente es una unidad indivisible. Un encabezado
+                // de zona fuerza página nueva para quedar antes de su primer frente.
+                var indiceZona = unidades.map(function(n) { return n.classList && n.classList.contains('sec-h'); });
+                function capturarUnidad(node) {
+                    return window.html2canvas(node, { backgroundColor: '#ffffff', scale: escala, useCORS: false, allowTaint: false, logging: false });
+                }
+                function ponerCanvas(canvas, forzarPagina) {
+                    var w = canvas.width ? pageW : pageW, h = canvas.height * w / canvas.width;
+                    if (forzarPagina || (cursorY > margen && cursorY + h > pageH - margen)) { pdf.addPage(); cursorY = margen; }
+                    if (h > pageH - 2 * margen) { w = pageW * ((pageH - 2 * margen) / h); h = pageH - 2 * margen; }
+                    pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', (pageW - w) / 2, cursorY, w, h);
+                    cursorY += h + 10;
+                }
+                function limpiarHost() { if (host && host.parentNode) host.parentNode.removeChild(host); }
+                function siguiente(i) {
+                    if (i >= unidades.length) { var salida = pdf.output('blob'); limpiarHost(); resolve(salida); return; }
+                    var unidad = unidades[i], esZona = indiceZona[i];
+                    capturarUnidad(unidad).then(function(canvas) { ponerCanvas(canvas, !!esZona); siguiente(i + 1); }).catch(function(err) { limpiarHost(); reject(err); });
+                }
+                siguiente(0);
             } catch (e) { reject(e); }
         });
     }
@@ -5845,16 +5863,21 @@ document.addEventListener('DOMContentLoaded', function() {
             b += '</div>';
             return b;
         }
-        // Frentes sin zona primero; luego los sectores de Ciénaga agrupados bajo
-        // un único encabezado de Zona/Municipio (no se repite por cada sector).
-        var otros = visibles.filter(function(c) { return !esCienagaComp(c); });
-        var cienaga = visibles.filter(esCienagaComp);
-        otros.forEach(function(comp) { h += tarjetaFrente(comp); });
-        if (cienaga.length) {
-            h += '<div class="sec-h">Zona: ' + esc(ZONA_CIENAGA)
-                + '<span style="font-weight:600;font-size:9pt;"> &nbsp;&middot;&nbsp; Municipio: ' + esc(muniZona) + '</span></div>';
-            cienaga.forEach(function(comp) { h += tarjetaFrente(comp); });
-        }
+        // Agrupa por zona antes de renderizar: cada separador queda justo antes
+        // del primer frente de su zona, aunque los comparables vengan mezclados.
+        var gruposZona = [], porZona = Object.create(null);
+        visibles.forEach(function(comp) {
+            var clave = esCienagaComp(comp) ? ZONA_CIENAGA : ((comp.frente && comp.frente.zona) || '').trim();
+            if (!porZona[clave]) { porZona[clave] = { zona: clave, municipio: (comp.frente && comp.frente.municipio) || municipio, items: [] }; gruposZona.push(porZona[clave]); }
+            porZona[clave].items.push(comp);
+        });
+        gruposZona.forEach(function(grupo) {
+            if (grupo.zona) {
+                h += '<div class="sec-h">Zona: ' + esc(grupo.zona)
+                    + '<span style="font-weight:600;font-size:9pt;"> &nbsp;&middot;&nbsp; Municipio: ' + esc(grupo.municipio || municipio) + '</span></div>';
+            }
+            grupo.items.forEach(function(comp) { h += tarjetaFrente(comp); });
+        });
         var frentesConHallazgos = visibles.filter(function(c) { return c.frente && c.frente.hallazgos && c.frente.hallazgos.trim(); });
         if (frentesConHallazgos.length) {
             h += '<div class="dash-title" style="font-size:9.5pt;font-weight:700;color:#1e3a2f;margin:14px 0 6px;">Hallazgos por Frente</div>';
