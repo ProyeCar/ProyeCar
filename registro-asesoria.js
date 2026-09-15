@@ -1495,7 +1495,6 @@
                         + filaDashboardInfo('📍', 'Municipio', d.municipio)
                         + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">'
                         + '<button type="button" class="ra-jefe-dash-abrir" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#1a5c35;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Abrir</button>'
-                        + '<button type="button" class="ra-jefe-dash-share" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#dcfce7;color:#14532d;border:1px solid #86efac;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Compartir / Guardar PDF</button>'
                         + '</div></div>';
                 }).join('');
             dest.querySelectorAll('.ra-jefe-dash-abrir').forEach(function(btn) {
@@ -1514,19 +1513,6 @@
                         btn.disabled = false;
                         alert('No se pudo cargar el dashboard.');
                     });
-                };
-            });
-            dest.querySelectorAll('.ra-jefe-dash-share').forEach(function(btn) {
-                btn.onclick = function() {
-                    var dashId = btn.getAttribute('data-id');
-                    sb.rpc('ra_get_dashboard_html', {
-                        p_jefe_id: ses.id,
-                        p_dashboard_id: dashId,
-                        p_codigo: ses.codigo_acceso
-                    }).then(function(res) {
-                        if (res.error || !res.data) { alert('No se pudo cargar el dashboard.'); return; }
-                        abrirDashboardSandboxed(res.data);
-                    }, function() { alert('No se pudo cargar el dashboard.'); });
                 };
             });
         }).catch(function() {
@@ -1558,7 +1544,6 @@
                     + filaDashboardInfo('📍', 'Municipio', d.municipio)
                     + '</div>'
                     + '<div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;"><button type="button" class="ra-admin-dash-open" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#1a5c35;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Abrir</button>'
-                    + '<button type="button" class="ra-admin-dash-share" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#dcfce7;color:#14532d;border:1px solid #86efac;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Compartir / Guardar PDF</button>'
                     + '<button type="button" class="ra-admin-dash-delete" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#b91c1c;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Borrar</button></div></div>';
             }).join('');
             dest.querySelectorAll('.ra-admin-dash-open').forEach(function(btn) {
@@ -1576,18 +1561,6 @@
                         btn.disabled = false;
                         alert('No se pudo cargar el dashboard.');
                     });
-                };
-            });
-            dest.querySelectorAll('.ra-admin-dash-share').forEach(function(btn) {
-                btn.onclick = function() {
-                    sb.rpc('ra_get_admin_dashboard_html', {
-                        p_admin_id: ses.id,
-                        p_dashboard_id: btn.getAttribute('data-id'),
-                        p_codigo: ses.codigo_acceso
-                    }).then(function(res) {
-                        if (res.error || !res.data) { alert('No se pudo cargar el dashboard.'); return; }
-                        abrirDashboardSandboxed(res.data);
-                    }, function() { alert('No se pudo cargar el dashboard.'); });
                 };
             });
             dest.querySelectorAll('.ra-admin-dash-delete').forEach(function(btn) {
