@@ -5692,11 +5692,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 var pdf = new JsPDF({ unit: 'pt', format: 'a4' });
                 var pageW = pdf.internal.pageSize.getWidth(), pageH = pdf.internal.pageSize.getHeight();
                 var margen = 28, cursorY = margen, escala = Math.min(2, window.devicePixelRatio || 1);
-                var unidades = [];
+                var candidatas = [];
                 Array.prototype.forEach.call(safe.children || [], function(n) {
                     if (n.classList && n.classList.contains('dash-resumen')) {
-                        Array.prototype.forEach.call(n.children || [], function(hijo) { unidades.push(hijo); });
-                    } else unidades.push(n);
+                        Array.prototype.forEach.call(n.children || [], function(hijo) { candidatas.push(hijo); });
+                    } else candidatas.push(n);
+                });
+                // Solo se capturan unidades con dimensión visual real. Esto
+                // evita que style/script/link u otros nodos display:none entren
+                // accidentalmente a html2canvas y produzcan ratios 0/NaN.
+                var unidades = candidatas.filter(function(n) {
+                    if (!n || /^(STYLE|SCRIPT|LINK|META|TEMPLATE)$/.test(n.tagName || '')) return false;
+                    var r = n.getBoundingClientRect ? n.getBoundingClientRect() : null;
+                    return !!(r && r.width > 0 && r.height > 0);
                 });
                 // Cada tarjeta de frente es una unidad indivisible. Un encabezado
                 // de zona fuerza página nueva para quedar antes de su primer frente.
