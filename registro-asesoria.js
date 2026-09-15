@@ -1407,6 +1407,8 @@
     }
 
     function compartirDashboardEjecutivo(html, btn) {
+        // Ruta única: el listado reutiliza exactamente el generador binario
+        // usado por el flujo Dashboard/WhatsApp (sin reconstruir el PDF aquí).
         if (btn) btn.disabled = true;
         var promesa = Promise.resolve().then(function() {
             if (typeof window.generarPdfBinarioDesdeHtmlDashboard !== 'function') throw new Error('Generador PDF no disponible.');
