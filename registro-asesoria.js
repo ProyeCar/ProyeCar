@@ -1406,6 +1406,24 @@
         });
     }
 
+    function imprimirDashboardEjecutivo(html) {
+        console.log('[Dashboard PDF] imprimirDashboardEjecutivo: usando window.print del documento padre');
+        var parsed = new DOMParser().parseFromString(html || '', 'text/html');
+        var hostPrint = document.createElement('div');
+        hostPrint.id = 'pc-dashboard-print-host';
+        hostPrint.innerHTML = parsed.body ? parsed.body.innerHTML : '';
+        hostPrint.querySelectorAll('script,button,nav,iframe').forEach(function(n) { n.remove(); });
+        hostPrint.querySelectorAll('*').forEach(function(n) { Array.from(n.attributes || []).forEach(function(a) { if (/^on/i.test(a.name) || /^(src|href)$/i.test(a.name) && a.value && !/^data:/i.test(a.value) && !/^#/.test(a.value)) n.removeAttribute(a.name); }); });
+        var estilo = document.createElement('style');
+        estilo.textContent = Array.from(parsed.head ? parsed.head.querySelectorAll('style') : []).map(function(s) { return s.textContent; }).join('\n') + '@media screen{#pc-dashboard-print-host{display:none!important}}@media print{body>*:not(#pc-dashboard-print-host){display:none!important}#pc-dashboard-print-host{display:block!important;position:static!important;width:100%!important;background:#fff!important}#pc-dashboard-print-host *{-webkit-print-color-adjust:exact;print-color-adjust:exact}}';
+        document.head.appendChild(estilo);
+        document.body.appendChild(hostPrint);
+        var limpiar = function() { window.removeEventListener('afterprint', limpiar); if (hostPrint.parentNode) hostPrint.parentNode.removeChild(hostPrint); if (estilo.parentNode) estilo.parentNode.removeChild(estilo); };
+        window.addEventListener('afterprint', limpiar);
+        window.print();
+        setTimeout(limpiar, 2000);
+    }
+
     function abrirDashboardSandboxed(html) {
         var blob = new Blob([html || ''], { type: 'text/html' });
         var url = URL.createObjectURL(blob);
@@ -1430,28 +1448,7 @@
         // Sandbox sin allow-scripts ni allow-same-origin: el HTML almacenado (generado
         // por otro usuario) se muestra pero cualquier <script> queda inerte y sin acceso
         // al origen/localStorage del jefe. Los gráficos ya están capturados como <img>.
-        iframe.setAttribute('sandbox', 'allow-modals allow-scripts');
-        var btnImprimir = document.createElement('button');
-        btnImprimir.type = 'button';
-        btnImprimir.textContent = 'Imprimir / Guardar PDF';
-        btnImprimir.style.cssText = 'padding:8px 12px;border:none;border-radius:8px;background:#f59e0b;color:#fff;font-weight:700;cursor:pointer;min-height:44px;';
-        btnImprimir.onclick = function() {
-            console.log('[Dashboard PDF] click imprimir: usando window.print del documento padre');
-            var parsed = new DOMParser().parseFromString(html || '', 'text/html');
-            var hostPrint = document.createElement('div');
-            hostPrint.id = 'pc-dashboard-print-host';
-            hostPrint.innerHTML = parsed.body ? parsed.body.innerHTML : '';
-            hostPrint.querySelectorAll('script,button,nav,iframe').forEach(function(n) { n.remove(); });
-            var estilo = document.createElement('style');
-            estilo.textContent = Array.from(parsed.head ? parsed.head.querySelectorAll('style') : []).map(function(s) { return s.textContent; }).join('\n') + '@media screen{#pc-dashboard-print-host{display:none!important}}@media print{body>*:not(#pc-dashboard-print-host){display:none!important}#pc-dashboard-print-host{display:block!important;position:static!important;width:100%!important;background:#fff!important}#pc-dashboard-print-host *{-webkit-print-color-adjust:exact;print-color-adjust:exact}}';
-            document.head.appendChild(estilo);
-            document.body.appendChild(hostPrint);
-            var limpiar = function() { window.removeEventListener('afterprint', limpiar); if (hostPrint.parentNode) hostPrint.parentNode.removeChild(hostPrint); if (estilo.parentNode) estilo.parentNode.removeChild(estilo); };
-            window.addEventListener('afterprint', limpiar);
-            window.print();
-            setTimeout(limpiar, 2000);
-        };
-        bar.insertBefore(btnImprimir, btnCerrar);
+        iframe.setAttribute('sandbox', '');
         iframe.style.cssText = 'flex:1;border:none;background:#fff;width:100%;';
         overlay.appendChild(bar);
         overlay.appendChild(iframe);
@@ -1495,6 +1492,7 @@
                         + filaDashboardInfo('📍', 'Municipio', d.municipio)
                         + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">'
                         + '<button type="button" class="ra-jefe-dash-abrir" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#1a5c35;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Abrir</button>'
+                        + '<button type="button" class="ra-jefe-dash-print" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Compartir/Guardar PDF</button>'
                         + '</div></div>';
                 }).join('');
             dest.querySelectorAll('.ra-jefe-dash-abrir').forEach(function(btn) {
@@ -1509,6 +1507,24 @@
                         btn.disabled = false;
                         if (res.error || !res.data) { alert('No se pudo cargar el dashboard.'); return; }
                         abrirDashboardSandboxed(res.data);
+                    }, function() {
+                        btn.disabled = false;
+                        alert('No se pudo cargar el dashboard.');
+                    });
+                };
+            });
+            dest.querySelectorAll('.ra-jefe-dash-print').forEach(function(btn) {
+                btn.onclick = function() {
+                    var dashId = btn.getAttribute('data-id');
+                    btn.disabled = true;
+                    sb.rpc('ra_get_dashboard_html', {
+                        p_jefe_id: ses.id,
+                        p_dashboard_id: dashId,
+                        p_codigo: ses.codigo_acceso
+                    }).then(function(res) {
+                        btn.disabled = false;
+                        if (res.error || !res.data) { alert('No se pudo cargar el dashboard.'); return; }
+                        imprimirDashboardEjecutivo(res.data);
                     }, function() {
                         btn.disabled = false;
                         alert('No se pudo cargar el dashboard.');
@@ -1544,6 +1560,7 @@
                     + filaDashboardInfo('📍', 'Municipio', d.municipio)
                     + '</div>'
                     + '<div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;"><button type="button" class="ra-admin-dash-open" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#1a5c35;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Abrir</button>'
+                    + '<button type="button" class="ra-admin-dash-print" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Compartir/Guardar PDF</button>'
                     + '<button type="button" class="ra-admin-dash-delete" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#b91c1c;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Borrar</button></div></div>';
             }).join('');
             dest.querySelectorAll('.ra-admin-dash-open').forEach(function(btn) {
@@ -1557,6 +1574,23 @@
                         btn.disabled = false;
                         if (res.error || !res.data) { alert('No se pudo cargar el dashboard.'); return; }
                         abrirDashboardSandboxed(res.data);
+                    }, function() {
+                        btn.disabled = false;
+                        alert('No se pudo cargar el dashboard.');
+                    });
+                };
+            });
+            dest.querySelectorAll('.ra-admin-dash-print').forEach(function(btn) {
+                btn.onclick = function() {
+                    btn.disabled = true;
+                    sb.rpc('ra_get_admin_dashboard_html', {
+                        p_admin_id: ses.id,
+                        p_dashboard_id: btn.getAttribute('data-id'),
+                        p_codigo: ses.codigo_acceso
+                    }).then(function(res) {
+                        btn.disabled = false;
+                        if (res.error || !res.data) { alert('No se pudo cargar el dashboard.'); return; }
+                        imprimirDashboardEjecutivo(res.data);
                     }, function() {
                         btn.disabled = false;
                         alert('No se pudo cargar el dashboard.');
