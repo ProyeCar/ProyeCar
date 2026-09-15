@@ -5704,7 +5704,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 function capturarUnidad(node) {
                     return window.html2canvas(node, { backgroundColor: '#ffffff', scale: escala, useCORS: false, allowTaint: false, logging: false });
                 }
-                function ponerCanvas(canvas, forzarPagina) {
+                function ponerCanvas(canvas, forzarPagina, node) {
+                    console.log('[Dashboard PDF] captura', {
+                        selector: node && (node.id ? '#' + node.id : (node.className ? '.' + String(node.className).trim().replace(/\s+/g, '.') : node.tagName)),
+                        tag: node && node.tagName,
+                        width: canvas && canvas.width,
+                        height: canvas && canvas.height,
+                        rect: node && node.getBoundingClientRect ? { width: node.getBoundingClientRect().width, height: node.getBoundingClientRect().height } : null
+                    });
                     if (!canvas || !Number.isFinite(canvas.width) || !Number.isFinite(canvas.height) || canvas.width <= 0 || canvas.height <= 0) throw new Error('La captura PDF no tiene dimensiones válidas.');
                     var w = pageW, h = canvas.height * w / canvas.width;
                     if (!Number.isFinite(h) || h <= 0) throw new Error('La proporción de la captura PDF no es válida.');
@@ -5717,7 +5724,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 function siguiente(i) {
                     if (i >= unidades.length) { var salida = pdf.output('blob'); limpiarHost(); resolve(salida); return; }
                     var unidad = unidades[i], esZona = indiceZona[i];
-                    capturarUnidad(unidad).then(function(canvas) { ponerCanvas(canvas, !!esZona); siguiente(i + 1); }).catch(function(err) { limpiarHost(); reject(err); });
+                    capturarUnidad(unidad).then(function(canvas) { ponerCanvas(canvas, !!esZona, unidad); siguiente(i + 1); }).catch(function(err) { limpiarHost(); reject(err); });
                 }
                 esperarRender().then(function() { siguiente(0); }).catch(function(err) { limpiarHost(); reject(err); });
             } catch (e) { reject(e); }

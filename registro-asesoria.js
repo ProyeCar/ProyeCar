@@ -1406,6 +1406,31 @@
         });
     }
 
+    function compartirDashboardEjecutivo(html, btn) {
+        if (btn) btn.disabled = true;
+        var promesa = Promise.resolve().then(function() {
+            if (typeof window.generarPdfBinarioDesdeHtmlDashboard !== 'function') throw new Error('Generador PDF no disponible.');
+            return window.generarPdfBinarioDesdeHtmlDashboard(html || '');
+        }).then(function(blobPdf) {
+            var archivoPdf = new File([blobPdf], 'Dashboard_Ejecutivo_CARDIQUE.pdf', { type: 'application/pdf' });
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [archivoPdf] })) {
+                return navigator.share({ title: 'Dashboard Ejecutivo CARDIQUE', files: [archivoPdf] });
+            }
+            var enlace = document.createElement('a');
+            enlace.href = URL.createObjectURL(blobPdf);
+            enlace.download = archivoPdf.name;
+            enlace.click();
+            setTimeout(function() { URL.revokeObjectURL(enlace.href); }, 1000);
+        }).catch(function(e) {
+            if (!e || e.name !== 'AbortError') alert((e && e.message) || 'No se pudo generar el PDF.');
+        }).finally(function() {
+            if (btn) btn.disabled = false;
+        });
+        return promesa;
+    }
+
+    window.compartirDashboardEjecutivo = compartirDashboardEjecutivo;
+
     function abrirDashboardSandboxed(html) {
         var blob = new Blob([html || ''], { type: 'text/html' });
         var url = URL.createObjectURL(blob);
@@ -1413,13 +1438,6 @@
         overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#111827;display:flex;flex-direction:column;';
         var bar = document.createElement('div');
         bar.style.cssText = 'padding:10px 14px;background:#14532d;display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;';
-        var hintPdf = document.createElement('span');
-        hintPdf.textContent = 'Usa Ctrl+P / Cmd+P para imprimir o guardar como PDF';
-        hintPdf.style.cssText = 'margin-right:auto;flex:1 1 180px;min-width:0;color:#dcfce7;font-size:0.74rem;line-height:1.3;font-weight:600;';
-        var btnCompartir = document.createElement('button');
-        btnCompartir.type = 'button';
-        btnCompartir.textContent = 'Compartir / Guardar PDF';
-        btnCompartir.style.cssText = 'padding:8px 11px;border:none;border-radius:8px;background:#dcfce7;color:#14532d;font-weight:700;cursor:pointer;white-space:nowrap;';
         var btnCerrar = document.createElement('button');
         btnCerrar.type = 'button';
         btnCerrar.textContent = 'Cerrar';
@@ -1428,28 +1446,7 @@
             if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
             URL.revokeObjectURL(url);
         };
-        btnCompartir.onclick = async function() {
-            btnCompartir.disabled = true;
-            try {
-                if (typeof window.generarPdfBinarioDesdeHtmlDashboard !== 'function') throw new Error('Generador PDF no disponible.');
-                var blobPdf = await window.generarPdfBinarioDesdeHtmlDashboard(html || '');
-                var archivoPdf = new File([blobPdf], 'Dashboard_Ejecutivo_CARDIQUE.pdf', { type: 'application/pdf' });
-                if (navigator.share && navigator.canShare && navigator.canShare({ files: [archivoPdf] })) {
-                    await navigator.share({ title: 'Dashboard Ejecutivo CARDIQUE', files: [archivoPdf] });
-                } else {
-                    var enlace = document.createElement('a');
-                    enlace.href = URL.createObjectURL(blobPdf);
-                    enlace.download = archivoPdf.name;
-                    enlace.click();
-                    setTimeout(function() { URL.revokeObjectURL(enlace.href); }, 1000);
-                }
-            } catch (e) {
-                if (!e || e.name !== 'AbortError') alert((e && e.message) || 'No se pudo generar el PDF.');
-            } finally { btnCompartir.disabled = false; }
-        };
         btnCerrar.onclick = cerrar;
-        bar.appendChild(hintPdf);
-        bar.appendChild(btnCompartir);
         bar.appendChild(btnCerrar);
         var iframe = document.createElement('iframe');
         iframe.src = url;
@@ -1495,12 +1492,15 @@
             dest.innerHTML = '<div style="font-size:0.82rem;font-weight:700;color:#374151;margin-bottom:8px;">Dashboards Ejecutivos</div>'
                 + rows.map(function(d) {
                     var fecha = d.creado_en ? new Date(d.creado_en).toLocaleString('es-CO') : '';
-                    return '<button type="button" class="ra-jefe-dash-abrir" data-id="' + escHtml(d.id) + '" style="width:100%;text-align:left;padding:10px 12px;margin-bottom:6px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;font-size:0.8rem;color:#14532d;cursor:pointer;display:block;">'
+                    return '<div class="ra-jefe-dash-item" style="width:100%;box-sizing:border-box;padding:10px 12px;margin-bottom:6px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;font-size:0.8rem;color:#14532d;">'
                         + '<span style="display:inline-flex;align-items:center;gap:4px;background:#1a5c35;color:#fff;padding:3px 9px;border-radius:999px;font-size:0.72rem;font-weight:700;margin-bottom:4px;">📊 ' + escHtml(etiquetaFrenteDashboard(d.frente)) + '</span>'
                         + filaDashboardInfo('📄', 'Contrato', d.contrato)
                         + filaDashboardInfo('📅', 'Fecha y hora', fecha)
                         + filaDashboardInfo('📍', 'Municipio', d.municipio)
-                        + '</button>';
+                        + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">'
+                        + '<button type="button" class="ra-jefe-dash-abrir" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#1a5c35;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Abrir</button>'
+                        + '<button type="button" class="ra-jefe-dash-share" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#dcfce7;color:#14532d;border:1px solid #86efac;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Compartir / Guardar PDF</button>'
+                        + '</div></div>';
                 }).join('');
             dest.querySelectorAll('.ra-jefe-dash-abrir').forEach(function(btn) {
                 btn.onclick = function() {
@@ -1518,6 +1518,19 @@
                         btn.disabled = false;
                         alert('No se pudo cargar el dashboard.');
                     });
+                };
+            });
+            dest.querySelectorAll('.ra-jefe-dash-share').forEach(function(btn) {
+                btn.onclick = function() {
+                    var dashId = btn.getAttribute('data-id');
+                    sb.rpc('ra_get_dashboard_html', {
+                        p_jefe_id: ses.id,
+                        p_dashboard_id: dashId,
+                        p_codigo: ses.codigo_acceso
+                    }).then(function(res) {
+                        if (res.error || !res.data) { alert('No se pudo cargar el dashboard.'); return; }
+                        compartirDashboardEjecutivo(res.data, btn);
+                    }, function() { alert('No se pudo cargar el dashboard.'); });
                 };
             });
         }).catch(function() {
@@ -1548,7 +1561,8 @@
                     + filaDashboardInfo('📅', 'Fecha y hora', fecha)
                     + filaDashboardInfo('📍', 'Municipio', d.municipio)
                     + '</div>'
-                    + '<div style="display:flex;gap:6px;flex-shrink:0;"><button type="button" class="ra-admin-dash-open" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#1a5c35;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Abrir</button>'
+                    + '<div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;"><button type="button" class="ra-admin-dash-open" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#1a5c35;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Abrir</button>'
+                    + '<button type="button" class="ra-admin-dash-share" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#dcfce7;color:#14532d;border:1px solid #86efac;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Compartir / Guardar PDF</button>'
                     + '<button type="button" class="ra-admin-dash-delete" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#b91c1c;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Borrar</button></div></div>';
             }).join('');
             dest.querySelectorAll('.ra-admin-dash-open').forEach(function(btn) {
@@ -1566,6 +1580,18 @@
                         btn.disabled = false;
                         alert('No se pudo cargar el dashboard.');
                     });
+                };
+            });
+            dest.querySelectorAll('.ra-admin-dash-share').forEach(function(btn) {
+                btn.onclick = function() {
+                    sb.rpc('ra_get_admin_dashboard_html', {
+                        p_admin_id: ses.id,
+                        p_dashboard_id: btn.getAttribute('data-id'),
+                        p_codigo: ses.codigo_acceso
+                    }).then(function(res) {
+                        if (res.error || !res.data) { alert('No se pudo cargar el dashboard.'); return; }
+                        compartirDashboardEjecutivo(res.data, btn);
+                    }, function() { alert('No se pudo cargar el dashboard.'); });
                 };
             });
             dest.querySelectorAll('.ra-admin-dash-delete').forEach(function(btn) {
