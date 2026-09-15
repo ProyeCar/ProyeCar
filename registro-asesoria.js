@@ -1412,10 +1412,14 @@
         var overlay = document.createElement('div');
         overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#111827;display:flex;flex-direction:column;';
         var bar = document.createElement('div');
-        bar.style.cssText = 'padding:10px 14px;background:#14532d;display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-shrink:0;';
+        bar.style.cssText = 'padding:10px 14px;background:#14532d;display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;';
         var hintPdf = document.createElement('span');
         hintPdf.textContent = 'Usa Ctrl+P / Cmd+P para imprimir o guardar como PDF';
-        hintPdf.style.cssText = 'margin-right:auto;color:#dcfce7;font-size:0.78rem;font-weight:600;';
+        hintPdf.style.cssText = 'margin-right:auto;flex:1 1 180px;min-width:0;color:#dcfce7;font-size:0.74rem;line-height:1.3;font-weight:600;';
+        var btnCompartir = document.createElement('button');
+        btnCompartir.type = 'button';
+        btnCompartir.textContent = 'Compartir / Guardar PDF';
+        btnCompartir.style.cssText = 'padding:8px 11px;border:none;border-radius:8px;background:#dcfce7;color:#14532d;font-weight:700;cursor:pointer;white-space:nowrap;';
         var btnCerrar = document.createElement('button');
         btnCerrar.type = 'button';
         btnCerrar.textContent = 'Cerrar';
@@ -1424,8 +1428,28 @@
             if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
             URL.revokeObjectURL(url);
         };
+        btnCompartir.onclick = async function() {
+            btnCompartir.disabled = true;
+            try {
+                if (typeof window.generarPdfBinarioDesdeHtmlDashboard !== 'function') throw new Error('Generador PDF no disponible.');
+                var blobPdf = await window.generarPdfBinarioDesdeHtmlDashboard(html || '');
+                var archivoPdf = new File([blobPdf], 'Dashboard_Ejecutivo_CARDIQUE.pdf', { type: 'application/pdf' });
+                if (navigator.share && navigator.canShare && navigator.canShare({ files: [archivoPdf] })) {
+                    await navigator.share({ title: 'Dashboard Ejecutivo CARDIQUE', files: [archivoPdf] });
+                } else {
+                    var enlace = document.createElement('a');
+                    enlace.href = URL.createObjectURL(blobPdf);
+                    enlace.download = archivoPdf.name;
+                    enlace.click();
+                    setTimeout(function() { URL.revokeObjectURL(enlace.href); }, 1000);
+                }
+            } catch (e) {
+                if (!e || e.name !== 'AbortError') alert((e && e.message) || 'No se pudo generar el PDF.');
+            } finally { btnCompartir.disabled = false; }
+        };
         btnCerrar.onclick = cerrar;
         bar.appendChild(hintPdf);
+        bar.appendChild(btnCompartir);
         bar.appendChild(btnCerrar);
         var iframe = document.createElement('iframe');
         iframe.src = url;

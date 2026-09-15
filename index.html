@@ -1821,7 +1821,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.183";
+const APP_VERSION = "1.5.184";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -2069,6 +2069,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
+<script src="vendor/jspdf.umd.min.js" defer></script>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 </head>
 <body>
@@ -3037,6 +3038,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var transparentSrc = await stripLogoWhiteBackground(src);
         if (transparentSrc) logoImg.src = transparentSrc;
     }
+    window._logoTransparentePromise = Promise.resolve();
     const proyectoInput = document.getElementById("proyecto");
     const ubicacionInput = document.getElementById("ubicacion");
     const inspectorInput = document.getElementById("inspector");
@@ -3895,9 +3897,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const savedLogo = localStorage.getItem("cardique_logo");
     if (savedLogo) {
         logoImg.src = savedLogo;
-        aplicarLogoFondoTransparente(savedLogo);
+        window._logoTransparentePromise = aplicarLogoFondoTransparente(savedLogo).catch(function() {});
     } else {
-        aplicarLogoFondoTransparente(logoImg.src);
+        window._logoTransparentePromise = aplicarLogoFondoTransparente(logoImg.src).catch(function() {});
     }
     logoFileInput.onchange = (e) => {
         const file = e.target.files[0];
@@ -3907,6 +3909,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const transparentSrc = await stripLogoWhiteBackground(ev.target.result);
                 logoImg.src = transparentSrc;
                 localStorage.setItem("cardique_logo", transparentSrc);
+                window._logoTransparentePromise = Promise.resolve();
             };
             reader.readAsDataURL(file);
         }
@@ -5642,6 +5645,57 @@ document.addEventListener('DOMContentLoaded', function() {
     window.entregarHtmlEnVentanaPdf = entregarHtmlEnVentanaPdf;
     window.htmlBarraAccionesPdf = htmlBarraAccionesPdf;
 
+    function esperarLogoDashboard() {
+        var pendiente = window._logoTransparentePromise;
+        if (!pendiente || typeof pendiente.then !== 'function') return Promise.resolve();
+        return Promise.race([pendiente, new Promise(function(resolve) { setTimeout(resolve, 1800); })]).catch(function() {});
+    }
+
+    // Convierte el HTML autocontenido del dashboard (texto e imágenes data URI)
+    // en un PDF binario válido sin ejecutar el HTML almacenado.
+    function generarPdfBinarioDesdeHtmlDashboard(html) {
+        return new Promise(function(resolve, reject) {
+            try {
+                var JsPDF = window.jspdf && window.jspdf.jsPDF;
+                if (!JsPDF) throw new Error('El generador PDF local no está disponible.');
+                var parsed = new DOMParser().parseFromString(html || '', 'text/html');
+                var pdf = new JsPDF({ unit: 'pt', format: 'a4' });
+                var margen = 42, ancho = 511, y = 44;
+                function nuevaPaginaSiHaceFalta(alto) {
+                    if (y + alto > 770) { pdf.addPage(); y = margen; }
+                }
+                function escribirTexto(txt, tam, negrita) {
+                    var limpio = String(txt || '').replace(/\s+/g, ' ').trim();
+                    if (!limpio) return;
+                    pdf.setFont('helvetica', negrita ? 'bold' : 'normal');
+                    pdf.setFontSize(tam || 9);
+                    var lineas = pdf.splitTextToSize(limpio, ancho);
+                    nuevaPaginaSiHaceFalta(lineas.length * ((tam || 9) + 3) + 4);
+                    pdf.text(lineas, margen, y);
+                    y += lineas.length * ((tam || 9) + 3) + 4;
+                }
+                function recorrer(el) {
+                    if (!el || el.nodeType !== 1) return;
+                    if (el.tagName === 'IMG' && el.src && el.src.indexOf('data:') === 0) {
+                        var w = Math.min(ancho, 250), h = 105;
+                        nuevaPaginaSiHaceFalta(h + 12);
+                        var formatoImg = /^data:image\/jpe?g/i.test(el.src) ? 'JPEG' : 'PNG';
+                        try { pdf.addImage(el.src, formatoImg, margen + (ancho - w) / 2, y, w, h, undefined, 'FAST'); y += h + 10; } catch (e) {}
+                        return;
+                    }
+                    var tag = el.tagName;
+                    if (/^(SCRIPT|STYLE|BUTTON|NAV)$/.test(tag)) return;
+                    var directo = Array.prototype.filter.call(el.childNodes || [], function(n) { return n.nodeType === 3; }).map(function(n) { return n.nodeValue; }).join(' ');
+                    if (directo.trim()) escribirTexto(directo, /^(H1|H2|H3|TH)$/.test(tag) ? 11 : 9, /^(H1|H2|H3|TH)$/.test(tag));
+                    Array.prototype.forEach.call(el.children || [], recorrer);
+                }
+                recorrer(parsed.body);
+                resolve(pdf.output('blob'));
+            } catch (e) { reject(e); }
+        });
+    }
+    window.generarPdfBinarioDesdeHtmlDashboard = generarPdfBinarioDesdeHtmlDashboard;
+
     function construirHtmlDashboardEjecutivo(compD, graficas, opts) {
         compD = compD || {};
         graficas = graficas || [];
@@ -5709,6 +5763,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // El logo se incrusta como data URI para que también aparezca al imprimir
         // dashboards almacenados y abiertos posteriormente por jefe/administrador.
         var logoSrcDashboard = (typeof logoImg !== 'undefined' && logoImg && logoImg.src && logoImg.src.indexOf('data:') === 0) ? logoImg.src : '';
+        console.debug('[Dashboard] logo al generar:', logoSrcDashboard || '(no data URI)', 'complete=', !!(logoImg && logoImg.complete));
 
         var totalGraficas = chartSlots.length;
         h += '<div class="dash-charts">';
@@ -5865,6 +5920,7 @@ document.addEventListener('DOMContentLoaded', function() {
             tickSizeY: COMP_GRAFICA_TYPO.tickY * 2,
             pctFontSize: COMP_GRAFICA_TYPO.pctBar * 2
         }).then(function(graficas) {
+            return esperarLogoDashboard().then(function() {
             restaurarBtn();
             var h, hArchivo;
             try {
@@ -5881,6 +5937,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             entregarDashboard(h, hArchivo);
+            });
         }).catch(function(err) {
             restaurarBtn();
             if (window._pdfWin && !window._pdfWin.closed) { try { window._pdfWin.close(); } catch (e) {} }
