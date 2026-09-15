@@ -1456,9 +1456,27 @@
     }
 
     function filaDashboardInfo(icono, label, valor) {
-        return '<div style="font-size:12px;line-height:1.4;margin-top:2px;">'
+        return '<div class="ra-dash-info" style="font-size:12px;line-height:1.4;margin-top:2px;">'
             + icono + ' <span style="font-weight:600;color:#111827;">' + escHtml(label) + ':</span>'
             + ' <span style="font-weight:normal;color:#6b7280;">' + escHtml(valor || 'Sin especificar') + '</span></div>';
+    }
+
+    function asegurarEstilosDashboardsResponsive() {
+        if (document.getElementById('ra-dashboards-responsive-style')) return;
+        var style = document.createElement('style');
+        style.id = 'ra-dashboards-responsive-style';
+        style.textContent = '@media (max-width:480px){'
+            + '.ra-jefe-dash-item,.ra-admin-dash-item{width:100%;box-sizing:border-box;padding:12px!important;}'
+            + '.ra-dash-card-header{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:nowrap;min-width:0;}'
+            + '.ra-dash-card-header .ra-dash-professional{min-width:0;overflow-wrap:anywhere;}'
+            + '.ra-dash-card-header .ra-dash-badge{margin:0!important;flex:0 0 auto;white-space:nowrap;}'
+            + '.ra-dash-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 12px;width:100%;margin-top:8px;}'
+            + '.ra-dash-meta .ra-dash-info{min-width:0;overflow-wrap:anywhere;}'
+            + '.ra-dash-meta .ra-dash-info:last-child{grid-column:1 / -1;}'
+            + '.ra-dash-actions{display:grid!important;grid-template-columns:1fr 1.5fr 1fr;gap:8px!important;width:100%;margin-top:12px!important;}'
+            + '.ra-dash-actions button{min-width:0;min-height:40px;padding:7px 6px!important;white-space:normal;}'
+            + '}';
+        document.head.appendChild(style);
     }
 
     function etiquetaFrenteDashboard(frente) {
@@ -1470,6 +1488,7 @@
     function cargarDashboardsEjecutivosJefe(sb, ses, profId) {
         var dest = document.getElementById('ra-jefe-dashboards');
         if (!dest) return;
+        asegurarEstilosDashboardsResponsive();
         dest.innerHTML = '<div style="padding:8px;color:#6b7280;font-size:0.8rem;">Cargando dashboards ejecutivos…</div>';
         sb.rpc('ra_list_jefe_dashboards', {
             p_jefe_id: ses.id,
@@ -1486,11 +1505,11 @@
                 + rows.map(function(d) {
                     var fecha = d.creado_en ? new Date(d.creado_en).toLocaleString('es-CO') : '';
                     return '<div class="ra-jefe-dash-item" style="width:100%;box-sizing:border-box;padding:10px 12px;margin-bottom:6px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;font-size:0.8rem;color:#14532d;">'
-                        + '<span style="display:inline-flex;align-items:center;gap:4px;background:#1a5c35;color:#fff;padding:3px 9px;border-radius:999px;font-size:0.72rem;font-weight:700;margin-bottom:4px;">📊 ' + escHtml(etiquetaFrenteDashboard(d.frente)) + '</span>'
-                        + filaDashboardInfo('📄', 'Contrato', d.contrato)
+                        + '<div class="ra-dash-card-header"><span class="ra-dash-badge" style="display:inline-flex;align-items:center;gap:4px;background:#1a5c35;color:#fff;padding:3px 9px;border-radius:999px;font-size:0.72rem;font-weight:700;">📊 ' + escHtml(etiquetaFrenteDashboard(d.frente)) + '</span></div>'
+                        + '<div class="ra-dash-meta">' + filaDashboardInfo('📄', 'Contrato', d.contrato)
                         + filaDashboardInfo('📅', 'Fecha y hora', fecha)
-                        + filaDashboardInfo('📍', 'Municipio', d.municipio)
-                        + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">'
+                        + filaDashboardInfo('📍', 'Municipio', d.municipio) + '</div>'
+                        + '<div class="ra-dash-actions" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">'
                         + '<button type="button" class="ra-jefe-dash-abrir" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#1a5c35;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Abrir</button>'
                         + '<button type="button" class="ra-jefe-dash-print" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Compartir/Guardar PDF</button>'
                         + '</div></div>';
@@ -1539,6 +1558,7 @@
     function cargarDashboardsEjecutivosAdmin(sb, ses) {
         var dest = document.getElementById('ra-admin-dashboards-body');
         if (!dest || !sb || !ses) return;
+        asegurarEstilosDashboardsResponsive();
         dest.innerHTML = '<div style="padding:12px;color:#6b7280;font-size:0.84rem;">Cargando dashboards ejecutivos…</div>';
         sb.rpc('ra_list_admin_dashboards', {
             p_admin_id: ses.id,
@@ -1552,14 +1572,13 @@
             }
             dest.innerHTML = rows.map(function(d) {
                 var fecha = d.creado_en ? new Date(d.creado_en).toLocaleString('es-CO') : 'Sin fecha';
-                return '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:10px 0;border-top:1px solid #f3f4f6;">'
-                    + '<div style="min-width:0;flex:1;"><div style="font-size:0.84rem;font-weight:700;color:#111827;">' + escHtml(d.profesional_nombre || 'Autor sin nombre') + '</div>'
-                    + '<span style="display:inline-flex;align-items:center;gap:4px;background:#1a5c35;color:#fff;padding:2px 8px;border-radius:999px;font-size:0.68rem;font-weight:700;margin-top:4px;">📊 ' + escHtml(etiquetaFrenteDashboard(d.frente)) + '</span>'
-                    + filaDashboardInfo('📄', 'Contrato', d.contrato)
+                return '<div class="ra-admin-dash-item" style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:10px 0;border-top:1px solid #f3f4f6;">'
+                    + '<div style="min-width:0;flex:1;"><div class="ra-dash-card-header"><div class="ra-dash-professional" style="font-size:0.84rem;font-weight:700;color:#111827;">' + escHtml(d.profesional_nombre || 'Autor sin nombre') + '</div>'
+                    + '<span class="ra-dash-badge" style="display:inline-flex;align-items:center;gap:4px;background:#1a5c35;color:#fff;padding:2px 8px;border-radius:999px;font-size:0.68rem;font-weight:700;margin-top:4px;">📊 ' + escHtml(etiquetaFrenteDashboard(d.frente)) + '</span></div>'
+                    + '<div class="ra-dash-meta">' + filaDashboardInfo('📄', 'Contrato', d.contrato)
                     + filaDashboardInfo('📅', 'Fecha y hora', fecha)
-                    + filaDashboardInfo('📍', 'Municipio', d.municipio)
-                    + '</div>'
-                    + '<div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;"><button type="button" class="ra-admin-dash-open" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#1a5c35;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Abrir</button>'
+                    + filaDashboardInfo('📍', 'Municipio', d.municipio) + '</div></div>'
+                    + '<div class="ra-dash-actions" style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;"><button type="button" class="ra-admin-dash-open" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#1a5c35;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Abrir</button>'
                     + '<button type="button" class="ra-admin-dash-print" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Compartir/Guardar PDF</button>'
                     + '<button type="button" class="ra-admin-dash-delete" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#b91c1c;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Borrar</button></div></div>';
             }).join('');
