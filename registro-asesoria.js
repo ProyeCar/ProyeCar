@@ -1414,6 +1414,13 @@
             if (typeof window.generarPdfBinarioDesdeHtmlDashboard !== 'function') throw new Error('Generador PDF no disponible.');
             return window.generarPdfBinarioDesdeHtmlDashboard(html || '');
         }).then(function(dataUri) {
+            var ua = navigator.userAgent || '';
+            var esIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            var esSafari = /Safari\//.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS|Chrome\//.test(ua);
+            if (esIOS && esSafari) {
+                window.open(dataUri, '_blank');
+                return;
+            }
             var enlace = document.createElement('a');
             enlace.href = dataUri;
             enlace.download = 'Dashboard_Ejecutivo_CARDIQUE.pdf';
