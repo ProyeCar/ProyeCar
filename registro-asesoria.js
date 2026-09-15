@@ -1406,37 +1406,6 @@
         });
     }
 
-    function compartirDashboardEjecutivo(html, btn) {
-        // Ruta única: el listado reutiliza exactamente el generador binario
-        // usado por el flujo Dashboard/WhatsApp (sin reconstruir el PDF aquí).
-        if (btn) btn.disabled = true;
-        var promesa = Promise.resolve().then(function() {
-            if (typeof window.generarPdfBinarioDesdeHtmlDashboard !== 'function') throw new Error('Generador PDF no disponible.');
-            return window.generarPdfBinarioDesdeHtmlDashboard(html || '');
-        }).then(function(dataUri) {
-            var ua = navigator.userAgent || '';
-            var esIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-            var esSafari = /Safari\//.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS|Chrome\//.test(ua);
-            if (esIOS && esSafari) {
-                window.open(dataUri, '_blank');
-                return;
-            }
-            var enlace = document.createElement('a');
-            enlace.href = dataUri;
-            enlace.download = 'Dashboard_Ejecutivo_CARDIQUE.pdf';
-            document.body.appendChild(enlace);
-            enlace.click();
-            document.body.removeChild(enlace);
-        }).catch(function(e) {
-            if (!e || e.name !== 'AbortError') alert((e && e.message) || 'No se pudo generar el PDF.');
-        }).finally(function() {
-            if (btn) btn.disabled = false;
-        });
-        return promesa;
-    }
-
-    window.compartirDashboardEjecutivo = compartirDashboardEjecutivo;
-
     function abrirDashboardSandboxed(html) {
         var blob = new Blob([html || ''], { type: 'text/html' });
         var url = URL.createObjectURL(blob);
@@ -1461,7 +1430,13 @@
         // Sandbox sin allow-scripts ni allow-same-origin: el HTML almacenado (generado
         // por otro usuario) se muestra pero cualquier <script> queda inerte y sin acceso
         // al origen/localStorage del jefe. Los gráficos ya están capturados como <img>.
-        iframe.setAttribute('sandbox', '');
+        iframe.setAttribute('sandbox', 'allow-modals allow-scripts');
+        var btnImprimir = document.createElement('button');
+        btnImprimir.type = 'button';
+        btnImprimir.textContent = 'Imprimir / Guardar PDF';
+        btnImprimir.style.cssText = 'padding:8px 12px;border:none;border-radius:8px;background:#f59e0b;color:#fff;font-weight:700;cursor:pointer;min-height:44px;';
+        btnImprimir.onclick = function() { try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch (e) {} };
+        bar.insertBefore(btnImprimir, btnCerrar);
         iframe.style.cssText = 'flex:1;border:none;background:#fff;width:100%;';
         overlay.appendChild(bar);
         overlay.appendChild(iframe);
@@ -1535,7 +1510,7 @@
                         p_codigo: ses.codigo_acceso
                     }).then(function(res) {
                         if (res.error || !res.data) { alert('No se pudo cargar el dashboard.'); return; }
-                        compartirDashboardEjecutivo(res.data, btn);
+                        abrirDashboardSandboxed(res.data);
                     }, function() { alert('No se pudo cargar el dashboard.'); });
                 };
             });
@@ -1596,7 +1571,7 @@
                         p_codigo: ses.codigo_acceso
                     }).then(function(res) {
                         if (res.error || !res.data) { alert('No se pudo cargar el dashboard.'); return; }
-                        compartirDashboardEjecutivo(res.data, btn);
+                        abrirDashboardSandboxed(res.data);
                     }, function() { alert('No se pudo cargar el dashboard.'); });
                 };
             });
