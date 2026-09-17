@@ -4403,6 +4403,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     const btnDel = document.createElement("button"); btnDel.innerHTML = pcIcon('x', 14, '#ffffff'); btnDel.className = "del-foto"; btnDel.onclick = async () => {
                         const fid = frentes[idx].fotos[fotoIdx];
                         frentes[idx].fotos.splice(fotoIdx, 1);
+                        if (frentes[idx].fotoItems) delete frentes[idx].fotoItems[fid];
+                        window._compPdfData = null;
                         try { await idbEliminarFoto(fid); } catch(e) {}
                         if (window._fotoCache) delete window._fotoCache[fid];
                         saveToLocal(); renderFrentes();
@@ -4498,6 +4500,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     // PASO 2: Guardar itemId junto a la foto
                                     if (!frentes[idx].fotoItems) frentes[idx].fotoItems = {};
                                     if (itemId) frentes[idx].fotoItems[id] = itemId;
+                                    window._compPdfData = null;
                                     // También guardar en caché en memoria para render inmediato
                                     if (!window._fotoCache) window._fotoCache = {};
                                     window._fotoCache[id] = dataUrl;
@@ -5678,6 +5681,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 Array.prototype.forEach.call(parsed.head ? parsed.head.querySelectorAll('style') : [], function(s) { safe.insertBefore(s.cloneNode(true), safe.firstChild); });
                 host.appendChild(safe);
                 document.body.appendChild(host);
+                safe.querySelectorAll('.photo-group-head').forEach(function(el) {
+                    el.style.setProperty('break-inside', 'avoid', 'important');
+                    el.style.setProperty('page-break-inside', 'avoid', 'important');
+                });
                 safe.querySelectorAll('.dash-hallazgo-td').forEach(function(el) {
                     el.style.setProperty('text-align', 'left', 'important');
                 });
@@ -6012,6 +6019,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     function generarDashboardEjecutivo() {
         var compD = window._compPdfData;
+        if (!compD) {
+            compD = typeof resolverAnalisisComparativoPorFrente === 'function'
+                ? resolverAnalisisComparativoPorFrente() : null;
+            if (compD) window._compPdfData = compD;
+        }
         if (!compD || !compD.comparables || !compD.comparables.length) {
             alert('No hay datos de análisis comparativo para generar el dashboard.');
             return;
