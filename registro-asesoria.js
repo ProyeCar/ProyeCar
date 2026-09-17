@@ -607,6 +607,7 @@
             p_jefe_id: payload.jefeId || null,
             p_contrato: payload.contrato || null,
             p_municipio: payload.municipio || null,
+            p_inspeccion_local_id: payload.inspeccionLocalId ? String(payload.inspeccionLocalId) : null,
             es_admin: !!payload.esAdmin,
             intentos: 0
         };
@@ -652,7 +653,8 @@
             p_html: rec.p_html,
             p_jefe_id: jefeId,
             p_contrato: rec.p_contrato || null,
-            p_municipio: rec.p_municipio || null
+            p_municipio: rec.p_municipio || null,
+            p_inspeccion_local_id: rec.p_inspeccion_local_id || null
         });
     }
 
@@ -1505,11 +1507,13 @@
             }
             dest.innerHTML = '<div style="font-size:0.82rem;font-weight:700;color:#374151;margin-bottom:8px;">Dashboards Ejecutivos</div>'
                 + rows.map(function(d) {
-                    var fecha = d.creado_en ? new Date(d.creado_en).toLocaleString('es-CO') : '';
+                    var fechaBase = d.actualizado_en || d.creado_en;
+                    var etiquetaFecha = d.actualizado_en && d.creado_en && new Date(d.actualizado_en) > new Date(d.creado_en) ? 'Actualizado' : 'Generado';
+                    var fecha = fechaBase ? new Date(fechaBase).toLocaleString('es-CO') : '';
                     return '<div class="ra-jefe-dash-item" style="width:100%;box-sizing:border-box;padding:10px 12px;margin-bottom:6px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;font-size:0.8rem;color:#14532d;">'
                         + '<div class="ra-dash-card-header"><span class="ra-dash-badge" style="display:inline-flex;align-items:center;gap:4px;background:#1a5c35;color:#fff;padding:3px 9px;border-radius:999px;font-size:0.72rem;font-weight:700;">📊 ' + escHtml(etiquetaFrenteDashboard(d.frente)) + '</span></div>'
                         + '<div class="ra-dash-meta">' + filaDashboardInfo('📄', 'Contrato', d.contrato)
-                        + filaDashboardInfo('📅', 'Fecha y hora', fecha)
+                        + filaDashboardInfo('📅', etiquetaFecha, fecha)
                         + filaDashboardInfo('📍', 'Municipio', d.municipio) + '</div>'
                         + '<div class="ra-dash-actions" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">'
                         + '<button type="button" class="ra-jefe-dash-abrir" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#1a5c35;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Abrir</button>'
@@ -1573,12 +1577,14 @@
                 return;
             }
             dest.innerHTML = rows.map(function(d) {
-                var fecha = d.creado_en ? new Date(d.creado_en).toLocaleString('es-CO') : 'Sin fecha';
+                var fechaBase = d.actualizado_en || d.creado_en;
+                var etiquetaFecha = d.actualizado_en && d.creado_en && new Date(d.actualizado_en) > new Date(d.creado_en) ? 'Actualizado' : 'Generado';
+                var fecha = fechaBase ? new Date(fechaBase).toLocaleString('es-CO') : 'Sin fecha';
                 return '<div class="ra-admin-dash-item" style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:10px 0;border-top:1px solid #f3f4f6;">'
                     + '<div style="min-width:0;flex:1;"><div class="ra-dash-card-header"><div class="ra-dash-professional" style="font-size:0.84rem;font-weight:700;color:#111827;">' + escHtml(d.profesional_nombre || 'Autor sin nombre') + '</div>'
                     + '<span class="ra-dash-badge" style="display:inline-flex;align-items:center;gap:4px;background:#1a5c35;color:#fff;padding:2px 8px;border-radius:999px;font-size:0.68rem;font-weight:700;margin-top:4px;">📊 ' + escHtml(etiquetaFrenteDashboard(d.frente)) + '</span></div>'
                     + '<div class="ra-dash-meta">' + filaDashboardInfo('📄', 'Contrato', d.contrato)
-                    + filaDashboardInfo('📅', 'Fecha y hora', fecha)
+                    + filaDashboardInfo('📅', etiquetaFecha, fecha)
                     + filaDashboardInfo('📍', 'Municipio', d.municipio) + '</div></div>'
                     + '<div class="ra-dash-actions" style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;"><button type="button" class="ra-admin-dash-open" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#1a5c35;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Abrir</button>'
                     + '<button type="button" class="ra-admin-dash-print" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Compartir/Guardar PDF</button>'

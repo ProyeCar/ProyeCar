@@ -6019,6 +6019,14 @@ document.addEventListener('DOMContentLoaded', function() {
             var contrato = (document.getElementById('proyecto') || {}).value || '';
             var comparables = (compD && compD.comparables) || [];
             var municipio = '';
+            var inspeccionLocalId = compD && compD.reciente && compD.reciente.id;
+            if (inspeccionLocalId === undefined || inspeccionLocalId === null || inspeccionLocalId === '') {
+                inspeccionLocalId = localStorage.getItem('proyecar_inspeccion_local_id');
+            }
+            if (inspeccionLocalId === undefined || inspeccionLocalId === null || inspeccionLocalId === '') {
+                console.warn('Dashboard Ejecutivo no guardado: falta inspeccion_local_id.');
+                return;
+            }
             if (frenteSel !== 'todos') {
                 var frenteMatch = comparables.filter(function(c) { return c.frente && c.frente.nombre === frenteSel; })[0];
                 if (frenteMatch && frenteMatch.frente) municipio = frenteMatch.frente.municipio || '';
@@ -6036,7 +6044,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 html: html,
                 esAdmin: esAdmin,
                 contrato: contrato,
-                municipio: municipio
+                municipio: municipio,
+                inspeccionLocalId: String(inspeccionLocalId)
             }).catch(function(err) {
                 console.warn('No se pudo encolar el Dashboard Ejecutivo para el panel jefe:', err && err.message);
             });
@@ -7428,6 +7437,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 categorias: JSON.parse(JSON.stringify(f.categorias || []))
             }))
         };
+        localStorage.setItem('proyecar_inspeccion_local_id', String(registro.id));
         const hist = getHistorial();
         hist.unshift(registro);
         saveHistorial(hist);
@@ -7630,6 +7640,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!confirm('¿Restaurar esta inspección? Se reemplazarán los datos actuales.')) return;
         const hist = getHistorial();
         const r = hist[idx];
+        localStorage.setItem('proyecar_inspeccion_local_id', String(r.id));
         frentes = normalizeFrentes(r.frentes || []);
         if (r.areasEvaluadas && r.areasEvaluadas.length) {
             guardarFiltroCategorias(r.areasEvaluadas);
@@ -8409,6 +8420,7 @@ document.addEventListener('DOMContentLoaded', function() {
             ? frentesParaInspeccionActiva(frentesBase, areasEval)
             : frentesBase;
         return {
+            id: localStorage.getItem('proyecar_inspeccion_local_id') || null,
             proyecto: (document.getElementById('proyecto') || {}).value || '',
             fecha: (document.getElementById('fecha') || {}).value || '',
             ubicacion: (document.getElementById('ubicacion') || {}).value || '',
