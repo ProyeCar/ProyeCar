@@ -1431,18 +1431,17 @@
         var url = URL.createObjectURL(blob);
         var overlay = document.createElement('div');
         overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#111827;display:flex;flex-direction:column;';
-        var bar = document.createElement('div');
-        bar.style.cssText = 'padding:10px 14px;background:#14532d;display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;';
         var btnCerrar = document.createElement('button');
         btnCerrar.type = 'button';
-        btnCerrar.textContent = 'Cerrar';
-        btnCerrar.style.cssText = 'padding:8px 16px;border:none;border-radius:8px;background:#fff;color:#14532d;font-weight:700;cursor:pointer;';
+        btnCerrar.textContent = 'Atrás';
+        btnCerrar.setAttribute('aria-label', 'Atrás');
+        btnCerrar.title = 'Atrás';
+        btnCerrar.style.cssText = 'position:fixed;right:max(16px, env(safe-area-inset-right));bottom:max(16px, env(safe-area-inset-bottom));z-index:100001;min-width:44px;min-height:44px;padding:10px 14px;border:2px solid #14532d;border-radius:999px;background:#fff;color:#14532d;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35);touch-action:manipulation;';
         var cerrar = function() {
             if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
             URL.revokeObjectURL(url);
         };
         btnCerrar.onclick = cerrar;
-        bar.appendChild(btnCerrar);
         var iframe = document.createElement('iframe');
         iframe.src = url;
         iframe.setAttribute('tabindex', '0');
@@ -1452,8 +1451,8 @@
         // al origen/localStorage del jefe. Los gráficos ya están capturados como <img>.
         iframe.setAttribute('sandbox', '');
         iframe.style.cssText = 'flex:1;border:none;background:#fff;width:100%;';
-        overlay.appendChild(bar);
         overlay.appendChild(iframe);
+        overlay.appendChild(btnCerrar);
         document.body.appendChild(overlay);
     }
 
