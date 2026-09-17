@@ -6024,7 +6024,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 inspeccionLocalId = localStorage.getItem('proyecar_inspeccion_local_id');
             }
             if (inspeccionLocalId === undefined || inspeccionLocalId === null || inspeccionLocalId === '') {
-                console.warn('Dashboard Ejecutivo no guardado: falta inspeccion_local_id.');
+                alert('Debes archivar la inspección antes de generar el Dashboard Ejecutivo para que se sincronice con el panel del jefe. El PDF se generó localmente, pero no quedó guardado en el panel remoto.');
                 return;
             }
             if (frenteSel !== 'todos') {
