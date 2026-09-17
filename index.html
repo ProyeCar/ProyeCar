@@ -5748,10 +5748,51 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     window.generarPdfBinarioDesdeHtmlDashboard = generarPdfBinarioDesdeHtmlDashboard;
 
-    function construirHtmlDashboardEjecutivo(compD, graficas, opts) {
+    function prepararFotosDashboardEjecutivo(compD) {
+        var seleccion = [];
+        (compD && compD.comparables || []).forEach(function(comp) {
+            var fr = comp && comp.frente;
+            if (!fr || !fr.fotos || !fr.fotoItems) return;
+            var noCumple = [];
+            (fr.categorias || []).forEach(function(cat) {
+                (cat.items || []).forEach(function(item) {
+                    if (item.cumple === false) noCumple.push(item.id);
+                });
+            });
+            var ids = (fr.fotos || []).filter(function(id) { return noCumple.indexOf(fr.fotoItems[id]) !== -1; });
+            seleccion = seleccion.concat(ids.slice(0, 4).map(function(id) { return { id: id, fr: fr }; }));
+        });
+        var ids = seleccion.map(function(x) { return x.id; });
+        if (!ids.length) return Promise.resolve({});
+        return idbLeerFotos(ids).then(function(raw) {
+            var out = {};
+            return Promise.all(Object.keys(raw || {}).map(function(id) {
+                return new Promise(function(resolve) {
+                    var img = new Image();
+                    img.onload = function() {
+                        try {
+                            var max = 1200, scale = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+                            var w = Math.max(1, Math.round(img.naturalWidth * scale)), h = Math.max(1, Math.round(img.naturalHeight * scale));
+                            var canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
+                            var ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
+                            var src = String(raw[id] || '');
+                            out[id] = src.indexOf('image/png') !== -1 && src.indexOf('data:image/png') === 0
+                                ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', 0.75);
+                        } catch (e) { out[id] = raw[id]; }
+                        resolve();
+                    };
+                    img.onerror = function() { resolve(); };
+                    img.src = raw[id];
+                });
+            })).then(function() { return out; });
+        }).catch(function() { return {}; });
+    }
+
+    async function construirHtmlDashboardEjecutivo(compD, graficas, opts) {
         compD = compD || {};
         graficas = graficas || [];
         opts = opts || {};
+        var fotoMapDashboard = opts.fotoMap || await prepararFotosDashboardEjecutivo(compD);
         function esc(s) {
             return (s || '').toString()
                 .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -5805,6 +5846,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // reparte pocas palabras por línea y deja "ríos" de espacio feos.
             + '.dash-hallazgo-td{text-align:justify;line-height:1.5;overflow-wrap:break-word;word-wrap:break-word}'
             + '@media (max-width:640px){.dash-hallazgo-td{text-align:left}}'
+            + '.photo-grid{display:block;margin:10px 0}.photo-row{display:flex;gap:10px;break-inside:avoid;page-break-inside:avoid;margin-bottom:10px;align-items:flex-start}.photo-card{display:block;flex:1;min-width:0;margin:0;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;text-align:center;break-inside:avoid;page-break-inside:avoid}.photo-card img{width:100%;height:auto;max-height:220px;object-fit:contain;display:block;background:#f8fafc}.photo-card figcaption{font-size:8pt;color:#374151;padding:5px 6px;background:#f1f5f9;border-top:1px solid #e2e8f0;font-weight:600;text-align:center;overflow-wrap:break-word}'
+            + '@media (max-width:640px){.photo-row{gap:6px}.photo-card figcaption{font-size:7.5pt}}'
             + '.dash-footer{margin-top:14px;padding-top:8px;border-top:1px solid #d1d5db;font-size:8pt;color:#64748b;page-break-inside:avoid}'
             + '@media print{.no-print-bar,.spacer-dash{display:none!important}}';
         var h = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
@@ -5926,6 +5969,27 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             h += '</tbody></table>';
         }
+        var fotosPorFrente = visibles.map(function(c) {
+            var fr = c.frente || {}, noCumple = [];
+            (fr.categorias || []).forEach(function(cat) { (cat.items || []).forEach(function(it) { if (it.cumple === false) noCumple.push(it.id); }); });
+            var ids = (fr.fotos || []).filter(function(id) { return noCumple.indexOf(fr.fotoItems && fr.fotoItems[id]) !== -1; });
+            return { fr: fr, ids: ids.slice(0, 4), omitted: Math.max(0, ids.length - 4) };
+        }).filter(function(x) { return x.ids.length; });
+        if (fotosPorFrente.length) {
+            h += '<div class="dash-title" style="font-size:12pt;font-weight:800;color:#1e3a2f;margin:16px 0 8px;">Registro Fotográfico</div>';
+            fotosPorFrente.forEach(function(group) {
+                h += '<div class="photo-group-head"><div class="cat-h">' + esc(group.fr.nombre || 'Sin nombre') + '</div><div class="photo-grid">';
+                group.ids.forEach(function(fid, idx) {
+                    if (idx % 2 === 0) h += '<div class="photo-row">';
+                    var itemId = group.fr.fotoItems[fid], itemObj = null;
+                    (group.fr.categorias || []).forEach(function(cat) { (cat.items || []).forEach(function(it) { if (it.id === itemId) itemObj = it; }); });
+                    var caption = itemObj ? itemId.toUpperCase() + ' — ' + (itemObj.cumple === false ? 'NO CUMPLE' : itemObj.cumple === true ? 'CUMPLE' : 'SIN CALIFICAR') : 'Fotografía ' + (idx + 1) + ' — ' + esc(group.fr.nombre || 'Sin nombre');
+                    h += '<figure class="photo-card"><img src="' + (fotoMapDashboard[fid] || '') + '" alt="Evidencia ' + esc(group.fr.nombre || '') + '"><figcaption>' + caption + '</figcaption></figure>';
+                    if (idx % 2 === 1 || idx === group.ids.length - 1) h += '</div>';
+                });
+                h += '</div>' + (group.omitted ? '<div class="dash-hallazgo" style="color:#64748b;font-size:8.5pt;">Se omitieron fotografías adicionales por límite del Dashboard Ejecutivo.</div>' : '') + '</div>';
+            });
+        }
         h += '<div style="background:#f8fafc;border-radius:10px;padding:10px 12px;margin-top:10px;page-break-inside:avoid;">'
             + '<div style="font-size:8.5pt;font-weight:700;color:#374151;margin-bottom:6px;">Guía de colores</div>'
             + '<div style="display:flex;flex-direction:column;gap:3px;font-size:8pt;color:#374151;">'
@@ -5980,13 +6044,14 @@ document.addEventListener('DOMContentLoaded', function() {
             return esperarLogoDashboard().then(function() {
             restaurarBtn();
             var h, hArchivo;
+            return prepararFotosDashboardEjecutivo(compD).then(async function(fotoMapDashboard) {
             try {
-                h = construirHtmlDashboardEjecutivo(compD, graficas || []);
+                h = await construirHtmlDashboardEjecutivo(compD, graficas || [], { fotoMap: fotoMapDashboard });
                 // Copia sin la barra "Volver/Imprimir" ni su <script>: la que ve el
                 // jefe se abre en un iframe sandbox (sin scripts), donde esos botones
                 // quedarían inertes y con el layout roto (sin el CSS que los soporta
                 // en el overlay del profesional).
-                hArchivo = construirHtmlDashboardEjecutivo(compD, graficas || [], { sinBarraAcciones: true });
+                hArchivo = await construirHtmlDashboardEjecutivo(compD, graficas || [], { sinBarraAcciones: true, fotoMap: fotoMapDashboard });
             } catch (e) {
                 if (window._pdfWin && !window._pdfWin.closed) { try { window._pdfWin.close(); } catch (e2) {} }
                 window._pdfWin = null;
@@ -5994,6 +6059,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             entregarDashboard(h, hArchivo);
+            });
             });
         }).catch(function(err) {
             restaurarBtn();
