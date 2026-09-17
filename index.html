@@ -5678,6 +5678,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 Array.prototype.forEach.call(parsed.head ? parsed.head.querySelectorAll('style') : [], function(s) { safe.insertBefore(s.cloneNode(true), safe.firstChild); });
                 host.appendChild(safe);
                 document.body.appendChild(host);
+                safe.querySelectorAll('.dash-hallazgo-td').forEach(function(el) {
+                    el.style.setProperty('text-align', 'left', 'important');
+                });
                 function esperarRender() {
                     var imgs = Array.prototype.slice.call(safe.querySelectorAll('img'));
                     return Promise.all(imgs.map(function(img) {
@@ -7859,7 +7862,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         numeroContrato: fRef.numeroContrato,
                         municipio: fRef.municipio || '',
                         zona: fRef.zona || (typeof esFrenteGrupoCienaga === 'function' && esFrenteGrupoCienaga(fRef) ? ZONA_CIENAGA : ''),
-                        hallazgos: fRef.hallazgos || ''
+                        hallazgos: fRef.hallazgos || '',
+                        fotos: fActual ? fActual.fotos : [],
+                        fotoItems: fActual ? fActual.fotoItems : {},
+                        categorias: fActual ? fActual.categorias : []
                     },
                     reciente: reciente,
                     anterior: anterior,
@@ -8613,7 +8619,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         numeroContrato: f.numeroContrato,
                         municipio: f.municipio || '',
                         zona: f.zona || '',
-                        hallazgos: f.hallazgos || ''
+                        hallazgos: f.hallazgos || '',
+                        fotos: f.fotos,
+                        fotoItems: f.fotoItems,
+                        categorias: f.categorias
                     },
                     reciente: actual,
                     anterior: null,
@@ -8640,7 +8649,10 @@ document.addEventListener('DOMContentLoaded', function() {
             comparables.push({
                 frente: {
                     nombre: f.nombre, contratista: f.contratista, numeroContrato: f.numeroContrato,
-                    municipio: f.municipio || '', zona: f.zona || '', hallazgos: f.hallazgos || ''
+                    municipio: f.municipio || '', zona: f.zona || '', hallazgos: f.hallazgos || '',
+                    fotos: f.fotos,
+                    fotoItems: f.fotoItems,
+                    categorias: f.categorias
                 },
                 reciente: actual,
                 anterior: anteriorGlobal,
