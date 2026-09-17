@@ -5771,6 +5771,8 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             var ids = (fr.fotos || []).filter(function(id) { return noCumple.indexOf(fr.fotoItems[id]) !== -1; });
             seleccion = seleccion.concat(ids.slice(0, 4).map(function(id) { return { id: id, fr: fr }; }));
+            var generales = (fr.fotos || []).filter(function(id) { return !Object.prototype.hasOwnProperty.call(fr.fotoItems, id); });
+            seleccion = seleccion.concat(generales.slice(0, 2).map(function(id) { return { id: id, fr: fr, general: true }; }));
         });
         var ids = seleccion.map(function(x) { return x.id; });
         if (!ids.length) return Promise.resolve({});
@@ -5986,7 +5988,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return { fr: fr, ids: ids.slice(0, 4), omitted: Math.max(0, ids.length - 4) };
         }).filter(function(x) { return x.ids.length; });
         if (fotosPorFrente.length) {
-            h += '<div class="dash-title" style="font-size:12pt;font-weight:800;color:#1e3a2f;margin:16px 0 8px;">Registro Fotográfico</div>';
+            h += '<div class="dash-title" style="font-size:12pt;font-weight:800;color:#1e3a2f;margin:16px 0 8px;">Registro Fotográfico — Hallazgos</div>';
             fotosPorFrente.forEach(function(group) {
                 h += '<div class="photo-group-head"><div class="cat-h">' + esc(group.fr.nombre || 'Sin nombre') + '</div><div class="photo-grid">';
                 group.ids.forEach(function(fid, idx) {
@@ -5998,6 +6000,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (idx % 2 === 1 || idx === group.ids.length - 1) h += '</div>';
                 });
                 h += '</div>' + (group.omitted ? '<div class="dash-hallazgo" style="color:#64748b;font-size:8.5pt;">Se omitieron fotografías adicionales por límite del Dashboard Ejecutivo.</div>' : '') + '</div>';
+            });
+        }
+        var generalesPorFrente = visibles.map(function(c) {
+            var fr = c.frente || {}, fotoItems = fr.fotoItems || {};
+            var ids = (fr.fotos || []).filter(function(id) { return !Object.prototype.hasOwnProperty.call(fotoItems, id); });
+            return { fr: fr, ids: ids.slice(0, 2), omitted: Math.max(0, ids.length - 2) };
+        }).filter(function(x) { return x.ids.length; });
+        if (generalesPorFrente.length) {
+            h += '<div class="dash-title" style="font-size:12pt;font-weight:800;color:#1e3a2f;margin:16px 0 8px;">Evidencia Fotográfica General</div>';
+            generalesPorFrente.forEach(function(group) {
+                h += '<div class="photo-group-head"><div class="cat-h">' + esc(group.fr.nombre || 'Sin nombre') + '</div><div class="photo-grid">';
+                group.ids.forEach(function(fid, idx) {
+                    if (idx % 2 === 0) h += '<div class="photo-row">';
+                    var label = group.ids.length > 1 ? 'Evidencia general ' + (idx + 1) : 'Evidencia general';
+                    h += '<figure class="photo-card"><img src="' + (fotoMapDashboard[fid] || '') + '" alt="' + esc(label + ' — Frente: ' + (group.fr.nombre || 'Sin nombre')) + '"><figcaption>' + esc(label + ' — Frente: ' + (group.fr.nombre || 'Sin nombre')) + '</figcaption></figure>';
+                    if (idx % 2 === 1 || idx === group.ids.length - 1) h += '</div>';
+                });
+                h += '</div>' + (group.omitted ? '<div class="dash-hallazgo" style="color:#64748b;font-size:8.5pt;">Se omitieron fotografías generales adicionales por límite del Dashboard Ejecutivo.</div>' : '') + '</div>';
             });
         }
         h += '<div style="background:#f8fafc;border-radius:10px;padding:10px 12px;margin-top:10px;page-break-inside:avoid;">'
