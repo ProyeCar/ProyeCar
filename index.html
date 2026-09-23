@@ -1821,7 +1821,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.200";
+const APP_VERSION = "1.5.201";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -6039,6 +6039,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     function generarDashboardEjecutivo() {
         var compD = window._compPdfData;
+        var fechaActualDashboard = String((document.getElementById('fecha') || {}).value || '').trim().substring(0, 10);
+        var fechaCacheadaDashboard = String(compD && compD.reciente && compD.reciente.fecha || '').trim().substring(0, 10);
+        if (compD && fechaActualDashboard && fechaCacheadaDashboard && fechaActualDashboard !== fechaCacheadaDashboard) {
+            compD = null;
+            window._compPdfData = null;
+        }
         if (!compD) {
             compD = typeof resolverAnalisisComparativoPorFrente === 'function'
                 ? resolverAnalisisComparativoPorFrente() : null;
@@ -6709,7 +6715,12 @@ document.addEventListener('DOMContentLoaded', function() {
     proyectoInput.addEventListener("input", saveToLocal);
     ubicacionInput.addEventListener("input", saveToLocal);
     inspectorInput.addEventListener("input", saveToLocal);
-    fechaInput.addEventListener("change", saveToLocal);
+    fechaInput.addEventListener("change", function() {
+        window._compPdfData = null;
+        window._compManualData = null;
+        window._comparisonData = null;
+        saveToLocal();
+    });
 
     // ── FASE 2: HISTORIAL Y COMPARAR ──
 
