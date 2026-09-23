@@ -1821,7 +1821,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.204";
+const APP_VERSION = "1.5.205";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -2145,6 +2145,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 <input type="text" id="inspector" placeholder="Nombre del profesional">
             </div>
         </div>
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid #d1fae5;display:flex;flex-wrap:wrap;gap:8px;">
+            <button type="button" id="btn-guardar-nueva-inspeccion" style="flex:1;min-width:220px;padding:11px 14px;background:#1a5c35;color:#fff;border:none;border-radius:10px;font-size:.84rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+                <span class="pc-icon-hydrate" data-i="archive" data-s="16" data-c="#fff"></span> Guardar como nueva inspección
+            </button>
+        </div>
+        <div style="margin-top:6px;color:#64748b;font-size:.72rem;line-height:1.4;">Crea un registro independiente en el historial. Usa “Guardar manualmente” para conservar solo el borrador actual.</div>
     </div>
 </div></div>
 
@@ -2999,6 +3005,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnRestaurarJson = document.getElementById("restaurar-json");
     const btnGenerarPdf = document.getElementById("generar-pdf");
     const btnGuardarManual = document.getElementById("guardar-manual");
+    const btnGuardarNuevaInspeccion = document.getElementById("btn-guardar-nueva-inspeccion");
     const saveIndicator = document.getElementById("save-indicator");
     const fechaInput = document.getElementById("fecha");
     const btnAgregarFrente = document.getElementById("agregar-frente");
@@ -7566,7 +7573,7 @@ document.addEventListener('DOMContentLoaded', function() {
         mostrarPantalla('historial');
     }
 
-    document.getElementById('btn-archivar').onclick = () => {
+    function archivarInspeccionActualEnHistorial() {
         const areasEval = obtenerFiltroCategoriasActivas();
         const frentesArch = frentesParaInspeccionActiva(frentes, areasEval);
         const data = { frentes: frentesArch, proyecto: proyectoInput.value, fecha: fechaInput.value, ubicacion: ubicacionInput.value, inspector: inspectorInput.value, areasEvaluadas: areasEval };
@@ -7578,7 +7585,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         const pendientes = detectarTentativosSinConfirmar(data.frentes);
         confirmarTentativosYArchivar(pendientes, function() { ejecutarArchivado(data, areasEval); });
-    };
+    }
+
+    document.getElementById('btn-archivar').onclick = archivarInspeccionActualEnHistorial;
+    if (btnGuardarNuevaInspeccion) btnGuardarNuevaInspeccion.onclick = archivarInspeccionActualEnHistorial;
 
     document.getElementById('btn-limpiar-hist').onclick = () => {
         if (confirm('¿Borrar todo el historial?')) {

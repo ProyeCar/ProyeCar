@@ -1,5 +1,5 @@
 // build: 2026-09-17-dashboard-update
-const APP_VERSION = '1.5.204';
+const APP_VERSION = '1.5.205';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 const VERSION_CHECK_INTERVAL_MS = 5 * 60 * 1000;
 
