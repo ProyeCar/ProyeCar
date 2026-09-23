@@ -1821,7 +1821,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CARDIQUE">
     <script>
-const APP_VERSION = "1.5.203";
+const APP_VERSION = "1.5.204";
 const VERSION_LS_KEY = 'proyecar_version_aplicada';
 /** Número WhatsApp destino (E.164 sin +). Vacío = wa.me/?text= genérico. */
 var PROYECAR_WHATSAPP_NUMERO = '';
@@ -7434,8 +7434,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function saveHistorial(hist) {
-        try { localStorage.setItem('cardique_historial', JSON.stringify(hist)); } catch(e) { console.warn('Historial full'); return; }
+        try {
+            localStorage.setItem('cardique_historial', JSON.stringify(hist));
+        } catch(e) {
+            console.error('No se pudo guardar el historial:', e);
+            alert('No se pudo guardar la inspección en el historial. Libera espacio del navegador e inténtalo de nuevo.');
+            return false;
+        }
         sincronizarDependientesHistorial();
+        return true;
     }
 
     /** Refresca Comparar, comparación semanal PDF y modal tras cualquier cambio en historial. */
@@ -7521,9 +7528,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const stats = calcularPct(data.frentes, areasEval);
         const ahoraArchivo = new Date();
         const fechaInspeccion = normalizarFechaInspeccionYMD(data.fecha);
+        const hist = getHistorial();
+        var nuevoId = Date.now();
+        while (hist.some(function(reg) { return String(reg && reg.id) === String(nuevoId); })) nuevoId++;
         if (fechaInput.value !== fechaInspeccion) fechaInput.value = fechaInspeccion;
         const registro = {
-            id: Date.now(),
+            id: nuevoId,
             archivedAt: fechaHoraArchivoColombia(ahoraArchivo),
             proyecto: data.proyecto,
             fecha: fechaInspeccion,
@@ -7550,9 +7560,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }))
         };
         localStorage.setItem('proyecar_inspeccion_local_id', String(registro.id));
-        const hist = getHistorial();
         hist.unshift(registro);
-        saveHistorial(hist);
+        if (!saveHistorial(hist)) return;
         alert('Inspección archivada en historial.');
         mostrarPantalla('historial');
     }
