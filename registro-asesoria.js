@@ -1497,6 +1497,36 @@
         return valor ? new Date(valor).toLocaleString('es-CO') : 'Sin fecha';
     }
 
+    function filaFechaInspeccionDashboard(d) {
+        var fecha = fechaInspeccionDashboard(d);
+        return '<div data-ra-fecha-inspeccion="' + escHtml(d && d.id || '') + '">'
+            + filaDashboardInfo('🗓️', 'Fecha de inspección', fecha || 'Cargando…')
+            + '</div>';
+    }
+
+    function extraerFechaInspeccionDashboardHtml(html) {
+        var texto = String(html || '').replace(/<[^>]+>/g, ' ').replace(/&mdash;/g, '—');
+        var match = texto.match(/Actual:\s*([0-9]{4}-[0-9]{2}-[0-9]{2})/i)
+            || texto.match(/Fecha:\s*([0-9]{4}-[0-9]{2}-[0-9]{2})/i);
+        return match ? match[1] : '';
+    }
+
+    function completarFechasInspeccionDashboards(dest, rows, cargarHtml) {
+        (rows || []).forEach(function(d) {
+            if (fechaInspeccionDashboard(d)) return;
+            var celda = Array.prototype.find.call(dest.querySelectorAll('[data-ra-fecha-inspeccion]'), function(el) {
+                return el.getAttribute('data-ra-fecha-inspeccion') === String(d.id);
+            });
+            if (!celda) return;
+            cargarHtml(d.id).then(function(html) {
+                var fecha = extraerFechaInspeccionDashboardHtml(html);
+                celda.innerHTML = filaDashboardInfo('🗓️', 'Fecha de inspección', fecha || 'No disponible');
+            }).catch(function() {
+                celda.innerHTML = filaDashboardInfo('🗓️', 'Fecha de inspección', 'No disponible');
+            });
+        });
+    }
+
     function cargarDashboardsEjecutivosJefe(sb, ses, profId) {
         var dest = document.getElementById('ra-jefe-dashboards');
         if (!dest) return;
@@ -1518,7 +1548,7 @@
                     return '<div class="ra-jefe-dash-item" style="width:100%;box-sizing:border-box;padding:10px 12px;margin-bottom:6px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;font-size:0.8rem;color:#14532d;">'
                         + '<div class="ra-dash-card-header"><span class="ra-dash-badge" style="display:inline-flex;align-items:center;gap:4px;background:#1a5c35;color:#fff;padding:3px 9px;border-radius:999px;font-size:0.72rem;font-weight:700;">📊 ' + escHtml(etiquetaFrenteDashboard(d.frente)) + '</span></div>'
                         + '<div class="ra-dash-meta">' + filaDashboardInfo('📄', 'Contrato', d.contrato)
-                        + filaDashboardInfo('🗓️', 'Fecha de inspección', fechaInspeccionDashboard(d) || 'No disponible')
+                        + filaFechaInspeccionDashboard(d)
                         + filaDashboardInfo('📅', 'Fecha de generación del informe', fechaGeneracionDashboard(d))
                         + filaDashboardInfo('📍', 'Municipio', d.municipio) + '</div>'
                         + '<div class="ra-dash-actions" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">'
@@ -1543,6 +1573,16 @@
                         alert('No se pudo cargar el dashboard.');
                     });
                 };
+            });
+            completarFechasInspeccionDashboards(dest, rows, function(dashId) {
+                return sb.rpc('ra_get_dashboard_html', {
+                    p_jefe_id: ses.id,
+                    p_dashboard_id: dashId,
+                    p_codigo: ses.codigo_acceso
+                }).then(function(res) {
+                    if (res.error) throw res.error;
+                    return res.data;
+                });
             });
             dest.querySelectorAll('.ra-jefe-dash-print').forEach(function(btn) {
                 btn.onclick = function() {
@@ -1587,7 +1627,7 @@
                     + '<div style="min-width:0;flex:1;"><div class="ra-dash-card-header"><div class="ra-dash-professional" style="font-size:0.84rem;font-weight:700;color:#111827;">' + escHtml(d.profesional_nombre || 'Autor sin nombre') + '</div>'
                     + '<span class="ra-dash-badge" style="display:inline-flex;align-items:center;gap:4px;background:#1a5c35;color:#fff;padding:2px 8px;border-radius:999px;font-size:0.68rem;font-weight:700;margin-top:4px;">📊 ' + escHtml(etiquetaFrenteDashboard(d.frente)) + '</span></div>'
                     + '<div class="ra-dash-meta">' + filaDashboardInfo('📄', 'Contrato', d.contrato)
-                    + filaDashboardInfo('🗓️', 'Fecha de inspección', fechaInspeccionDashboard(d) || 'No disponible')
+                    + filaFechaInspeccionDashboard(d)
                     + filaDashboardInfo('📅', 'Fecha de generación del informe', fechaGeneracionDashboard(d))
                     + filaDashboardInfo('📍', 'Municipio', d.municipio) + '</div></div>'
                     + '<div class="ra-dash-actions" style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;"><button type="button" class="ra-admin-dash-open" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#1a5c35;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Abrir</button>'
@@ -1610,6 +1650,16 @@
                         alert('No se pudo cargar el dashboard.');
                     });
                 };
+            });
+            completarFechasInspeccionDashboards(dest, rows, function(dashId) {
+                return sb.rpc('ra_get_admin_dashboard_html', {
+                    p_admin_id: ses.id,
+                    p_dashboard_id: dashId,
+                    p_codigo: ses.codigo_acceso
+                }).then(function(res) {
+                    if (res.error) throw res.error;
+                    return res.data;
+                });
             });
             dest.querySelectorAll('.ra-admin-dash-print').forEach(function(btn) {
                 btn.onclick = function() {
