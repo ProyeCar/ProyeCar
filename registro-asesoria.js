@@ -1410,6 +1410,8 @@
 
     function imprimirDashboardEjecutivo(html) {
         console.log('[Dashboard PDF] imprimirDashboardEjecutivo: usando window.print del documento padre');
+        var previo = document.getElementById('pc-dashboard-print-host');
+        if (previo && previo.parentNode) previo.parentNode.removeChild(previo);
         var parsed = new DOMParser().parseFromString(html || '', 'text/html');
         var hostPrint = document.createElement('div');
         hostPrint.id = 'pc-dashboard-print-host';
@@ -1423,7 +1425,51 @@
         var limpiar = function() { window.removeEventListener('afterprint', limpiar); if (hostPrint.parentNode) hostPrint.parentNode.removeChild(hostPrint); if (estilo.parentNode) estilo.parentNode.removeChild(estilo); };
         window.addEventListener('afterprint', limpiar);
         window.print();
-        setTimeout(limpiar, 2000);
+        // iOS abre la vista de impresión de forma asíncrona: no retirar el contenido
+        // a los 2 s. El host es invisible en pantalla (@media screen), así que basta
+        // con limpiarlo en afterprint o, como respaldo, a los 2 minutos.
+        setTimeout(limpiar, 120000);
+    }
+
+    // iOS/iPadOS solo acepta window.print() dentro del toque directo del usuario.
+    var RA_ES_IOS = /iP(hone|ad|od)/.test(navigator.userAgent || '')
+        || (navigator.platform === 'MacIntel' && (navigator.maxTouchPoints || 0) > 1);
+
+    /**
+     * Botón "Compartir/Guardar PDF" compatible con iPhone.
+     * - PC/Android: un toque → descarga el HTML → imprime.
+     * - iOS: 1er toque descarga y deja listo; 2º toque imprime SÍNCRONO
+     *   (sin await previo), único modo en que Safari/PWA abre la impresión.
+     */
+    function cablearBotonImprimirDashboard(btn, obtenerHtml) {
+        var etiqueta = btn.textContent;
+        var restaurar = function() { btn.disabled = false; btn.textContent = etiqueta; btn.style.background = '#f59e0b'; };
+        btn.onclick = function() {
+            if (btn._raHtmlListo) {
+                var listo = btn._raHtmlListo;
+                btn._raHtmlListo = null;
+                restaurar();
+                imprimirDashboardEjecutivo(listo);
+                return;
+            }
+            btn.disabled = true;
+            btn.textContent = 'Preparando…';
+            obtenerHtml().then(function(html) {
+                if (!html) { restaurar(); alert('No se pudo cargar el dashboard.'); return; }
+                if (RA_ES_IOS) {
+                    btn._raHtmlListo = html;
+                    btn.disabled = false;
+                    btn.textContent = 'Listo · toca para imprimir';
+                    btn.style.background = '#16a34a';
+                    return;
+                }
+                restaurar();
+                imprimirDashboardEjecutivo(html);
+            }, function() {
+                restaurar();
+                alert('No se pudo cargar el dashboard.');
+            });
+        };
     }
 
     function abrirDashboardSandboxed(html) {
@@ -1585,22 +1631,13 @@
                 });
             });
             dest.querySelectorAll('.ra-jefe-dash-print').forEach(function(btn) {
-                btn.onclick = function() {
-                    var dashId = btn.getAttribute('data-id');
-                    btn.disabled = true;
-                    sb.rpc('ra_get_dashboard_html', {
+                cablearBotonImprimirDashboard(btn, function() {
+                    return sb.rpc('ra_get_dashboard_html', {
                         p_jefe_id: ses.id,
-                        p_dashboard_id: dashId,
+                        p_dashboard_id: btn.getAttribute('data-id'),
                         p_codigo: ses.codigo_acceso
-                    }).then(function(res) {
-                        btn.disabled = false;
-                        if (res.error || !res.data) { alert('No se pudo cargar el dashboard.'); return; }
-                        imprimirDashboardEjecutivo(res.data);
-                    }, function() {
-                        btn.disabled = false;
-                        alert('No se pudo cargar el dashboard.');
-                    });
-                };
+                    }).then(function(res) { return res.error ? null : res.data; });
+                });
             });
         }).catch(function() {
             dest.innerHTML = '<div style="padding:8px;color:#b91c1c;font-size:0.78rem;">No se pudieron cargar los dashboards ejecutivos.</div>';
@@ -1662,21 +1699,13 @@
                 });
             });
             dest.querySelectorAll('.ra-admin-dash-print').forEach(function(btn) {
-                btn.onclick = function() {
-                    btn.disabled = true;
-                    sb.rpc('ra_get_admin_dashboard_html', {
+                cablearBotonImprimirDashboard(btn, function() {
+                    return sb.rpc('ra_get_admin_dashboard_html', {
                         p_admin_id: ses.id,
                         p_dashboard_id: btn.getAttribute('data-id'),
                         p_codigo: ses.codigo_acceso
-                    }).then(function(res) {
-                        btn.disabled = false;
-                        if (res.error || !res.data) { alert('No se pudo cargar el dashboard.'); return; }
-                        imprimirDashboardEjecutivo(res.data);
-                    }, function() {
-                        btn.disabled = false;
-                        alert('No se pudo cargar el dashboard.');
-                    });
-                };
+                    }).then(function(res) { return res.error ? null : res.data; });
+                });
             });
             dest.querySelectorAll('.ra-admin-dash-delete').forEach(function(btn) {
                 btn.onclick = function() {
