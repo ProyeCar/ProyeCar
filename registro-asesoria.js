@@ -1431,9 +1431,6 @@
         setTimeout(limpiar, 120000);
     }
 
-    // iOS/iPadOS solo acepta window.print() dentro del toque directo del usuario.
-    var RA_ES_IOS = /iP(hone|ad|od)/.test(navigator.userAgent || '')
-        || (navigator.platform === 'MacIntel' && (navigator.maxTouchPoints || 0) > 1);
 
     /**
      * Botón "Compartir/Guardar PDF" compatible con iPhone.
@@ -1441,60 +1438,53 @@
      * - iOS: 1er toque descarga y deja listo; 2º toque imprime SÍNCRONO
      *   (sin await previo), único modo en que Safari/PWA abre la impresión.
      */
-    // Convierte el dataURI del generador jsPDF en un File PDF validado (%PDF-).
-    function raDataUriAPdfFile(dataUri) {
-        var base64 = String(dataUri || '').split(',')[1] || '';
-        var bin = atob(base64);
-        var bytes = new Uint8Array(bin.length);
-        for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-        if (bytes.length < 5 || String.fromCharCode(bytes[0], bytes[1], bytes[2], bytes[3], bytes[4]) !== '%PDF-') {
-            throw new Error('El archivo generado no es un PDF válido.');
+    /**
+     * Abre el Dashboard guardado con EL MISMO visor del flujo WhatsApp
+     * (entregarHtmlEnVentanaPdf): barra Volver / Imprimir dentro del iframe,
+     * así el print() ocurre en el toque directo → funciona en iPhone/PWA.
+     * Seguridad: el HTML almacenado (de otro usuario) se sanitiza antes:
+     * sin <script>/<iframe>, sin on*=, sin src/href externos. Solo corren
+     * los scripts propios del visor, en iframe sin allow-same-origin.
+     */
+    function abrirVisorPdfDashboard(html) {
+        if (typeof window.entregarHtmlEnVentanaPdf !== 'function' || typeof window.htmlBarraAccionesPdf !== 'function') {
+            imprimirDashboardEjecutivo(html);
+            return;
         }
-        return new File([bytes], 'Dashboard_Ejecutivo_CARDIQUE.pdf', { type: 'application/pdf' });
+        var parsed = new DOMParser().parseFromString(html || '', 'text/html');
+        var cuerpo = parsed.body || parsed.createElement('body');
+        cuerpo.querySelectorAll('script,iframe,object,embed,link,meta,base,form,button,nav,.no-print-bar,.spacer,.spacer-dash').forEach(function(n) { n.remove(); });
+        cuerpo.querySelectorAll('*').forEach(function(n) {
+            Array.from(n.attributes || []).forEach(function(a) {
+                if (/^on/i.test(a.name)) { n.removeAttribute(a.name); return; }
+                if (/^(src|href|xlink:href|srcset|action|formaction)$/i.test(a.name) && a.value && !/^data:image\//i.test(a.value) && !/^#/.test(a.value)) n.removeAttribute(a.name);
+            });
+        });
+        var estilos = Array.from(parsed.head ? parsed.head.querySelectorAll('style') : []).map(function(st) {
+            return '<style>' + String(st.textContent || '').replace(/<\/style/gi, '') + '</style>';
+        }).join('');
+        var doc = '<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">'
+            + '<meta name="viewport" content="width=device-width,initial-scale=1">'
+            + '<title>Dashboard Ejecutivo CARDIQUE</title>' + estilos + '</head><body>'
+            + window.htmlBarraAccionesPdf({ compact: true })
+            + cuerpo.innerHTML + '</body></html>';
+        window.entregarHtmlEnVentanaPdf(doc, { hint: 'Pulsa «Imprimir / Guardar PDF» y elige Guardar en Archivos o Compartir.' });
     }
 
-    /**
-     * Botón "Compartir/Guardar PDF".
-     * - PC/Android: un toque → descarga el HTML → window.print().
-     * - iOS (Safari y app instalada, donde window.print() no funciona):
-     *   1er toque genera un PDF real (jsPDF); 2º toque abre la hoja nativa
-     *   de Compartir de forma SÍNCRONA (requisito de iOS: gesto directo).
-     *   Si el dispositivo no soporta compartir archivos, cae a impresión.
-     */
+    /** Botón "Compartir/Guardar PDF": trae el HTML y lo abre en el visor del flujo WhatsApp. */
     function cablearBotonImprimirDashboard(btn, obtenerHtml) {
         var etiqueta = btn.textContent;
-        var restaurar = function() { btn.disabled = false; btn.textContent = etiqueta; btn.style.background = '#f59e0b'; };
+        var restaurar = function() { btn.disabled = false; btn.textContent = etiqueta; };
         btn.onclick = function() {
-            if (btn._raPdfListo) {
-                var file = btn._raPdfListo, htmlRespaldo = btn._raHtmlListo;
-                btn._raPdfListo = null; btn._raHtmlListo = null;
-                restaurar();
-                if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    navigator.share({ files: [file], title: 'Dashboard Ejecutivo CARDIQUE' }).catch(function(e) {
-                        if (!e || e.name !== 'AbortError') alert('No se pudo compartir el PDF: ' + ((e && e.message) || e));
-                    });
-                } else {
-                    imprimirDashboardEjecutivo(htmlRespaldo);
-                }
-                return;
-            }
             btn.disabled = true;
-            btn.textContent = 'Preparando…';
+            btn.textContent = 'Abriendo…';
             obtenerHtml().then(function(html) {
-                if (!html) { restaurar(); alert('No se pudo cargar el dashboard.'); return; }
-                if (!RA_ES_IOS) { restaurar(); imprimirDashboardEjecutivo(html); return; }
-                if (typeof window.generarPdfBinarioDesdeHtmlDashboard !== 'function') throw new Error('Generador PDF no disponible.');
-                btn.textContent = 'Generando PDF…';
-                return window.generarPdfBinarioDesdeHtmlDashboard(html).then(function(dataUri) {
-                    btn._raPdfListo = raDataUriAPdfFile(dataUri);
-                    btn._raHtmlListo = html;
-                    btn.disabled = false;
-                    btn.textContent = 'Listo · toca para guardar PDF';
-                    btn.style.background = '#16a34a';
-                });
-            }).catch(function(e) {
                 restaurar();
-                alert('No se pudo preparar el PDF: ' + ((e && e.message) || 'error desconocido'));
+                if (!html) { alert('No se pudo cargar el dashboard.'); return; }
+                abrirVisorPdfDashboard(html);
+            }, function() {
+                restaurar();
+                alert('No se pudo cargar el dashboard.');
             });
         };
     }

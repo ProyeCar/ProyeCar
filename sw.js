@@ -1,5 +1,5 @@
-// build: 2026-10-15-ios-share-pdf-dashboard
-const APP_VERSION = '1.5.208';
+// build: 2026-10-15-dashboard-visor-whatsapp
+const APP_VERSION = '1.5.209';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 const VERSION_CHECK_INTERVAL_MS = 5 * 60 * 1000;
 
