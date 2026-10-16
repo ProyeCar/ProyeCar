@@ -1,5 +1,5 @@
 // build: 2026-10-15-ios-print-dashboard
-const APP_VERSION = '1.5.206';
+const APP_VERSION = '1.5.207';
 const CACHE_NAME = 'cardique-v' + APP_VERSION;
 const VERSION_CHECK_INTERVAL_MS = 5 * 60 * 1000;
 

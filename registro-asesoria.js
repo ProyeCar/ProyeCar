@@ -1599,7 +1599,7 @@
                         + filaDashboardInfo('📍', 'Municipio', d.municipio) + '</div>'
                         + '<div class="ra-dash-actions" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">'
                         + '<button type="button" class="ra-jefe-dash-abrir" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#1a5c35;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Abrir</button>'
-                        + '<button type="button" class="ra-jefe-dash-print" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Compartir/Guardar PDF</button>'
+                        + '<button type="button" class="ra-jefe-dash-print" data-id="' + escHtml(d.id) + '" style="min-width:44px;min-height:44px;padding:10px 12px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;line-height:1.2;cursor:pointer;touch-action:manipulation;">Compartir/Guardar PDF</button>'
                         + '</div></div>';
                 }).join('');
             dest.querySelectorAll('.ra-jefe-dash-abrir').forEach(function(btn) {
@@ -1668,7 +1668,7 @@
                     + filaDashboardInfo('📅', 'Fecha de generación del informe', fechaGeneracionDashboard(d))
                     + filaDashboardInfo('📍', 'Municipio', d.municipio) + '</div></div>'
                     + '<div class="ra-dash-actions" style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;"><button type="button" class="ra-admin-dash-open" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#1a5c35;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Abrir</button>'
-                    + '<button type="button" class="ra-admin-dash-print" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Compartir/Guardar PDF</button>'
+                    + '<button type="button" class="ra-admin-dash-print" data-id="' + escHtml(d.id) + '" style="min-width:44px;min-height:44px;padding:10px 12px;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;line-height:1.2;cursor:pointer;touch-action:manipulation;">Compartir/Guardar PDF</button>'
                     + '<button type="button" class="ra-admin-dash-delete" data-id="' + escHtml(d.id) + '" style="padding:7px 10px;background:#b91c1c;color:#fff;border:none;border-radius:8px;font-size:0.74rem;font-weight:700;cursor:pointer;">Borrar</button></div></div>';
             }).join('');
             dest.querySelectorAll('.ra-admin-dash-open').forEach(function(btn) {
