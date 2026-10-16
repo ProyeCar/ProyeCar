@@ -1441,33 +1441,60 @@
      * - iOS: 1er toque descarga y deja listo; 2º toque imprime SÍNCRONO
      *   (sin await previo), único modo en que Safari/PWA abre la impresión.
      */
+    // Convierte el dataURI del generador jsPDF en un File PDF validado (%PDF-).
+    function raDataUriAPdfFile(dataUri) {
+        var base64 = String(dataUri || '').split(',')[1] || '';
+        var bin = atob(base64);
+        var bytes = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        if (bytes.length < 5 || String.fromCharCode(bytes[0], bytes[1], bytes[2], bytes[3], bytes[4]) !== '%PDF-') {
+            throw new Error('El archivo generado no es un PDF válido.');
+        }
+        return new File([bytes], 'Dashboard_Ejecutivo_CARDIQUE.pdf', { type: 'application/pdf' });
+    }
+
+    /**
+     * Botón "Compartir/Guardar PDF".
+     * - PC/Android: un toque → descarga el HTML → window.print().
+     * - iOS (Safari y app instalada, donde window.print() no funciona):
+     *   1er toque genera un PDF real (jsPDF); 2º toque abre la hoja nativa
+     *   de Compartir de forma SÍNCRONA (requisito de iOS: gesto directo).
+     *   Si el dispositivo no soporta compartir archivos, cae a impresión.
+     */
     function cablearBotonImprimirDashboard(btn, obtenerHtml) {
         var etiqueta = btn.textContent;
         var restaurar = function() { btn.disabled = false; btn.textContent = etiqueta; btn.style.background = '#f59e0b'; };
         btn.onclick = function() {
-            if (btn._raHtmlListo) {
-                var listo = btn._raHtmlListo;
-                btn._raHtmlListo = null;
+            if (btn._raPdfListo) {
+                var file = btn._raPdfListo, htmlRespaldo = btn._raHtmlListo;
+                btn._raPdfListo = null; btn._raHtmlListo = null;
                 restaurar();
-                imprimirDashboardEjecutivo(listo);
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    navigator.share({ files: [file], title: 'Dashboard Ejecutivo CARDIQUE' }).catch(function(e) {
+                        if (!e || e.name !== 'AbortError') alert('No se pudo compartir el PDF: ' + ((e && e.message) || e));
+                    });
+                } else {
+                    imprimirDashboardEjecutivo(htmlRespaldo);
+                }
                 return;
             }
             btn.disabled = true;
             btn.textContent = 'Preparando…';
             obtenerHtml().then(function(html) {
                 if (!html) { restaurar(); alert('No se pudo cargar el dashboard.'); return; }
-                if (RA_ES_IOS) {
+                if (!RA_ES_IOS) { restaurar(); imprimirDashboardEjecutivo(html); return; }
+                if (typeof window.generarPdfBinarioDesdeHtmlDashboard !== 'function') throw new Error('Generador PDF no disponible.');
+                btn.textContent = 'Generando PDF…';
+                return window.generarPdfBinarioDesdeHtmlDashboard(html).then(function(dataUri) {
+                    btn._raPdfListo = raDataUriAPdfFile(dataUri);
                     btn._raHtmlListo = html;
                     btn.disabled = false;
-                    btn.textContent = 'Listo · toca para imprimir';
+                    btn.textContent = 'Listo · toca para guardar PDF';
                     btn.style.background = '#16a34a';
-                    return;
-                }
+                });
+            }).catch(function(e) {
                 restaurar();
-                imprimirDashboardEjecutivo(html);
-            }, function() {
-                restaurar();
-                alert('No se pudo cargar el dashboard.');
+                alert('No se pudo preparar el PDF: ' + ((e && e.message) || 'error desconocido'));
             });
         };
     }
